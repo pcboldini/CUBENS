@@ -11,9 +11,14 @@ It incorporates:
  - GPU-acceleration using OpenACC directives for computation offloading and asynchronous CUDA-aware MPI for GPU-GPU communication.
 
 The following geometries can be simulated:
- - transitional boundary layer
- - turbulent boundary layer
- - channel flow
+ - transitional boundary layer,
+ - turbulent boundary layer,
+ - channel flow.
+
+Current developments:
+ - extension of the GPU-acceleration to other GPU architectures, e.g.~AMD cards,
+ - suitable shock-capturing techniques for the supersonic and hypersonic flow regime,
+ - curvilinear coordinates for more realistic geometries.
 
 ### Reference 
 For more information on CUBENS:
