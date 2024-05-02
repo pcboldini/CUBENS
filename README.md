@@ -1,4 +1,4 @@
-![CUBENS_logo](https://github.com/pcboldini/CUBENS/blob/main/CUBENS_logo.pdf)
+<img src="CUBENS_logo.png" width="auto" height="auto">
 # Main
 
 
