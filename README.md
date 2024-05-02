@@ -1,4 +1,5 @@
-<img src="CUBENS_logo.png" width="auto" height="auto">
+<img src="CUBENS_logo.png" width="30%" height="30%">
+
 # Main
 
 
