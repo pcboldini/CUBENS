@@ -7,7 +7,7 @@ It incorporates:
  - non-ideal, strongly non-linear thermodynamics,
  - a wall-normal buoyant force,
  - high-order finite-difference schemes with convective terms in split and kinetic-energy- and entropy-preserving form,
- - non-ideal non-reflectiing boundary conditions,
+ - non-ideal non-reflecting boundary conditions,
  - GPU-acceleration using OpenACC directives for computation offloading and asynchronous CUDA-aware MPI for GPU-GPU communication.
 
 The following geometries can be simulated:
@@ -16,7 +16,7 @@ The following geometries can be simulated:
  - channel flow.
 
 Current developments:
- - extension of the GPU-acceleration to other GPU architectures, e.g.~AMD cards,
+ - extension of the GPU-acceleration to other GPU architectures, e.g. AMD cards,
  - suitable shock-capturing techniques for the supersonic and hypersonic flow regime,
  - curvilinear coordinates for more realistic geometries.
 
