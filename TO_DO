@@ -1,0 +1,19 @@
+- Comment/clean up:
+  DONE: auxl, boundary, comm, eos, eos_var, eos_visc, eulerFlux, finitediff, grid, io_std_units, main_comp, math, nvtx, perturbation, rhs, rk3, table, timer
+  TO DO: init, param, main_post, postpro, interpol/main_interpol, interpol/auxlpol
+
+- Actions:
+  DONE: include input flag, grid, and boundary conditions for channel flow
+  DONE: add CFL condition with conduction for timestep limitation
+  DONE: remove filter, mass diffusion, math_const
+  DONE: re-organize cmpbulk (bulk properties calculation)
+  DONE: Makefile with different compilers for CPU and GPU
+  TO DO: 
+    1) merge Ryo's modifications 
+    2) treatment of the pre-processing (init): from Matlab to Jupyter Notebook
+    3) re-organize the initial solution and the input parameters
+    4) implement the look-up tables
+    5) re-organize home
+    6) re-organize post-processing
+    7) ...
+    
