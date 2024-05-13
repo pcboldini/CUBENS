@@ -1,0 +1,28 @@
+cd postproc/files_fft
+
+input_path=$PWD
+input_folder=${input_path#$TMPDIR/}
+
+cp -r . /$HOME/$input_folder
+
+cd ../..
+
+input_path2=$PWD
+input_folder2=${input_path2#$TMPDIR/}
+
+cp out_sim /$HOME/$input_folder2
+cp out_post /$HOME/$input_folder2
+
+cd postproc 
+
+input_path3=$PWD
+input_folder3=${input_path3#$TMPDIR/}
+
+cp initBL_param.mat /$HOME/$input_folder3
+cp params_variation.txt /$HOME/$input_folder3
+
+cp -r wall_prop /$HOME/$input_folder3
+
+echo "done!"
+#echo $input_path3
+#echo $input_folder3
