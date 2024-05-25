@@ -6,11 +6,11 @@ from writexmf import writexmf
 current_path=os.getcwd()
 dst_path=os.path.join(current_path,"visualize/xplanes")
 
-time_start=11
-time_end=11
+time_start=0
+time_end=0
 time_step=1
-index_x=25
-interpol=1 # 1 for interpol planes
+index_x=1
+interpol=0 # 1 for interpol planes
 
 var=["r","u","v","w","e"] #,"vortx","vorty","vortz"
 

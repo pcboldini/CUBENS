@@ -43,8 +43,9 @@ contains
          x=real(x3)
       endif
    end subroutine
-! spline function for mesh cubic interpolation: calcuation of the second derivative
+! spline function for mesh cubic interpolation: calculation of the second derivative
    subroutine spline(x, y, n, y2)
+      !$acc routine seq
       use decomp_2d
       implicit none
       integer   i, k, n, nmax
@@ -73,6 +74,7 @@ contains
    end subroutine
 ! spline function for mesh cubic interpolation: actual interpolation with given mesh second derivatives
 subroutine splint(xa,ya,y2a,n,x,y)
+   !$acc routine seq
    use decomp_2d
    implicit none
    integer n,k,khi,klo

@@ -6,70 +6,34 @@
 ! -
 module mod_halo
   use MPI
-  use mod_param, only:nHalo
+  use mod_param, only:nHalo,BC_inl_rescale
   use decomp_2d 
   use mod_timer
   implicit none
   type rk
     integer :: myid,kp,km,jp,jm
     logical :: inlet,outlet
+    integer :: kp_rcy,km_rcy
+    logical :: recycle
   end type rk
   type(rk) :: neigh
+  integer :: krcy
   character(len=30) :: char_buff_j
   ! definition of the transfer data arrays depending on the architecture
 #if defined(_OPENACC) && !defined(_GPU_DIRECT)
   real(mytype), allocatable, dimension(:,:,:,:) :: buff_send9_j, buff_send9_k, buff_recv9_j, buff_recv9_k
   real(mytype), allocatable, dimension(:,:,:) :: buff_send1_j, buff_send1_k, buff_recv1_j, buff_recv1_k
+  real(mytype), allocatable, dimension(:,:,:,:) :: send_rcy, recv_rcy
 #elif defined(_OPENACC)
   real(mytype), allocatable, dimension(:,:,:,:) :: buff_send9_j, buff_send9_k, buff_recv9_j, buff_recv9_k
   real(mytype), allocatable, dimension(:,:,:) :: buff_send1_j, buff_send1_k, buff_recv1_j, buff_recv1_k
+  real(mytype), allocatable, dimension(:,:,:,:) :: send_rcy, recv_rcy
 #elif !defined(_OPENACC)
   real(mytype), allocatable, dimension(:,:,:) :: senjP,rcvjP,senjM,rcvjM
   real(mytype), allocatable, dimension(:,:,:) :: senkP,rcvkP,senkM,rcvkM
+  real(mytype), allocatable, dimension(:,:,:,:) :: send_rcy, recv_rcy
 #endif
 contains
-! initialization of the MPI rank routine
-  subroutine splitcomm(myid,p_row,p_col)
-    implicit none
-    integer               :: p_row,p_col
-    integer               :: rank_kp,rank_km,rank_jp,rank_jm,comm_cart,ierr,myid
-    integer, dimension(2) :: dimens,coordr,coordn,coords,coordt,coordb
-    logical, dimension(2) :: period
-    ! p_row: number of computational partition units in spanwise y-direction
-    ! p_col: number of computational partition units in streamise z-direction
-    dimens(1) = p_row
-    dimens(2) = p_col
-    neigh%inlet  = .false.
-    neigh%outlet = .false.
-    ! new communicator for cartesian topology
-    call mpi_cart_create(MPI_COMM_WORLD,2,dimens,period,.false.,comm_cart,ierr)
-    call mpi_cart_coords(comm_cart,myid,2,coordr,ierr)
-    coordn(1)=coordr(1)
-    coords(1)=coordr(1)
-    coordt(2)=coordr(2)
-    coordb(2)=coordr(2)
-    coordn(2)=coordr(2)+1
-    if (coordn(2).gt.p_col-1) then
-      coordn(2) = 0
-      neigh%outlet = .true.
-    endif
-    coords(2)=coordr(2)-1
-    if (coords(2).lt.0) then
-      coords(2) = p_col-1
-      neigh%inlet = .true.
-    endif
-    coordt(1)=coordr(1)+1
-    if (coordt(1).gt.p_row-1) coordt(1) = 0
-    coordb(1)=coordr(1)-1
-    if (coordb(1).lt.0) coordb(1) = p_row-1
-    neigh%myid = myid
-    ! determine process ranks in the two MPI directions (y and z)
-    call mpi_cart_rank(comm_cart, coordn, neigh%kp, ierr)
-    call mpi_cart_rank(comm_cart, coords, neigh%km, ierr)
-    call mpi_cart_rank(comm_cart, coordt, neigh%jp, ierr)
-    call mpi_cart_rank(comm_cart, coordb, neigh%jm, ierr)
-    call mpi_barrier(MPI_COMM_WORLD, ierr) 
-  end subroutine splitcomm
 ! initialization of the MPI routine
   subroutine comm_init(myid,p_row,p_col,comm_cart,xs,imax,jmax,kmax)
     implicit none
@@ -187,6 +151,73 @@ contains
   !$acc enter data create(buff_send9_j,buff_send9_k,buff_recv9_j,buff_recv9_k) 
   !$acc enter data create(buff_send1_j,buff_send1_k,buff_recv1_j,buff_recv1_k)
   end subroutine
+! initialization of the rescale MPI routine
+  subroutine comm_init_rescale(z,xs)
+  use decomp_2d
+  use mod_param
+  implicit none
+  integer               :: i,k,ierr,rcy_col
+  integer, dimension(2) :: coordr,coord_rcy,coord_inl
+  integer, dimension(3) :: xs
+  real(mytype), dimension(:) :: z
+  ! sending data buffer 1-dimensional
+  allocate(send_rcy(xs(1),xs(2),5,nHalo+1))
+  ! receiving data buffer 1-dimensional
+  allocate(recv_rcy(xs(1),xs(2),5,nHalo+1))
+  ! checking whether the recycle length is appropriate
+  if (pert_calc==1) then
+    write(stdout,* ) 'ERROR: Please turn off perturbations when you use rescale-reintroduction'
+    call decomp_2d_finalize
+    call mpi_finalize(ierr) 
+    stop
+  endif
+  if (spInlLen .gt. 0.0_mytype) then
+    write(stdout,* ) 'ERROR: Please turn off sponge at inlet when you use rescale-reintroduction'
+    call decomp_2d_finalize
+    call mpi_finalize(ierr) 
+    stop
+  endif
+  if ((z_recycle .lt. spInlLen) .or. (z_recycle .gt. len_z-spOutLen))then
+    write(stdout,* ) 'ERROR: Rescycle location is inside the sponge'
+    call decomp_2d_finalize
+    call mpi_finalize(ierr) 
+    stop
+  endif
+  ! Detect rank and k-index of the recycle postion
+  neigh%recycle = .false.
+  rcy_col = 0
+  krcy  = 0
+  if ((z(1) .le. z_recycle) .and. (z(xs(3)) .ge. z_recycle))then
+    neigh%recycle = .true.
+    call mpi_cart_coords(DECOMP_2D_COMM_CART_X,nrank,2,coordr,ierr)
+    rcy_col = coordr(2)
+    do k=1,xs(3)
+      if (z(k) .gt. z_recycle) then
+        krcy = k
+        exit
+      endif
+    enddo
+  endif
+  call mpi_allreduce(MPI_IN_PLACE, rcy_col, 1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr);   rcy_col = rcy_col/p_row
+  call mpi_allreduce(MPI_IN_PLACE, krcy   , 1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr);   krcy    = krcy   /p_row
+  ! Set MPI communications
+  if ((neigh%inlet) .or. (neigh%recycle)) then
+    call mpi_cart_coords(DECOMP_2D_COMM_CART_X,nrank,2,coordr,ierr)
+    coord_rcy(1)=coordr(1)
+    coord_inl(1)=coordr(1)
+    coord_rcy(2)=coordr(2)+rcy_col
+    if (coord_rcy(2).gt.rcy_col) then
+      coord_rcy(2) = 0
+    endif
+    coord_inl(2)=coordr(2)-rcy_col
+    if (coord_inl(2).lt.0) then
+      coord_inl(2) = rcy_col
+    endif
+    call mpi_cart_rank(DECOMP_2D_COMM_CART_X, coord_rcy, neigh%kp_rcy, ierr)
+    call mpi_cart_rank(DECOMP_2D_COMM_CART_X, coord_inl, neigh%km_rcy, ierr)
+  endif 
+  !$acc enter data create(send_rcy,recv_rcy) 
+end subroutine
 ! update halo cells in j-and k-direction only for GPU architecture   
 #if defined(_OPENACC)
   ! 9-dimensional buffer
@@ -656,6 +687,56 @@ contains
       enddo
     endif 
   end subroutine
+! update inlet location with recycling position
+  subroutine haloUpdate_rescale(xs,tmp1,tmp2,tmp3,tmp4,tmp5)
+    use mod_param
+    implicit none
+    integer :: ierr,istat(mpi_status_size),i,j,h
+    integer, dimension(3) :: xs
+    real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:) :: tmp1,tmp2,tmp3,tmp4,tmp5
+    ! sending variables from recycle location to inlet
+    !$acc parallel loop collapse(3) default(present)
+    do j=1,xs(2)
+      do h=1,nHalo+1
+        do i=1,xs(1)
+          send_rcy(i,j,1,h) = tmp1(i,j,krcy+1-h)
+          send_rcy(i,j,2,h) = tmp2(i,j,krcy+1-h)
+          send_rcy(i,j,3,h) = tmp3(i,j,krcy+1-h)
+          send_rcy(i,j,4,h) = tmp4(i,j,krcy+1-h)
+          send_rcy(i,j,5,h) = tmp5(i,j,krcy+1-h)
+        enddo
+      enddo
+    enddo
+! MPI call
+#if defined(_GPU_DIRECT)
+  !$acc host_data use_device(send_rcy,recv_rcy)  
+#elif !defined(_GPU_DIRECT)
+  !$acc update host(send_rcy)
+#endif
+    call mpi_sendrecv(send_rcy,xs(1)*xs(2)*5*(nHalo+1),real_type,neigh%km_rcy,0, &
+                      recv_rcy,xs(1)*xs(2)*5*(nHalo+1),real_type,neigh%kp_rcy,0, &
+                      MPI_COMM_WORLD,istat,ierr)
+#if defined(_GPU_DIRECT)
+  !$acc end host_data  
+#elif !defined(_GPU_DIRECT)
+  !$acc update device(recv_rcy) 
+#endif
+    ! updating halo and inlet
+    if((neigh%inlet)) then
+      !$acc parallel loop collapse(3) default(present)
+      do j=1,xs(2)
+        do h=1,nHalo+1
+          do i=1,xs(1)
+            tmp1(i,j,2-h) = recv_rcy(i,j,1,h)
+            tmp2(i,j,2-h) = recv_rcy(i,j,2,h)
+            tmp3(i,j,2-h) = recv_rcy(i,j,3,h)
+            tmp4(i,j,2-h) = recv_rcy(i,j,4,h)
+            tmp5(i,j,2-h) = recv_rcy(i,j,5,h)
+          enddo 
+        enddo
+      enddo
+    endif
+  end subroutine
 ! update halo cells only for CPU architecture   
 #else
   subroutine haloUpdateMult_CPU(dir,xs,tmp1,tmp2,tmp3,tmp4,tmp5,tmp6,tmp7,tmp8,tmp9)
@@ -731,6 +812,35 @@ contains
       array(1:xs(1),1:xs(2),1-h)     = rcvkM(1:xs(1),1:xs(2),h)
       array(1:xs(1),1:xs(2),xs(3)+h) = rcvkP(1:xs(1),1:xs(2),h)
     enddo
+  end subroutine
+! update inlet location with recycling position
+  subroutine haloUpdate_rescale(xs,tmp1,tmp2,tmp3,tmp4,tmp5)
+    use mod_param
+    implicit none
+    integer :: ierr,istat(mpi_status_size),h
+    integer, dimension(3) :: xs
+    real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:) :: tmp1,tmp2,tmp3,tmp4,tmp5
+    ! sending variables from recycle location to inlet
+    do h=1,nHalo+1
+       send_rcy(1:xs(1),1:xs(2),1,h) = tmp1(1:xs(1),1:xs(2),krcy+1-h)
+       send_rcy(1:xs(1),1:xs(2),2,h) = tmp2(1:xs(1),1:xs(2),krcy+1-h)
+       send_rcy(1:xs(1),1:xs(2),3,h) = tmp3(1:xs(1),1:xs(2),krcy+1-h)
+       send_rcy(1:xs(1),1:xs(2),4,h) = tmp4(1:xs(1),1:xs(2),krcy+1-h)
+       send_rcy(1:xs(1),1:xs(2),5,h) = tmp5(1:xs(1),1:xs(2),krcy+1-h)
+    enddo
+    call mpi_sendrecv(send_rcy,xs(1)*xs(2)*5*(nHalo+1),real_type,neigh%km_rcy,0, &
+                      recv_rcy,xs(1)*xs(2)*5*(nHalo+1),real_type,neigh%kp_rcy,0, &
+                      MPI_COMM_WORLD,istat,ierr)
+    ! updating halo and inlet
+    if((neigh%inlet)) then
+       do h=1,nHalo+1
+          tmp1(1:xs(1),1:xs(2),2-h) = recv_rcy(1:xs(1),1:xs(2),1,h)
+          tmp2(1:xs(1),1:xs(2),2-h) = recv_rcy(1:xs(1),1:xs(2),2,h)
+          tmp3(1:xs(1),1:xs(2),2-h) = recv_rcy(1:xs(1),1:xs(2),3,h)
+          tmp4(1:xs(1),1:xs(2),2-h) = recv_rcy(1:xs(1),1:xs(2),4,h)
+          tmp5(1:xs(1),1:xs(2),2-h) = recv_rcy(1:xs(1),1:xs(2),5,h)
+       enddo
+    endif
   end subroutine
 #endif
 end module

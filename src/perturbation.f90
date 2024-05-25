@@ -56,7 +56,7 @@ contains
       amp2=pert_ampl(2)
       ! if the perturbation is placed inside the sponge, then stop the simulation
       if (pert_Restart_new .lt. spInLen_Reend) then
-        if (nrank == 0) write(*,*) "suction/blowing is inside the inlet sponge! RESET!"
+        if (nrank == 0) write(stdout,*) "suction/blowing is inside the inlet sponge! RESET!"
           call decomp_2d_finalize
           call mpi_finalize(ierr) 
           stop 
@@ -153,45 +153,41 @@ subroutine print_pertBC()
   use mod_finitediff
   implicit none
   if (nrank == 0) then
-    write(stdout,* ) 
     write(stdout,* ) 'Perturbation: blowing/suction'
-    write(stdout,* ) '-----------------------------------'
-    write(stdout,* ) 'pert_calc =                                           ', pert_calc
+    write(stdout,'(A)') 'o--------------------------------------------------o'
+    write(stdout,'(A, I10)') 'pert_calc:                            ', pert_calc
     if (pert_calc == 0) then
-      write(stdout,* ) 'blowing/suction off!                                '
+      write(stdout,'(A)') 'blowing/suction off!                                '
     elseif (pert_calc == 1) then
-      write(stdout,* ) 'pert is outside sponge, go ahead!                 '
-      write(stdout,* ) 'new pert_ReMid =                                   ',pert_Remid_new
-      write(stdout,* ) 'new pert_zMid =                                    ',pert_zMid_new
-      write(stdout,* ) 'new pert_zLen =                                    ',pert_zLen_new
-      write(stdout,* ) 'new pert_ReStart =                                 ',pert_Restart_new
-      write(stdout,* ) 'new pert_ReEnd =                                   ',pert_Reend_new
+      write(stdout,'(A)') 'pert is outside sponge, go ahead!                 '
+      write(stdout,'(A, F10.4)') 'new pert_ReMid:                       ',pert_Remid_new
+      write(stdout,'(A, F10.4)') 'new pert_zMid =                       ',pert_zMid_new
+      write(stdout,'(A, F10.4)') 'new pert_zLen =                       ',pert_zLen_new
+      write(stdout,'(A, F10.4)') 'new pert_ReStart =                    ',pert_Restart_new
+      write(stdout,'(A, F10.4)') 'new pert_ReEnd =                      ',pert_Reend_new
       write(stdout,* ) 
       if (amp2 == 0.0_mytype) then
         write(stdout,* ) 'Only 2D waves!'
-        write(stdout,* ) '2D dimensionless frequency (x 10^6) =              ',freq1*1e6_mytype
-        write(stdout,"(A51,F10.4)") '2D angular frequency =                            ',omega1
-        write(stdout,* ) '2D wave amplitude =                                ',amp1
-        write(stdout,* ) 
+        write(stdout,'(A, F10.4)') '2D dimensionless frequency (x 10^6):  ',freq1*1e6_mytype
+        write(stdout,'(A, F10.4)') '2D angular frequency:                 ',omega1
+        write(stdout,'(A, F10.4)') '2D wave amplitude:                    ',amp1
       else
         write(stdout,* ) '2D + oblique waves!'
-        write(stdout,* ) '2D dimensionless frequency (x 10^6) =              ',freq1*1e6_mytype
-        write(stdout,* ) '2D angular frequency =                              ',omega1
-        write(stdout,* ) '2D wave amplitude =                                ',amp1
-        write(stdout,* ) 
-        write(stdout,* ) '3D dimensionless frequency (x 10^6) =              ',freq2*1e6_mytype
-        write(stdout,* ) '3D angular frequency =                              ',omega2
-        write(stdout,* ) '3D wave amplitude =                                ',amp2
-        write(stdout,* )   
-        write(stdout,* ) 'Number of spanwise modes =                            ',n3dmode
-        write(stdout,* ) 'Fundamental spanwise wavenumber =                     ',beta0
+        write(stdout,'(A, F10.4)') '2D dimensionless frequency (x 10^6):  ',freq1*1e6_mytype
+        write(stdout,'(A, F10.4)') '2D angular frequency:                 ',omega1
+        write(stdout,'(A, F10.4)') '2D wave amplitude:                    ',amp1
+        write(stdout,'(A, F10.4)') '3D dimensionless frequency (x 10^6):  ',freq2*1e6_mytype
+        write(stdout,'(A, F10.4)') '3D angular frequency:                 ',omega2
+        write(stdout,'(A, F10.4)') '3D wave amplitude:                    ',amp2
+        write(stdout,'(A, I10)') 'Number of spanwise modes:             ',n3dmode
+        write(stdout,'(A, F10.4)') 'Fundamental spanwise wavenumber:      ',beta0
         if (n3dmode .gt. 1) then
-          write(stdout,* ) 'Spanwise wavenumbers =                               ',pert_beta
+          write(stdout,'(A, F10.4)') 'Spanwise wavenumbers:                 ',pert_beta
         endif
         write(stdout,* ) 
       endif
     endif
-    write(stdout,* ) '-----------------------------------'
+    write(stdout,'(A)') 'o--------------------------------------------------o'
     write(stdout,* ) 
   endif
   end subroutine

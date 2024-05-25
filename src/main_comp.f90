@@ -26,24 +26,31 @@ program DNS
   use mod_math
   !@acc use openacc 
   implicit none
+
 !===============================================================================================!
 !                                       CUBENS main data
 !===============================================================================================!
 ! Non-conservative, time variables                          
   integer :: ierr,k,j,i
-  integer :: istep,istart
+  integer :: istep,istart,countAvg
   real(8) :: wt_start, wt_tmp 
-  real(mytype) :: dt, time, velwb, CFL_new
-  real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka
+  real(mytype) :: dt, time, velwb, CFL_new, factAvg
+  real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
-  real(mytype), allocatable, dimension(:,:,:) :: vortx, vorty, vortz
+#if defined(BL) || defined(TGV)
+  ! for boundary layer and TGV
+  real(mytype), allocatable, dimension(:,:,:) :: qave
+#elif defined(CHA)
+  real(mytype), allocatable, dimension(:,:) :: qave
+#endif
   TYPE (DECOMP_INFO) :: part
   CHARACTER(100) :: commLinePar1
   CHARACTER(100) :: commLinePar2
   character(len=30) :: date
   character*4 :: cha2
 ! CUBENS Version number
-  real(mytype), parameter                    :: version = 1.0                
+  real(mytype), parameter                    :: version = 1.0     
+
 !===============================================================================================!
 !                                       INITIALIZATION
 !===============================================================================================!
@@ -54,12 +61,11 @@ program DNS
 !---------------------------------------!
 ! Reading parameters
   call read_config()
-  select case (CASE)
-    case("BoundaryLayer")
-      call read_initBL_params()
-      ! Writing parameters for user variation 
-      call io_writeParams_variation()
-  end select
+#if defined(BL) || defined(CHA)
+  call read_init_params()
+  ! Writing parameters for user variation 
+  call io_writeParams_variation()
+#endif
 !-----------------------------!
 !         MPI library         !
 !-----------------------------!
@@ -80,11 +86,11 @@ program DNS
   if (nrank == 0) then
     write (stdout, *)
     write (stdout, *) "o--------------------------------------------------o"
-    write (stdout, *) "|         ________  ______  _______   _______      |"
-    write (stdout, *) "|        / ____/ / / / __ )/ ____/ | / / ___/      |"
-    write (stdout, *) "|       / /   / / / / __  / __/ /  |/ /\__ \       |"
-    write (stdout, *) "|      / /___/ /_/ / /_/ / /___/ /|  /___/ /       |"
-    write (stdout, *) "|      \____/\____/_____/_____/_/ |_//____/        |"
+    write (stdout, *) "|         ________  ______  _______   ________     |"
+    write (stdout, *) "|        / ____/ / / / __ )/ ____/ | /  / ___/     |"
+    write (stdout, *) "|       / /   / / / / /_/ / __/ /  |/  //____      |"
+    write (stdout, *) "|      / /___/ /_/ / /_/ / /___/ __   /___/ /      |"
+    write (stdout, *) "|     /_____/_____/_____/_____/_/  |_//____/       |"
     write (stdout, *) "|                                                  |"
     write (stdout, *) "|                                                  |"
     write (stdout, *) "|       CUBic Equation of state Navier-Stokes      |"
@@ -107,16 +113,14 @@ program DNS
 ! initialize EoS 
   if (nrank==0) then
     write(stdout,*) "Initializing EoS"
-    write(stdout,*)
   endif
   call init_EOSModel()
 ! initialize transport properties
   if (nrank==0) then
     write(stdout,*) "Initializing viscosity and conductivity"
-    write(stdout,*)
   endif
   call init_VISCModel()
-! initialize parameters
+! initialize EoS and TP global parameters
   if (nrank==0) then
     write(stdout,*) 'Initializing global variables for EOS and transport properties'
     write(stdout,*)
@@ -161,6 +165,12 @@ program DNS
     write(stdout,*)
   endif
   call init_BC() 
+  ! Set communicator for rescale-reintroduction
+  if (BC_inl_rescale .eqv. .true.) then
+    write(stdout,*) 'Initialize communication for recycling and rescaling'
+    call comm_init_rescale(z,xsize)
+  endif
+
 !===============================================================================================!
 !                                       ALLOCATION
 !===============================================================================================!
@@ -177,112 +187,135 @@ program DNS
   allocate(vortx(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(vorty(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(vortz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(rho_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(u_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(v_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(w_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(ien_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(pre_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(tem_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(mu_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(ka_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  rho = 1.0e30_mytype
-  u   = 1.0e30_mytype
-  v   = 1.0e30_mytype
-  w   = 1.0e30_mytype
-  ien = 1.0e30_mytype
-  pre = 1.0e30_mytype
-  tem = 1.0e30_mytype
-  mu  = 1.0e30_mytype
-  ka  = 1.0e30_mytype
-  vortx = 1.0e30_mytype
-  vorty  = 1.0e30_mytype
-  vortz  = 1.0e30_mytype
+  allocate(strxz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+  ! save 34 statistics
+#if defined(BL) || defined(TGV)
+  ! for boundary layer and TGV
+  allocate(qave(xsize(1), xsize(3), 34))
+#elif defined(CHA)
+  allocate(qave(xsize(1), 34))
+#endif
+  rho      = 1.0e30_mytype
+  u        = 1.0e30_mytype
+  v        = 1.0e30_mytype
+  w        = 1.0e30_mytype
+  ien      = 1.0e30_mytype
+  pre      = 1.0e30_mytype
+  tem      = 1.0e30_mytype
+  mu       = 1.0e30_mytype
+  ka       = 1.0e30_mytype
+  vortx    = 1.0e30_mytype
+  vorty    = 1.0e30_mytype
+  vortz    = 1.0e30_mytype
+  strxz    = 1.0e30_mytype 
+  qave     = 0.0_mytype
+  factAvg  = 0.0_mytype
+  countAvg = 0
 ! copy common arrays to device
-!$acc enter data copyin(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz)
-!$acc enter data copyin(rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl)
+!$acc enter data copyin(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz,qave)
 ! calculate sponge
+#if defined(BL)
   if (perBC(3) .eqv. .false.) then
-    if (nrank==0) write(stdout,*) 'Initializing sponge'
-      call initBlasius1D(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
-  !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz)  
+    allocate(rho_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(u_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(v_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(w_bl    (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(ien_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(pre_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(tem_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(mu_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+    allocate(ka_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
+      call initField_BL(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
+  !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)  
       r_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))
      ru_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))*u(1:xsize(1),1,1:xsize(3))
      rv_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))*v(1:xsize(1),1,1:xsize(3))
      rw_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))*w(1:xsize(1),1,1:xsize(3))
     ret_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))*( ien(1:xsize(1),1,1:xsize(3)) &
            + 0.5*(u(1:xsize(1),1,1:xsize(3))**2 + v(1:xsize(1),1,1:xsize(3))**2 + w(1:xsize(1),1,1:xsize(3))**2) )
+    p_ref(1:xsize(1),1:xsize(3)) = pre(1:xsize(1),1,1:xsize(3))
+#if defined(BL)
+    !$acc enter data copyin(rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl)
+    !$acc enter data copyin(r_ref,ru_ref,rv_ref,rw_ref,ret_ref,p_ref)
+#endif
   endif
-  !$acc enter data copyin(r_ref,ru_ref,rv_ref,rw_ref,ret_ref)
+#endif 
+
 !===============================================================================================!
 !                                       INITIAL CONDITION                                           
 !===============================================================================================!
-  dt     = dtMax
+  dt     = abs(dtMax)
   time   = 0.0_mytype
   istart = 0
   istep  = 0
-  CFL_new = CFL
-  if (nrank == 0) then
-    write(stdout,* )
-    write(stdout,* ) 'Initializing initial solution'
-  endif   
+  CFL_new = CFL 
 ! initialize initial solution or read restart file
   if (readRestartFile.lt.0)  then
-    select case (CASE)
-      case ("init")
-        ! channel
-        call initField(rho,u,v,w,ien)
-      case ("init_1D")
-        ! Taylor-Green Vortex
-        call initField_1D(rho,u,v,w,ien)
-      case("BoundaryLayer")
-        ! Blasius
-        call initBlasius1D(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka) !! obtaining tem and ien
-        rho_bl=rho;u_bl=u;v_bl=v;w_bl=w;ien_bl=ien;pre_bl=pre;tem_bl=tem;mu_bl=mu;ka_bl=ka
-        !$acc update device(rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl)
-      case("TGV")
-        ! Taylor-Green Vortex
-        call initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
-        !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
-    end select
+#if defined(BL)
+  ! Blasius
+  call initField_BL(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
+  rho_bl=rho;u_bl=u;v_bl=v;w_bl=w;ien_bl=ien;pre_bl=pre;tem_bl=tem;mu_bl=mu;ka_bl=ka
+  !$acc update device(rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl)
+#elif defined(CHA) 
+  ! channel
+  call initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
+#elif defined(TGV)
+  ! TGV
+  call initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
+#elif defined(1D) 
+  ! 1D wave
+  call initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
+#endif
 ! save restart at time t=0
-    if (nrank==0) write(stdout,*) 'saving restart'
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istart,time,rho,u,v,w,ien,nHalo,part)
   else
 ! read restart file    
-    if (nrank==0) write(stdout,*) 'reading restart:'
     istart = readRestartFile
     call loadRestart(istart,time,rho,u,v,w,ien,nHalo,part)
     !$acc update device(rho,u,v,w,ien)
   endif
 ! update the other secondary variables
-  if (nrank==0) write(stdout,*) 'updating ht,pre,tem,mu,ka'
+  if (nrank==0) write(stdout,*) 'updating initial pre,tem,mu,ka'
   call calcState_RE(rho,ien,pre,tem,mu,ka,1,xsize(1),1,xsize(2),1,xsize(3)) 
   call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   if (nrank==0) write(stdout,*)
+  if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .true.)) then
+    ! rescaling inlet boundary
+      call setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
+  endif
   call print_pertBC()
 ! calculate vorticity
-  call calcVort(vortx,vorty,vortz,u,v,w) 
-  !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz)
-! write planes  
-  if (yi_plane.gt.0)  then
-    call output2dPlane(part,nHalo,istart,2,yi_plane,rho,'ypl.','r.', u,'ypl.','u.', v,'ypl.','v.', w,'ypl.','w.', &
-                        pre,'ypl.','p.', tem,'ypl.','t.', ien,'ypl.','e.', mu,'ypl.','mu.', &
-                        ka,'ypl.','ka.',vortx,'ypl.','vortx.',vorty,'ypl.','vorty.',vortz,'ypl.','vortz.')
+  call calcVort(vortx,vorty,vortz,strxz,u,v,w)
+! write multiple planes  
+  !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)
+  if (yi_plane(1).gt.0)  then
+    do i=1,size(yi_plane)
+      call output2dPlane(part,nHalo,istart,2,yi_plane(i),rho,'ypl.','r.', u,'ypl.','u.', v,'ypl.','v.', w,'ypl.','w.', &
+                         pre,'ypl.','p.', tem,'ypl.','t.', ien,'ypl.','e.', mu,'ypl.','mu.', &
+                         ka,'ypl.','ka.',vortx,'ypl.','vortx.',vorty,'ypl.','vorty.',vortz,'ypl.','vortz.')
+      enddo
+  endif
+  if (xi_plane(1).gt.0)  then  
+    do i=1,size(xi_plane)
+      if (xi_plane(i) .eq. 1) then !planes at lower wall
+        call output2dPlane(part,nHalo,istart,1,xi_plane(i),rho,'xpl.','r.', tem,'xpl.','t.', mu,'xpl.','mu.', &
+                                                                                             strxz,'xpl.','strxz.')
+      else
+        call output2dPlane(part,nHalo,istart,1,xi_plane(i),rho,'xpl.','r.', u,'xpl.','u.', v,'xpl.','v.', w,'xpl.','w.', &
+                           pre,'xpl.','p.', tem,'xpl.','t.', ien,'xpl.','e.', mu,'xpl.','mu.', &
+                           ka,'xpl.','ka.',vortx,'xpl.','vortx.',vorty,'xpl.','vorty.',vortz,'xpl.','vortz.')
+      endif
+    enddo
+  endif
+  if (zi_plane(1).gt.0)  then 
+    do i=1,size(zi_plane) 
+      call output2dPlane(part,nHalo,istart,3,zi_plane(i),rho,'zpl.','r.', u,'zpl.','u.', v,'zpl.','v.', w,'zpl.','w.', &
+                         pre,'zpl.','p.', tem,'zpl.','t.', ien,'zpl.','e.', mu,'zpl.','mu.', &
+                         ka,'zpl.','ka.',vortx,'zpl.','vortx.',vorty,'zpl.','vorty.',vortz,'zpl.','vortz.')
+      enddo
   endif
 
-  if (xi_plane.gt.0)  then  
-    call output2dPlane(part,nHalo,istart,1,xi_plane,rho,'xpl.','r.', u,'xpl.','u.', v,'xpl.','v.', w,'xpl.','w.', &
-                        pre,'xpl.','p.', tem,'xpl.','t.', ien,'xpl.','e.', mu,'xpl.','mu.', &
-                        ka,'xpl.','ka.',vortx,'xpl.','vortx.',vorty,'xpl.','vorty.',vortz,'xpl.','vortz.')
-  endif
-
-  if (zi_plane.gt.0)  then  
-    call output2dPlane(part,nHalo,istart,3,zi_plane,rho,'zpl.','r.', u,'zpl.','u.', v,'zpl.','v.', w,'zpl.','w.', &
-                        pre,'zpl.','p.', tem,'zpl.','t.', ien,'zpl.','e.', mu,'zpl.','mu.', &
-                        ka,'zpl.','ka.',vortx,'zpl.','vortx.',vorty,'zpl.','vorty.',vortz,'zpl.','vortz.')
-  endif
 !===============================================================================================!
 !                                          TIME ITERATION
 !===============================================================================================!
@@ -290,17 +323,20 @@ program DNS
   wt_start = MPI_WTIME()
   wt_tmp = MPI_WTIME()
   ! calculate bulk properties for real time monitoring
-  if (nrank==0) write(stdout,*) 'calculating bulk'
-  call cmpbulk(istart,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb)
+  call cmpbulk(istart,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
   ! calculate timestep
   if (CFL.gt.0) call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
   ! loop over timesteps
   do istep=istart+1, istart+nsteps
     wt_tmp = MPI_WTIME()
-    ! ???????
+    ! for channel flow: pressure gradient correction for unity bulk velocity
     if (dpdz /= 0.0) then 
       call cmpbulkvel(rho,w,velwb)
       dpdz = 0.999*dpdz - 0.5*(velwb - 1.0)
+    endif
+    if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .true.)) then
+    ! rescaling inlet boundary
+      call setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
     endif
     ! recalculate timestep if condition is met
     if ((CFL.gt.0).and.(mod(istep, intvCalcCFL).eq.0))  call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
@@ -310,42 +346,69 @@ program DNS
     time = time + dt
     ! calculate bulk properties for real time monitoring
     if (mod((istep-istart),intvPrint).eq.0) then 
-      call calcVort(vortx,vorty,vortz,u,v,w) 
-      call cmpbulk(istep,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb)
+      call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
+      call cmpbulk(istep,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
     endif
     ! I/O planes if condition is met 
     if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter)) then 
       ! set boundary conditions
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
-      call calcVort(vortx,vorty,vortz,u,v,w) 
-      !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz)
-      ! write y-plane
-      if (yi_plane.gt.0)  then
-        call output2dPlane(part,nHalo,istep,2,yi_plane,rho,'ypl.','r.', u,'ypl.','u.', v,'ypl.','v.', w,'ypl.','w.', &
-                                    pre,'ypl.','p.', tem,'ypl.','t.', ien,'ypl.','e.', mu,'ypl.','mu.', &
-                                    ka,'ypl.','ka.', vortx,'ypl.','vortx.',vorty,'ypl.','vorty.',vortz,'ypl.','vortz.')
+      call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
+      !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)
+      ! write y-planes
+      if (yi_plane(1).gt.0)  then
+        do i=1,size(yi_plane)
+          call output2dPlane(part,nHalo,istep,2,yi_plane(i),rho,'ypl.','r.', u,'ypl.','u.', v,'ypl.','v.', w,'ypl.','w.', &
+                             pre,'ypl.','p.', tem,'ypl.','t.', ien,'ypl.','e.', mu,'ypl.','mu.', &
+                             ka,'ypl.','ka.', vortx,'ypl.','vortx.',vorty,'ypl.','vorty.',vortz,'ypl.','vortz.')
+        enddo
       endif
-      ! write x-plane
-      if (xi_plane.gt.0)  then
-        call output2dPlane(part,nHalo,istep,1,xi_plane,rho,'xpl.','r.', u,'xpl.','u.', v,'xpl.','v.', w,'xpl.','w.', &
-                                    pre,'xpl.','p.', tem,'xpl.','t.', ien,'xpl.','e.', mu,'xpl.','mu.', &
-                                    ka,'xpl.','ka.', vortx,'xpl.','vortx.',vorty,'xpl.','vorty.',vortz,'xpl.','vortz.')
+      ! write x-planes
+      if (xi_plane(1).gt.0)  then
+        do i=1,size(xi_plane)
+          if (xi_plane(i) .eq. 1) then !planes at lower wall
+            call output2dPlane(part,nHalo,istep,1,xi_plane(i),rho,'xpl.','r.', tem,'xpl.','t.', mu,'xpl.','mu.', &
+                                                                                                strxz,'xpl.','strxz.')
+          else
+            call output2dPlane(part,nHalo,istep,1,xi_plane(i),rho,'xpl.','r.', u,'xpl.','u.', v,'xpl.','v.', w,'xpl.','w.', &
+                              pre,'xpl.','p.', tem,'xpl.','t.', ien,'xpl.','e.', mu,'xpl.','mu.', &
+                              ka,'xpl.','ka.', vortx,'xpl.','vortx.',vorty,'xpl.','vorty.',vortz,'xpl.','vortz.')
+          endif
+        enddo
       endif
-      ! write z-plane
-      if (zi_plane.gt.0)  then
-        call output2dPlane(part,nHalo,istep,3,zi_plane,rho,'zpl.','r.', u,'zpl.','u.', v,'zpl.','v.', w,'zpl.','w.', &
-                                    pre,'zpl.','p.', tem,'zpl.','t.', ien,'zpl.','e.', mu,'zpl.','mu.', &
-                                    ka,'zpl.','ka.', vortx,'zpl.','vortx.',vorty,'zpl.','vorty.',vortz,'zpl.','vortz.')
+      ! write z-planes
+      if (zi_plane(1).gt.0)  then
+        do i=1,size(zi_plane)
+          call output2dPlane(part,nHalo,istep,3,zi_plane(i),rho,'zpl.','r.', u,'zpl.','u.', v,'zpl.','v.', w,'zpl.','w.', &
+                             pre,'zpl.','p.', tem,'zpl.','t.', ien,'zpl.','e.', mu,'zpl.','mu.', &
+                             ka,'zpl.','ka.', vortx,'zpl.','vortx.',vorty,'zpl.','vorty.',vortz,'zpl.','vortz.')
+        enddo
       endif
     endif
     ! I/O restart files if condition is met 
-    if ((mod((istep-istart),intvSaveRestart).eq.0).and.(istep.ge.saveRestartAfter)) then
+    if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
     endif
+    ! I/O statistics files if condition is met 
+    if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .gt. 0)) then
+      if (istep .eq. saveStatsAfter) then
+        write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
+      else if ((istep .ge. saveStatsAfter) .and. (istep .ne. nsteps)) then
+        write(stdout,'(A, I10)') 'next averaging at step:               ', istep
+      else if ((istep .ge. saveStatsAfter) .and. (istep .eq. nsteps)) then
+        write(stdout,'(A, I10)') 'final averaging at step:              ', istep
+      endif
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
+      if (istep .eq. nsteps) then
+        !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
+        call saveStats(part,istep,dt,qave,factAvg,countAvg)
+      endif
+    endif
     ! I/O file for real-time parameter modifications
-    if ((mod(istep,intvReadParam).eq.0) .and. (intvReadParam.gt.0)) call io_readParams_variation()
+    if ((mod(istep,intvReadParam) .eq. 0) .and. (intvReadParam .gt. 0)) call io_readParams_variation()
     ! simulation can be stopped with *abortSimulation*
     if (abortSimulation .eqv. .true.) then 
       !$acc update host(rho,u,v,w,ien)
@@ -357,11 +420,12 @@ program DNS
   enddo
   if (nrank==0) then
     write(*,*)
-    write (stdout, *) "o----------------------------------------------------------------------------------o"
+    write (stdout, *) "o--------------------------------------------------o"
     write(*,*) 'SIMULATE done!'
   endif
-  ! Print total time 
+  ! print total time 
   if (nrank == 0) print '("Total time = ",f10.3," minutes.")', (MPI_WTIME() - wt_start)/60.0
+
 !===============================================================================================!
 !                                       DEALLOCATION
 !===============================================================================================!
@@ -377,16 +441,20 @@ program DNS
   deallocate(vortx)
   deallocate(vorty)
   deallocate(vortz)
-  deallocate(rho_bl)
-  deallocate(u_bl)
-  deallocate(v_bl)
-  deallocate(w_bl)
-  deallocate(ien_bl)
-  deallocate(pre_bl)
-  deallocate(tem_bl)
-  deallocate(mu_bl)
-  deallocate(ka_bl)
-! stop the mpi 
+  deallocate(strxz)
+  deallocate(qave)
+  if (perBC(3) .eqv. .false.) then
+    deallocate(rho_bl)
+    deallocate(u_bl)
+    deallocate(v_bl)
+    deallocate(w_bl)
+    deallocate(ien_bl)
+    deallocate(pre_bl)
+    deallocate(tem_bl)
+    deallocate(mu_bl)
+    deallocate(ka_bl)
+  endif
+  ! stop the mpi 
   call decomp_2d_finalize
   call mpi_finalize(ierr)
 end program

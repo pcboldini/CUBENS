@@ -14,6 +14,9 @@ module mod_boundary
   real(mytype), allocatable, dimension(:,:) :: dudt_pert
   real(mytype), allocatable, dimension(:,:) :: w_LST_real, u_LST_real, tem_LST_real
   real(mytype), allocatable, dimension(:,:) :: w_LST_imag, u_LST_imag, tem_LST_imag
+  real(mytype), allocatable, dimension(:) :: au_rcy,av_rcy,aw_rcy,ap_rcy,at_rcy
+  real(mytype), allocatable, dimension(:) :: x_rcy_inner,x_rcy_outer,weight_func 
+  real(mytype) :: beta_rescale,delta_rcy,A_FF
   integer :: nLST
 contains
   ! initialization boundary condition module
@@ -42,52 +45,60 @@ contains
       ! initialization of the eigenfunctions
       call initLST(nLST,w_LST_real,u_LST_real,tem_LST_real,w_LST_imag,u_LST_imag,tem_LST_imag)
     endif
+    ! recycling and rescaling
+    if (BC_inl_rescale .eqv. .true.)then
+      call init_rescale()
+    endif
+    if (perBC(1) .eqv. .true.) then
+      BC_top = 'periodic'
+      BC_bot = 'periodic'
+    endif
+    if (perBC(3) .eqv. .true.) then
+      BC_inl = 'periodic'
+      BC_out = 'periodic'
+    endif
+    if (perBC(2) .eqv. .true.) then
+      BC_span = 'periodic'
+    endif
+
     ! print the boundary conditions
     if (nrank == 0) then
-      write(stdout,* ) 
       write(stdout,* ) 'Boundary conditions'
-      write(stdout,* ) '-------------------------'
-    select case (CASE)
-      case("BoundaryLayer","Channel")
-        if (BC_bot(1:5)==wall_bc) then
-          write(stdout,* ) 'Correct BC_bot in initBL and config.h'    
-        else
-          write(stdout,* ) 'Mismatch BC_bot between initBL and config.h, check both again!'
-          call decomp_2d_finalize
-          call mpi_finalize(ierr) 
-          stop
-        endif
-    end select
-    write(stdout,* ) 'Top boundary                                         ',BC_top
-    write(stdout,* ) 'Bottom boundary                                      ',BC_bot
-    if (CASE == "BoundaryLayer") then
-      write(stdout,* ) 'T_wall (T/T_inf)                                     ',Twall_bottom
-    else if (CASE == "Channel") then
-      write(stdout,* ) 'top T_wall (T/T_inf)                                     ',Twall_top
-      write(stdout,* ) 'bottom T_wall (T/T_inf)                                  ',Twall_bottom
-    endif
-    write(stdout,* ) 'Inlet boundary                                       ',BC_inl
-    if (BC_inl == "inlet_lst") then
-      write(stdout,* ) '      perturbation wave at the inlet!                                '
-      write(stdout,* ) 
-      write(stdout,* ) '      streamwise wavenumber                             ',alphaLST
-      write(stdout,* ) '      frequency                                         ',omega1
-      write(stdout,* ) '      normalised amplitude                              ',epsilonLST*Ma
-      write(stdout,* )
-    endif
-      write(stdout,* ) 'Outlet boundary                                      ',BC_out
-      write(stdout,* ) '-------------------------'
-      write(stdout,* ) 'Boundary calculation                                 completed!'
-      write(stdout,* ) 
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+      write(stdout,'(A, F10.4)') 'Boundary conditions                        done!'
+#if defined(BL) 
+      if (BC_bot(1:5)==wall_bc) then
+        write(stdout,* ) 'Correct BC_bot in initBL and config.h'    
+      else
+        write(stdout,* ) 'Mismatch BC_bot between initBL and config.h, check both again!'
+        call decomp_2d_finalize
+        call mpi_finalize(ierr) 
+        stop
+      endif
+#endif
+    write(stdout,'(A, A10)') 'Top boundary:                         ',BC_top
+    write(stdout,'(A, A10)') 'Bottom boundary:                      ',BC_bot
+#if defined(BL)
+      write(stdout,'(A, F10.4)') 'T_wall (T/T_inf):                     ',Twall_bot
+#elif defined(CHA)
+      write(stdout,'(A, F10.4)') 'Top T_wall (T/T_inf):                 ',Twall_top
+      write(stdout,'(A, F10.4)') 'Bottom T_wall (T/T_inf):              ',Twall_bot
+#endif
+    write(stdout,'(A, A10)') 'Inlet boundary:                       ',BC_inl
+    write(stdout,'(A, A11)') 'Outlet boundary:                      ',BC_out
+    write(stdout,'(A, A10)') 'Spanwise boundary:                      ',BC_span
+    write(stdout,'(A)') 'o--------------------------------------------------o'
+    write(stdout,* )
     endif
     if ((p_row == 1) .and. (nrank == i)) then
       if ((neigh%inlet)) then 
-         write(stdout,* ) 'Inlet boundary, proc=                                       ',nrank
+         write(stdout,'(A, I10)') 'Inlet boundary, proc=                ',nrank
       endif
     endif
     if ((p_row == 1) .and. (nrank==p_col-1)) then
       if ((neigh%outlet))  then 
-         write(stdout,* ) 'Outlet boundary, proc=                                      ',nrank
+         write(stdout,'(A, I10)')'Outlet boundary, proc=                ',nrank
+         write(stdout,* )
       endif
     endif
   end subroutine
@@ -168,7 +179,63 @@ contains
   deallocate(wIntp_real,uIntp_real,tIntp_real)
   deallocate(wIntp_imag,uIntp_imag,tIntp_imag)
 end subroutine
-! set all boundary conditions
+! initialization of the rescale for turbulent boundary layer
+subroutine init_rescale()
+  use decomp_2d
+  use mod_param
+  use mod_grid
+  use mod_halo
+  implicit none
+  real(mytype) :: xdelta_inl
+  integer :: i,ierr
+  real(mytype), parameter :: prt   = 0.89_mytype
+  allocate(au_rcy(1:xsize(1)),av_rcy(1:xsize(1)),aw_rcy(1:xsize(1)),ap_rcy(1:xsize(1)),at_rcy(1:xsize(1)))
+  allocate(x_rcy_inner(1:xsize(1)),x_rcy_outer(1:xsize(1)),weight_func(1:xsize(1)))
+  ! reading mean profiles from files
+  open(11,file = 'rescale/mean_values.txt',form='formatted',status="old",action="read")
+  read(11,*)
+  do i=1,xsize(1)
+    read(11,*) au_rcy(i),av_rcy(i),aw_rcy(i),ap_rcy(i),at_rcy(i)
+  enddo
+  close(11)
+  ! obtaining rescaling parameter 'beta'
+  do i=1,xsize(1)
+    ! 99% free-stream velocity
+    if (aw_rcy(i) .gt. 0.99_mytype) then 
+      delta_rcy = x(i)
+      exit
+    endif
+  enddo
+  if (delta_rcy .le. delta_inl) then
+    write(stdout,* ) 'ERROR: delta_inl is too large. please set the smaller value than:', delta_rcy
+    call decomp_2d_finalize
+    call mpi_finalize(ierr)
+    stop
+  endif
+  beta_rescale = (delta_rcy/delta_inl)**0.1
+  ! setting weighting function (ideal gas)
+  A_FF = dsqrt(((ig_gam-1.0_mytype)*0.5_mytype*(Ma)**2*prt)/ &
+       (1.0_mytype + (ig_gam-1.0_mytype)*0.5_mytype*(Ma)**2*prt))
+  x_rcy_inner = x*beta_rescale
+  x_rcy_outer = x*beta_rescale**10.0_mytype
+  do i=1,xsize(1)
+    xdelta_inl = x(i)/delta_inl
+    weight_func(i) = 0.5_mytype*(1.0_mytype + (tanh(4.0_mytype*(xdelta_inl-0.2_mytype)/ &
+                   ((1.0_mytype - 2.0_mytype*0.2_mytype)*xdelta_inl+0.2_mytype))/tanh(4.0_mytype)))
+    if (xdelta_inl .ge. 1.0_mytype) then
+      weight_func(i) = 1.0_mytype
+    endif
+  enddo
+  write(stdout,* ) 'Recycling and rescaling parameters'
+  write(stdout,'(A)') '------------------------------------------------'
+  write(stdout,'(A, F10.4)') 'Recycling position:                   ',z_recycle
+  write(stdout,'(A, F10.4)') 'Recycling Reynolds number:            ',(Re)**0.5_mytype*(zStartDNS+z_recycle)**0.5_mytype
+  write(stdout,'(A, F10.4)') 'Beta parameter:                       ',beta_rescale
+  write(stdout,* )
+  !$acc enter data copyin(au_rcy,av_rcy,aw_rcy,ap_rcy,at_rcy) 
+  !$acc enter data copyin(beta_rescale,A_FF,x_rcy_inner,x_rcy_outer,xdelta_inl,weight_func) 
+end subroutine
+! set all boundary conditions: bottom, top, inlet, outlet
 subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   use decomp_2d
   use mod_param
@@ -192,20 +259,19 @@ subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,p
   ! set halo cells for boundary conditions
   ! in case perBC is set to .true., periodic boundary conditions are applied
   if (perBC(1) .eqv. .false.) then 
-    ! top boundary
-    call setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
     ! bottom boundary
+    call setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
+    ! top boundary
     call setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
-  if ((perBC(3) .eqv. .false.) .and. (neigh%inlet)) then 
-    ! inlet boundary
+  if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .false.) .and. (neigh%inlet)) then 
+    ! standard inlet boundary 
     call setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   endif
   if ((perBC(3) .eqv. .false.) .and. (neigh%outlet)) then 
     ! outlet boundary
     call setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
-
 end subroutine
 ! halo cells: bottom boundary
 subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
@@ -219,8 +285,6 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
   real(mytype) :: time
   integer :: j,k,c, ierr, jm,km, iBC
-  integer :: kk
-  real(mytype) :: factz, ztem_1, ztem_2
   ! at the first mesh cell in x-direction
   iBC = 1
   jm = xsize(2)
@@ -298,7 +362,7 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
       do j=1,jm
         pre(iBC,j,k) = 0.0_mytype
         ! prescribing the wall temperature
-        tem(iBC,j,k) = Twall_bottom
+        tem(iBC,j,k) = Twall_bot
       enddo
     enddo
     !$acc wait(1)    
@@ -334,7 +398,7 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
     do k=1,km
       do j=1,jm 
         ! prescribing the wall temperature
-        tem(iBC,j,k) = Twall_bottom
+        tem(iBC,j,k) = Twall_bot
       enddo
     enddo
     !$acc wait(1)
@@ -357,10 +421,10 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
     enddo
   ! non-existing boundary condition  
   else
-    if (nrank.eq.0) write (*,*) "unknown BC_bottom: ", BC_bot
-      call decomp_2d_finalize
-      call mpi_finalize(ierr)
-      stop
+    if (nrank .eq. 0) write(stdout,*) "unknown BC_bottom: ", BC_bot
+    call decomp_2d_finalize
+    call mpi_finalize(ierr)
+    stop
   endif
   !$acc wait(1)
   ! prescribing the disturbance strip
@@ -374,9 +438,9 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
       write(stdout,*) "inlet_lst:", BC_inl
       write(stdout,*) "ERROR! with inlet_lst pert_calc should be set to 0"
     endif
-      call decomp_2d_finalize
-      call mpi_finalize(ierr) 
-      stop
+    call decomp_2d_finalize
+    call mpi_finalize(ierr) 
+    stop
   endif
 end subroutine
 ! RHS: bottom boundary 
@@ -393,7 +457,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
   real(mytype), dimension(5) :: d,L
   real(mytype) :: Kfact, sigm, sos, fac, dp, drho, du, dv, dw, ht
   real(mytype) :: xa, rhoa, ua, iena
-  integer :: iBC,j,k,jm,km,c, ierr, k1, kk
+  integer :: iBC,j,k,jm,km,c, ierr, k1
   ! at the first mesh cell in x-direction
   iBC = 1
   jm = xsize(2)
@@ -419,7 +483,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
               L(2) = ua*(dp - (sos**2)*drho)
               L(3) = 0.0_mytype
               L(4) = 0.0_mytype
-              L(5) = L(1) - 2*rhoa*sos*dudt_pert(j,k)
+              L(5) = L(1) - 2*sos*(rhoa*dudt_pert(j,k) + Ri_unit*(rhoa-1.0_mytype))
               ! time variation of the wave amplitudes
               d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
               d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -456,7 +520,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
         L(2) = 0.0_mytype
         L(3) = 0.0_mytype
         L(4) = 0.0_mytype
-        L(5) = L(1)
+        L(5) = L(1) - 2.0*sos*Ri_unit*(rhoa-1.0_mytype)
         ! time variation of the wave amplitudes
         d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
         d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -471,7 +535,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
         rhs_w(iBC,j,k) = 0.0_mytype
         rhs_e(iBC,j,k) = rhs_e(iBC,j,k) - d(1)*ht &
                                         - d(5)
-       enddo
+        enddo
       enddo
     endif
   ! calculate characteristics for adiabatic non-reflecting boundary condition
@@ -495,7 +559,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
           L(2) = ua*(dp - (sos**2)*drho)
           L(3) = 0.0_mytype
           L(4) = 0.0_mytype 
-          L(5) = L(1) - 2*rhoa*sos*dudt_pert(j,k)
+          L(5) = L(1) - 2*sos*(rhoa*dudt_pert(j,k) + Ri_unit*(rhoa-1.0_mytype))
           ! time variation of the wave amplitudes
           d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
           d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -528,7 +592,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
           L(2) = 0.0_mytype
           L(3) = 0.0_mytype
           L(4) = 0.0_mytype
-          L(5) = L(1)
+          L(5) = L(1) - 2*sos*Ri_unit*(rhoa-1.0_mytype)
           ! time variation of the wave amplitudes
           d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
           d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -546,9 +610,10 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
     endif
   ! without boundary condition
   else 
-    if (nrank.eq.0) write (*,*) "unknown BC_bottom"
+    if (nrank.eq.0) write (stdout,*) "unknown BC_bottom"
     call decomp_2d_finalize
     call mpi_finalize(ierr)
+    stop
   endif
 end subroutine
 ! halo cells: top boundary
@@ -593,7 +658,6 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
         u(iBC,j,k) = 0.0_mytype
         v(iBC,j,k) = 0.0_mytype
         w(iBC,j,k) = 0.0_mytype
-        dudt_pert(j,k) = 0.0_mytype 
       enddo
     enddo
     !$acc wait(1)
@@ -641,7 +705,6 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
         u(iBC,j,k) = 0.0_mytype
         v(iBC,j,k) = 0.0_mytype
         w(iBC,j,k) = 0.0_mytype
-        dudt_pert(j,k) = 0.0_mytype 
       enddo
     enddo
     !$acc wait(1) 
@@ -669,7 +732,6 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
         u(iBC,j,k) = 0.0_mytype
         v(iBC,j,k) = 0.0_mytype
         w(iBC,j,k) = 0.0_mytype
-        dudt_pert(j,k) = 0.0_mytype 
       enddo
     enddo
     !$acc wait(1)
@@ -709,16 +771,15 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
       enddo
     enddo
  ! isothermal non-reflecting boundary condition
-  else if (BC_top == "isoth_nrbc") then 
+  else if (BC_top == "isoth_nrbc") then
     !$acc parallel loop collapse(2) default(present) async(1) 
     do k=1,km
       do j=1,jm
         u(iBC,j,k) = 0.0_mytype
         v(iBC,j,k) = 0.0_mytype
         w(iBC,j,k) = 0.0_mytype
-        dudt_pert(j,k) = 0.0_mytype 
       enddo
-    enddo
+    enddo 
     !$acc wait(1)
     !$acc parallel loop collapse(2) default(present) async(1)
     do k=1,km
@@ -747,7 +808,9 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
     enddo
   ! non-existing boundary condition  
   else
-    if (nrank.eq.0) write (*,*) "unknown BC_top"
+    if (nrank.eq.0) then 
+      write(stdout,*) "unknown BC_top", BC_top
+    endif
     call decomp_2d_finalize
     call mpi_finalize(ierr)
     stop
@@ -776,14 +839,13 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   if (BC_top == "free_nrbc") then 
     ! constant for the pressure prescription
     sigm = 0.25_mytype
-    select case (t_param%USE_EOS)
-    case("IG")
+#if defined(IG)
       prefac_r = t_ig%prefac_r 
-    case("VdW")
+#elif defined(VdW)
       prefac_r = t_vdw%prefac_r 
-    case("PR")
+#elif defined(PR)
       prefac_r = t_pr%prefac_r 
-    end select
+#endif
     !$acc parallel loop collapse(2) default(present) private(sos,fac,dp,drho,du,dv,dw,d,L,Kfact,ht) async(1)
     do k = 1,km
       do j = 1,jm
@@ -845,7 +907,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         L(2) = 0.0_mytype
         L(3) = 0.0_mytype
         L(4) = 0.0_mytype
-        L(5) = L(1)
+        L(5) = L(1) - 2*sos*Ri_unit*(rhoa-1.0_mytype)
         ! time variation of the wave amplitudes
         d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
         d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -879,7 +941,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         L(2) = 0.0_mytype
         L(3) = 0.0_mytype
         L(4) = 0.0_mytype
-        L(5) = L(1)
+        L(5) = L(1) - 2*sos*Ri_unit*(rhoa-1.0_mytype)
         ! time variation of the wave amplitudes
         d(1) = (0.5_mytype*(L(5) + L(1)) - L(2))/sos**2
         d(2) = (L(5) - L(1))/(2*rhoa*sos)
@@ -896,9 +958,10 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
     enddo 
   ! without boundary condition
   else 
-    if (nrank.eq.0) write (*,*) "unknown BC_top"
+    if (nrank.eq.0) write (stdout,*) "unknown BC_top", BC_top
     call decomp_2d_finalize
     call mpi_finalize(ierr)
+    stop
   endif
 end subroutine
 ! halo cells: inlet boundary
@@ -925,7 +988,7 @@ subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pr
   kBC = 1 
   ! non-reflecting boundary condition
   if (BC_inl == "inlet_nrbc") then 
-    !$acc parallel loop collapse(3) default(present) 
+    !$acc parallel loop collapse(3) default(present) async(1)
     do j=1,jm
       do c=1,nHalo 
         do i=1,im
@@ -1038,9 +1101,188 @@ subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pr
     enddo
   ! non-existing boundary condition
   else
-    if (nrank.eq.0) write (*,*) "unknown BC_inlet"
+    if (nrank.eq.0) write(stdout,*) "unknown BC_inlet", BC_inl
     call decomp_2d_finalize
     call mpi_finalize(ierr)
+    stop
+  endif
+end subroutine
+! rescaling the inlet boundary condition
+subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
+  use mod_param
+  use mod_eos
+  use mod_halo
+  use mod_grid  
+  use mod_math
+  implicit none
+  real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_flu,v1d_flu,w1d_flu,p1d_flu,t1d_flu
+  !$acc declare create(u1d_flu,v1d_flu,w1d_flu,p1d_flu,t1d_flu)
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: aw_rcy_vd
+  !$acc declare create(aw_rcy_vd)
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_rcy_flu,v1d_rcy_flu,w1d_rcy_flu, &
+                                                                                        p1d_rcy_flu,t1d_rcy_flu
+  !$acc declare create(u1d_rcy_flu,v1d_rcy_flu,w1d_rcy_flu,p1d_rcy_flu,t1d_rcy_flu)
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_rcy_ave,v1d_rcy_ave,w1d_rcy_ave, &
+                                                                                        p1d_rcy_ave,t1d_rcy_ave
+  !$acc declare create(u1d_rcy_ave,v1d_rcy_ave,w1d_rcy_ave,p1d_rcy_ave,t1d_rcy_ave)                                                                                      
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_inner_flu,v_rcy_inner_flu, &
+                                                                                        w_rcy_inner_flu,p_rcy_inner_flu, &
+                                                                                        t_rcy_inner_flu
+  !$acc declare create(u_rcy_inner_flu,v_rcy_inner_flu,w_rcy_inner_flu,p_rcy_inner_flu,t_rcy_inner_flu)                                                                                        
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_inner_ave,v_rcy_inner_ave, &
+                                                                                        w_rcy_inner_ave,p_rcy_inner_ave, &
+                                                                                        t_rcy_inner_ave
+  !$acc declare create(u_rcy_inner_ave,v_rcy_inner_ave,w_rcy_inner_ave,p_rcy_inner_ave,t_rcy_inner_ave)                                                                              
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_outer_flu,v_rcy_outer_flu, & 
+                                                                                        w_rcy_outer_flu,p_rcy_outer_flu, &
+                                                                                        t_rcy_outer_flu
+  !$acc declare create(u_rcy_outer_flu,v_rcy_outer_flu,w_rcy_outer_flu,p_rcy_outer_flu,t_rcy_outer_flu)                                                                                        
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_outer_ave,v_rcy_outer_ave, &
+                                                                                        w_rcy_outer_ave,p_rcy_outer_ave, &
+                                                                                        t_rcy_outer_ave
+  !$acc declare create(u_rcy_outer_ave,v_rcy_outer_ave,w_rcy_outer_ave,p_rcy_outer_ave,t_rcy_outer_ave)                                                                                        
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_inl_inner,v_inl_inner,w_inl_inner, &
+                                                                                        p_inl_inner,t_inl_inner
+  !$acc declare create(u_inl_inner,v_inl_inner,w_inl_inner,p_inl_inner,t_inl_inner)  
+  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_inl_outer,v_inl_outer,w_inl_outer, &
+                                                                                        p_inl_outer,t_inl_outer
+  !$acc declare create(u_inl_outer,v_inl_outer,w_inl_outer,p_inl_outer,t_inl_outer)                                                                                        
+  integer :: i,j,k
+  ! sending variables from rescaling location to inlet
+  if ((neigh%inlet) .or. (neigh%recycle)) then
+     call haloUpdate_rescale(xsize,u,v,w,pre,tem)
+  endif
+  ! rescaling the inlet boundary layer thickness
+  if (neigh%inlet) then
+    !$acc parallel loop collapse(3) default(present)
+    do k=1-nHalo,1
+      do j=1,xsize(2)
+        do i=1,xsize(1)
+          ! fluctuations
+          u1d_flu(i,j,k) = u(i,j,k)   - au_rcy(i)
+          v1d_flu(i,j,k) = v(i,j,k)   - av_rcy(i)
+          w1d_flu(i,j,k) = w(i,j,k)   - aw_rcy(i)
+          p1d_flu(i,j,k) = pre(i,j,k) - ap_rcy(i)
+          t1d_flu(i,j,k) = tem(i,j,k) - at_rcy(i)
+          ! averaging (Van-Driest transformation for streamwise velocity with u_inf as 1)
+          aw_rcy_vd(i,j,k) = 1.0_mytype/A_FF * asin(A_FF*aw_rcy(i)) 
+        enddo
+      enddo
+    enddo
+    ! interpolation fluctuation
+    !$acc parallel loop collapse(2) default(present)
+    do k=1-nHalo,1
+      do j=1,xsize(2)
+        call spline(x,u1d_flu(1:xsize(1),j,k),xsize(1),u1d_rcy_flu(1:xsize(1),j,k))
+        call spline(x,v1d_flu(1:xsize(1),j,k),xsize(1),v1d_rcy_flu(1:xsize(1),j,k))
+        call spline(x,w1d_flu(1:xsize(1),j,k),xsize(1),w1d_rcy_flu(1:xsize(1),j,k))
+        call spline(x,p1d_flu(1:xsize(1),j,k),xsize(1),p1d_rcy_flu(1:xsize(1),j,k))
+        call spline(x,t1d_flu(1:xsize(1),j,k),xsize(1),t1d_rcy_flu(1:xsize(1),j,k))
+      enddo
+    enddo
+    ! interpolation average
+    !$acc parallel loop collapse(2) default(present)
+    do k=1-nHalo,1
+      do j=1,xsize(2)
+        call spline(x,au_rcy   ,xsize(1),u1d_rcy_ave(1:xsize(1),j,k))
+        call spline(x,av_rcy   ,xsize(1),v1d_rcy_ave(1:xsize(1),j,k))
+        call spline(x,aw_rcy_vd(1:xsize(1),j,k),xsize(1),w1d_rcy_ave(1:xsize(1),j,k))
+        call spline(x,ap_rcy   ,xsize(1),p1d_rcy_ave(1:xsize(1),j,k))
+        call spline(x,at_rcy   ,xsize(1),t1d_rcy_ave(1:xsize(1),j,k))
+      enddo
+    enddo
+    !$acc parallel loop collapse(3) default(present)
+    do k=1-nHalo,1
+      do j=1,xsize(2)
+        do i=1,xsize(1)
+          ! interpolating the inner layer
+          ! fluctuations
+          call splint(x,u1d_flu(1:xsize(1),j,k),u1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),u_rcy_inner_flu(i,j,k))
+          call splint(x,v1d_flu(1:xsize(1),j,k),v1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),v_rcy_inner_flu(i,j,k))
+          call splint(x,w1d_flu(1:xsize(1),j,k),w1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),w_rcy_inner_flu(i,j,k))
+          call splint(x,p1d_flu(1:xsize(1),j,k),p1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),p_rcy_inner_flu(i,j,k))
+          call splint(x,t1d_flu(1:xsize(1),j,k),t1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),t_rcy_inner_flu(i,j,k))
+          ! fluctuations are zero in the free stream
+          if (x(i) .gt. delta_inl*1.5_mytype) then
+            u_rcy_inner_flu(i,j,k) = 0.0_mytype
+            v_rcy_inner_flu(i,j,k) = 0.0_mytype
+            w_rcy_inner_flu(i,j,k) = 0.0_mytype
+            p_rcy_inner_flu(i,j,k) = 0.0_mytype
+            t_rcy_inner_flu(i,j,k) = 0.0_mytype
+          endif
+          ! average
+          call splint(x,au_rcy(1:xsize(1))   ,u1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),u_rcy_inner_ave(i,j,k))
+          call splint(x,av_rcy(1:xsize(1))   ,v1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),v_rcy_inner_ave(i,j,k))
+          call splint(x,aw_rcy_vd(1:xsize(1),j,k),w1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),w_rcy_inner_ave(i,j,k))
+          call splint(x,ap_rcy(1:xsize(1))   ,p1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),p_rcy_inner_ave(i,j,k))
+          call splint(x,at_rcy(1:xsize(1))   ,t1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_inner(i),t_rcy_inner_ave(i,j,k))
+          ! use free stream values
+          if (x(i) .gt. delta_inl*1.5_mytype) then
+            u_rcy_inner_ave(i,j,k) = 0.0_mytype 
+            v_rcy_inner_ave(i,j,k) = 0.0_mytype 
+            w_rcy_inner_ave(i,j,k) = 1.0_mytype 
+            p_rcy_inner_ave(i,j,k) = Pref       
+            t_rcy_inner_ave(i,j,k) = 1.0_mytype
+          endif    
+          ! interpolating the outler layer
+          ! fluctuations
+          call splint(x,u1d_flu(1:xsize(1),j,k),u1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),u_rcy_outer_flu(i,j,k))
+          call splint(x,v1d_flu(1:xsize(1),j,k),v1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),v_rcy_outer_flu(i,j,k))
+          call splint(x,w1d_flu(1:xsize(1),j,k),w1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),w_rcy_outer_flu(i,j,k))
+          call splint(x,p1d_flu(1:xsize(1),j,k),p1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),p_rcy_outer_flu(i,j,k))
+          call splint(x,t1d_flu(1:xsize(1),j,k),t1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),t_rcy_outer_flu(i,j,k))
+          ! fluctuations are zero in the free stream
+          if (x(i) .gt. delta_inl*1.5_mytype) then
+            u_rcy_outer_flu(i,j,k) = 0.0_mytype
+            v_rcy_outer_flu(i,j,k) = 0.0_mytype
+            w_rcy_outer_flu(i,j,k) = 0.0_mytype
+            p_rcy_outer_flu(i,j,k) = 0.0_mytype
+            t_rcy_outer_flu(i,j,k) = 0.0_mytype
+          endif
+          ! average
+          call splint(x,au_rcy(1:xsize(1))   ,u1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),u_rcy_outer_ave(i,j,k))
+          call splint(x,av_rcy(1:xsize(1))   ,v1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),v_rcy_outer_ave(i,j,k))
+          call splint(x,aw_rcy_vd(1:xsize(1),j,k),w1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),w_rcy_outer_ave(i,j,k))
+          call splint(x,ap_rcy(1:xsize(1))   ,p1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),p_rcy_outer_ave(i,j,k))
+          call splint(x,at_rcy(1:xsize(1))   ,t1d_rcy_ave(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),t_rcy_outer_ave(i,j,k))
+          ! use free stream values
+          if (x(i) .gt. delta_inl*1.5_mytype) then
+            u_rcy_outer_ave(i,j,k) = 0.0_mytype 
+            v_rcy_outer_ave(i,j,k) = 0.0_mytype 
+            w_rcy_outer_ave(i,j,k) = 1.0_mytype 
+            p_rcy_outer_ave(i,j,k) = Pref       
+            t_rcy_outer_ave(i,j,k) = 1.0_mytype 
+          endif
+          ! addition inner averages and fluctuations
+          u_inl_inner(i,j,k) = u_rcy_inner_ave(i,j,k) + beta_rescale*u_rcy_inner_flu(i,j,k)
+          v_inl_inner(i,j,k) = v_rcy_inner_ave(i,j,k) + beta_rescale*v_rcy_inner_flu(i,j,k)
+          w_inl_inner(i,j,k) = beta_rescale*(w_rcy_inner_ave(i,j,k) + w_rcy_inner_flu(i,j,k))
+          p_inl_inner(i,j,k) = p_rcy_inner_ave(i,j,k) + p_rcy_inner_flu(i,j,k)
+          t_inl_inner(i,j,k) = t_rcy_inner_ave(i,j,k) + t_rcy_inner_flu(i,j,k)
+          ! addition outer averages and fluctuations
+          u_inl_outer(i,j,k) = u_rcy_outer_ave(i,j,k) + beta_rescale*u_rcy_outer_flu(i,j,k)
+          v_inl_outer(i,j,k) = v_rcy_outer_ave(i,j,k) + beta_rescale*v_rcy_outer_flu(i,j,k)
+          w_inl_outer(i,j,k) = aw_rcy_vd(xsize(1),j,k) -beta_rescale* &
+                               (aw_rcy_vd(xsize(1),j,k) - w_rcy_outer_ave(i,j,k)) + beta_rescale*w_rcy_outer_flu(i,j,k)
+          p_inl_outer(i,j,k) = p_rcy_outer_ave(i,j,k) + p_rcy_outer_flu(i,j,k)
+          t_inl_outer(i,j,k) = t_rcy_outer_ave(i,j,k) + t_rcy_outer_flu(i,j,k)
+          ! weighting for total profiles
+          u(i,j,k) = u_inl_inner(i,j,k) * (1.0_mytype - weight_func(i)) + &
+                     u_inl_outer(i,j,k) * weight_func(i)
+          v(i,j,k) = v_inl_inner(i,j,k) * (1.0_mytype - weight_func(i)) + &
+                     v_inl_outer(i,j,k) * weight_func(i)
+          w(i,j,k) = w_inl_inner(i,j,k) * (1.0_mytype - weight_func(i)) + &
+                     w_inl_outer(i,j,k) * weight_func(i)
+          pre(i,j,k) = p_inl_inner(i,j,k) * (1.0_mytype - weight_func(i)) + &
+                       p_inl_outer(i,j,k) * weight_func(i)
+          tem(i,j,k) = t_inl_inner(i,j,k) * (1.0_mytype - weight_func(i)) + &
+                       t_inl_outer(i,j,k) * weight_func(i)  
+          enddo
+        enddo
+      enddo
+     ! updating secondary non-conservative variables
+     call calcState_PT(pre,tem,rho,ien,mu,ka,1,xsize(1),1,xsize(2),1-nHalo,1)
   endif
 end subroutine
 ! RHS: inlet boundary
@@ -1134,14 +1376,13 @@ subroutine setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
     enddo
   ! non-existing boundary condition
   else
-      if (nrank.eq.0) write (*,*) "unknown BC_outlet"
+      if (nrank.eq.0) write(stdout,*) "unknown BC_outlet"
       call decomp_2d_finalize
       call mpi_finalize(ierr)
   endif
-
 end subroutine
 ! RHS: outlet boundary
-subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
+subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
   use decomp_2d
   use mod_param
   use mod_eos
@@ -1153,21 +1394,21 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
   real(mytype), dimension(:,:,:) :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e  
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre
   real(mytype), dimension(5) :: d,L
+  real(mytype), dimension(:,:) :: p_ref
   real(mytype) :: sos, fac, Kfact, dp, drho, du, dv, dw, ht, prefac_r
   real(mytype) :: za, rhoa, ua, va, wa, iena
   im  = xsize(1)
   jm  = xsize(2)
   kBC = xsize(3)
   ! non-reflecting boundary condition
-  if (BC_inl == "inlet_nrbc") then 
-    select case (t_param%USE_EOS)
-      case("IG")
-        prefac_r = t_ig%prefac_r 
-      case("VdW")
-        prefac_r = t_vdw%prefac_r 
-      case("PR")
-        prefac_r = t_pr%prefac_r 
-    end select
+  if (BC_out == "outlet_nrbc") then 
+#if defined(IG)
+    prefac_r = t_ig%prefac_r 
+#elif defined(VdW)
+    prefac_r = t_vdw%prefac_r 
+#elif defined(PR)
+    prefac_r = t_pr%prefac_r 
+#endif
     !$acc parallel loop collapse(2) default(present) private(sos,fac,dp,drho,du,dv,dw,ht,Kfact,d,L,ht) async(1)
     do j = 1,jm
       ! i=1 is taken by the bottom boundary condition
@@ -1186,9 +1427,9 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
         call calc_conv_BD_ddz(dv,v,i,j,kBC,nHalo,za,dz)
         call calc_conv_BD_ddz(dw,w,i,j,kBC,nHalo,za,dz)
         ! K factor according to Rudy & Strikwerda, JCP 36, 1980.
-        Kfact = sigm_outlet*(1.0 - Ma**2)*sos/len_z
+        Kfact = sigm_outlet*(1.0_mytype - Ma**2)*sos/len_z
         ! amplitudes of characteristic waves
-        L(1) = Kfact*(pre(i,j,kBC) - Pref*prefac_r) + flag_supersonic_outlet*(wa - sos)*(dp - rhoa*sos*dw)
+        L(1) = Kfact*(pre(i,j,kBC) - p_ref(i,kBC)) + flag_supersonic_outlet*(wa - sos)*(dp - rhoa*sos*dw)
         L(2) =  wa*(dp - (sos**2)*drho)
         L(3) =  wa*du
         L(4) =  wa*dv
@@ -1214,9 +1455,10 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
     enddo
   ! without boundary condition
   else 
-    if (nrank.eq.0) write (*,*) "unknown BC_bottom"
+    if (nrank.eq.0) write(stdout,*) "unknown BC_top", BC_top
     call decomp_2d_finalize
     call mpi_finalize(ierr)
+    stop
   endif
 end subroutine
 end module mod_boundary

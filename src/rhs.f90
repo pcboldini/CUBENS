@@ -14,7 +14,7 @@ module mod_rhs
   ! define allocation RHS tensors, dilatation, and sponge parameters
   real(mytype), allocatable, dimension(:,:,:)   :: dil
   real(mytype), allocatable, dimension(:,:,:)   :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
-  real(mytype), allocatable, dimension(:,:)     :: r_ref, ru_ref, rv_ref, rw_ref, ret_ref
+  real(mytype), allocatable, dimension(:,:)     :: r_ref, ru_ref, rv_ref, rw_ref, ret_ref, p_ref
   real(mytype), allocatable, dimension(:)       :: spSigX, spSigZ
   real(mytype), allocatable, dimension(:,:,:)   :: rhoe
 contains
@@ -35,6 +35,7 @@ contains
     allocate( rhs_w(xsize(1), xsize(2), xsize(3)) )
     allocate( rhs_e(xsize(1), xsize(2), xsize(3)) )
     allocate( rhoe(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo) )
+    allocate(  p_ref(xsize(1),xsize(3)))
     ! allocate sponge if needed
     if ((spInlLen.gt.0.0).or.(spOutLen.gt.0.0).or.(spTopLen.gt.0.0)) then 
       allocate(  r_ref(xsize(1),xsize(3)))
@@ -273,7 +274,7 @@ contains
     endif
     ! outlet boundary conditions
     if ((perBC(3) .eqv. .false.) .and. (neigh%outlet)) then
-      call setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p)
+      call setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p,p_ref)
     endif
     !$acc wait    
     ! sponge enforcement 
@@ -456,7 +457,7 @@ contains
             d2Ty = d2Ty + visc_d2dy2(c)  * (Tjp +                  Tjm )
             d2Tz = d2Tz + visc_d2dz2(c,k)*  Tkp + visc_d2dz2(-c,k)*Tkm 
           enddo
-          ! shear stress
+          ! stress tensor
           sxx = 2.0*(dux - dila)
           sxy =      duy + dvx
           sxz =      duz + dwx
@@ -516,9 +517,10 @@ contains
     ! calculation of the outlet Reynolds number
     ReBlasiusEnd=(Re)**0.5*( (zEndDNS)**0.5 )  
     if (nrank == 0) then
-      write(stdout,* ) 
+#if defined(BL)
       write(stdout,* ) 'Sponge'
-      write(stdout,* ) '-------------------------'
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+#endif
       if (spInlLen>0.0) then
         write(stdout,* ) 'Inlet:                             '
         write(stdout,"(A26,F10.4)") 'spInlLen from 0 to ',spInlLen
@@ -539,7 +541,7 @@ contains
         write(stdout,* ) 'Free stream:                         '
         write(stdout,"(A22,F10.4,A3,F10.4)") 'spTopLen from ',(len_x-spTopLen),' to ', len_x
         write(stdout,"(A33,F10.4)") 'Max. damping coefficient=',spTopStr 
-        write(stdout,* ) '-----------------------------------'
+        write(stdout,'(A)') 'o--------------------------------------------------o'
         write(stdout,* )
       else  
       endif               

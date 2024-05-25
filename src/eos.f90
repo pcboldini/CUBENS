@@ -11,23 +11,20 @@ module mod_eos
 ! Variables container for global variables  
 ! EoS: Equation of State, TP: transport properties 
   type t_INIT_PARAM
-    character(len=20) :: USE_EOS, USE_VISC
     real(mytype) :: Rhoref, Tref
   end type 
   type(t_INIT_PARAM) :: t_param
   !$acc declare create(t_param)
-  !$acc declare create(t_param%USE_EOS,t_param%USE_VISC,t_param%Rhoref,t_param%Tref)
+  !$acc declare create(t_param%Rhoref,t_param%Tref)
   contains 
 ! Initialize global variables
   subroutine init_PARAM_EOS()
     use mod_param
     implicit none 
-    t_param%USE_EOS  = USE_EOS
-    t_param%USE_VISC  = USE_VISC
     t_param%Rhoref = Rhoref
     t_param%Tref = Tref
     !$acc update device(t_param) 
-    !$acc update device(t_param%USE_EOS,t_param%USE_VISC,t_param%Rhoref,t_param%Tref)
+    !$acc update device(t_param%Rhoref,t_param%Tref)
   end subroutine init_PARAM_EOS
 ! Call secondary EoS and TP variables from density and internal energy
   subroutine calcState_RE(rho,ien,pre,tem,mu,ka,i1,i2,j1,j2,k1,k2)

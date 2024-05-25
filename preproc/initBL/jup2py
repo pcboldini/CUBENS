@@ -1,0 +1,2 @@
+jupyter nbconvert --to script main_IG.ipynb
+

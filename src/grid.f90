@@ -30,7 +30,7 @@ module mod_grid
       ! x goes from 0 to len_x
       dx = len_x/(nx_global-1)  
       if (perBC(1) .eqv. .true.) dx = len_x/(nx_global)
-    else if (( xmesh_type == "non_equid" ) .or. (CASE=="Channel")) then
+    else if ( xmesh_type == "non_equid" ) then
       ! eta goes from 0 to 1
       dx = 1.0_mytype/(nx_global-1)
     endif
@@ -59,14 +59,13 @@ module mod_grid
     allocate(tmp(nz_global))
     allocate(tmp1(nz_global))
     allocate(tmp2(nz_global))
-    select case (CASE)
-      ! for boundary layer
-      case("BoundaryLayer","TGV")
-        call xDistribution(xmesh_type,ReTau, gridStretchX, len_x, xsize(1), x, xp, xpp)
+#if !defined(CHA)
+      ! for boundary layer and TGV
+      call xDistribution(xmesh_type,ReTau, gridStretchX, len_x, xsize(1), x, xp, xpp)       
+#elif defined(CHA)
       ! for channel
-      case("Channel")
-        call xDistribution_Channel(gridStretchX, len_x, xsize(1), x, xp, xpp)
-    end select   
+      call xDistribution_CHA(gridStretchX, len_x, xsize(1), x, xp, xpp)
+#endif   
     call yDistribution(ny_global, y, dy)
     call zDistribution(zmesh_type, xstart(3), xsize(3) ,nz_global, len_z &
                        ,z_1, z_2, bumpz1, bumpz2, zplus_min, zplus_max &
@@ -178,7 +177,7 @@ module mod_grid
     endif
   end subroutine
 ! calculation of the x-stencil (wall-normal) for channel
-  subroutine xDistribution_Channel(stretchx, len_x, npts, x, xp, xpp)
+  subroutine xDistribution_CHA(stretchx, len_x, npts, x, xp, xpp)
     implicit none
     integer :: npts, i, ierr
     real(mytype) :: stretchx, len_x, factx
@@ -322,67 +321,72 @@ module mod_grid
     endif
     ! display settings
     if (nrank == 0) then
-      write(stdout,* ) 
       write(stdout,* ) 'Mesh'
-      write(stdout,* ) '-------------------------'
+      write(stdout,'(A)') 'o--------------------------------------------------o'
       if (nrank == 0) then
-        write(stdout,* ) 'Grid initialisation                                 completed'
+        write(stdout,'(A, F10.4)') 'Grid initialisation                        done!'
       endif
       if (ny_global == 1) then
-        write (stdout,* ) 'Simulation grid dimensions                                 2D'
+        write(stdout,'(A)') 'Simulation grid dimensions                    2D'
       else
-        write (stdout,* ) 'Simulation grid dimensions                                 3D'
+        write(stdout,'(A)') 'Simulation grid dimensions                    3D'
       end if
-      write(stdout,* ) 'Total number of domains                          ',p_total
-      write(stdout,* ) 'domains in z-direction (x-y-plane)               ',p_col
-      write(stdout,* ) 'domains in y-direction (x-z-plane)               ',p_row
+      write(stdout,'(A, I10)') 'Total number of domains:              ',p_total
+      write(stdout,'(A, I10)') 'Domains in z-direction (x-y-plane):   ',p_col
+      write(stdout,'(A, I10)') 'Domains in y-direction (x-z-plane):   ',p_row
       write(stdout,* ) 
-      write(stdout,* ) 'Simulation domain in z-direction                 ',len_z
-      write(stdout,* ) 'Simulation domain in y-direction                 ',len_y
-      write(stdout,* ) 'Simulation domain in x-direction                 ',len_x
+      write(stdout,'(A, F10.4)') 'Length domain in z-direction:         ',len_z
+      write(stdout,'(A, F10.4)') 'Length domain in y-direction:         ',len_y
+      write(stdout,'(A, F10.4)') 'Length domain in x-direction:         ',len_x
       write(stdout,* ) 
-      write(stdout,* ) 'wall-normal mesh:                                 ',xmesh_type
-      write(stdout,* ) 'Grid points nz (streamwise)                      ',nz_global
-      write(stdout,* ) 'Streamwise mesh:                                         ',zmesh_type
+      write(stdout,'(A, A10)') 'Wall-normal mesh:                          ',xmesh_type
+      write(stdout,'(A, I10)') 'Grid points nz (streamwise):          ',nz_global
+      write(stdout,'(A, A10)') 'Streamwise mesh:                           ',zmesh_type
       if (zmesh_type == "equid") then
-        write(stdout,* ) '    Grid size                                         ',dz
-        write(stdout,* ) '    z_plus in laminar region                          ',z(2)*ReTau
+        write(stdout,'(A, F10.4)') 'Grid size:                            ',dz
+#if defined(BL)
+        write(stdout,'(A, F10.4)') 'z_plus in laminar region:             ',z(2)*ReTau
+#endif
         if (pert_calc==1) then
-          write(stdout,* ) '    Characteristic wavelength                         ',wl
-          write(stdout,* ) '    Number of points per wavelength                   ',npoints_x_wl1
+          write(stdout,'(A, F10.4)') 'Characteristic wavelength:            ',wl
+          write(stdout,'(A, F10.4)') 'Number of points per wavelength:      ',npoints_x_wl1
         endif
       else if (zmesh_type == "non_equid") then
-        write(stdout,* ) '    Laminar region length                             ',z_1*len_z
-        write(stdout,* ) '    Grid size dz1 in laminar region                    ',dz1
-        write(stdout,* ) '    z_plus in laminar region                          ',z(2)*ReTau
-        write(stdout,* ) '    Turbulent region length                           ',len_z-z_1*len_z-(1-z_2)*len_z
-        write(stdout,* ) '    Grid size dz2 in turbulent region                 ',dz2
+        write(stdout,'(A, F10.4)') 'Laminar region length:                ',z_1*len_z
+        write(stdout,'(A, F10.4)') 'Grid size dz1 in laminar region:      ',dz1
+        write(stdout,'(A, F10.4)') 'z_plus in laminar region:             ',z(2)*ReTau
+        write(stdout,'(A, F10.4)') 'Turbulent region length:              ',len_z-z_1*len_z-(1-z_2)*len_z
+        write(stdout,'(A, F10.4)') 'Grid size dz2 in turbulent region:    ',dz2
         if (pert_calc==1) then
-          write(stdout,* ) '    Characteristic wavelength                         ',wl
-          write(stdout,* ) '    Number of points per wavelength (laminar region)  ',npoints_x_wl1
-          write(stdout,* ) '    Number of points per wavelength (turbulent region)',npoints_x_wl2
+          write(stdout,'(A, F10.4)') 'Characteristic wavelength:            ',wl
+          write(stdout,'(A, F10.4)') 'Points per wavelength (laminar):      ',npoints_x_wl1
+          write(stdout,'(A, F10.4)') 'Points per wavelength (turbulent):    ',npoints_x_wl2
         endif
       endif
-      write(stdout,* ) 'Grid points ny (spanwise)                      ',ny_global  
-      write(stdout,* ) '    Grid size dy                                      ',dy    
-      write(stdout,* ) 'Grid points nx (wall-normal)                    ',nx_global
-      write(stdout,* ) '    Wall distance to first point                      ',x(2)
-      write(stdout,* ) '    y_plus at domain inlet                          ',yplus
-      write(stdout,* ) '    Stretching factor                                 ',gridStretchX
-      write(stdout,* ) 'Total number of grid points                         ',ngrid_total
+      write(stdout,'(A, I10)') 'Grid points ny (spanwise):            ',ny_global  
+      write(stdout,'(A, F10.4)') 'Grid size dy                          ',dy    
+      write(stdout,'(A, I10)') 'Grid points nx (wall-normal):         ',nx_global
+      if (xmesh_type == "non_equid") then
+        write(stdout,'(A, F10.4)') 'Wall distance to first point:         ',x(2)
+        write(stdout,'(A, F10.4)') 'y_plus at domain inlet                ',yplus
+        write(stdout,'(A, F10.4)') 'Stretching factor                     ',gridStretchX
+      else
+        write(stdout,'(A, F10.4)') 'Grid size dx                          ',dx
+      endif
+      write(stdout,'(A, I10)') 'Total number of grid points           ',ngrid_total
       write(stdout,* ) 
       write(stdout,* ) 'Grid transformations:                             '
       if (xmesh_type == "equid") then
-        write(stdout,* ) '    no transformation in x-direction (equidistant) '
+        write(stdout,* ) 'no transformation in x-direction (equidistant) '
       else if (xmesh_type == "non_equid") then
-        write(stdout,* ) '    x-direction (0,len_x) -> eta-direction (0,1) '
+        write(stdout,* ) 'x-direction (0,len_x) -> eta-direction (0,1) '
       endif 
       if (zmesh_type == "equid") then
-        write(stdout,* ) '    no transformation in z-direction (equidistant) '  
+        write(stdout,* ) 'no transformation in z-direction (equidistant) '  
       else if (zmesh_type == "non_equid") then
-        write(stdout,* ) '    z-direction (0,len_z) -> xi-direction (0,1)  '
+        write(stdout,* ) 'z-direction (0,len_z) -> xi-direction (0,1)  '
       endif 
-      write(stdout,* ) '-------------------------'
+      write(stdout,'(A)') 'o--------------------------------------------------o'
       write(stdout,* )
     endif
     deallocate(dz_real)

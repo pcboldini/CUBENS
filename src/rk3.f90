@@ -87,7 +87,9 @@ contains
     if (pert_calc==0) then
       dt = CFL/max(dtConvInv, dtViscInv, dtCondInv)
       call mpi_allreduce(dt, tmp, 1,real_type,MPI_MIN,MPI_COMM_WORLD,ierr)
-      dt = tmp
+      if (dtMax > 0) then
+        dt = min(tmp,dtMax)
+      endif
     endif
     ! timestep with perturbation, a new CFL is calculated from dt_FFT (perturbation)
     if ((pert_calc==1) .OR. (BC_inl == "inlet_lst")) then

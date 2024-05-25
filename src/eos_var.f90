@@ -5,6 +5,7 @@
 !
 ! -
 module mod_eos_var
+  use io_std_units
   use decomp_2d, only: mytype
   implicit none 
 ! Variables container for ideal gas EoS   
@@ -39,16 +40,20 @@ module mod_eos_var
     implicit none 
     real(mytype) :: prefac_r
     integer      :: ierr                         ! ierr
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_EOS=='IG') then
-        write(stdout,* ) 'Correct initialisation of USE_EOS'   
+        write(stdout,* ) 'Correct initialisation of USE_EOS'
+        write(stdout,* )   
       else
         write(stdout,* ) 'Mismatch USE_EOS between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr) 
         stop
       endif
     endif
+#endif
     ! Calculate variables
     prefac_r = 1.0_mytype
     Rhoref = 1.0_mytype
@@ -124,16 +129,20 @@ module mod_eos_var
     implicit none 
     real(mytype) :: vdw_cvR, prefac_r, Cpfac_r
     integer      :: ierr                         ! ierr
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_EOS=='VdW') then
         write(stdout,* ) 'Correct initialisation of USE_EOS'   
+        write(stdout,* )
       else
         write(stdout,* ) 'Mismatch USE_EOS between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr) 
         stop
       endif
     endif
+#endif
     ! Calculate variables
     vdw_cvR=eos_dof/2
     prefac_r = vdw_Zc/Rhoref/Tref/Ec/Cpref
@@ -288,16 +297,20 @@ module mod_eos_var
     implicit none
     real(mytype) :: pr_cvR, Cpfac_r
     integer      :: ierr                         ! ierr
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_EOS=='PR') then
-        write(stdout,* ) 'Correct initialisation of USE_EOS'   
+        write(stdout,* ) 'Correct initialisation of USE_EOS'  
+        write(stdout,* ) 
       else
         write(stdout,* ) 'Mismatch USE_EOS between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr) 
         stop
       endif
     endif
+#endif
     ! Calculate variables
     pr_cvR=eos_dof/2
     Cpfac_r = Tref/Ma**2/SOSref**2/pr_Zc
@@ -415,12 +428,13 @@ module mod_eos_var
 ! Calculate EoS from pressure and temperature
   subroutine calcEOS_PT(pre,tem_r,rho_r,ien)
     !$acc routine seq
-    use decomp_2d
+    use decomp_2d, only: mytype
     implicit none
     integer :: ierr
     real(mytype), intent(IN) :: pre,tem_r
     real(mytype), intent(OUT) :: rho_r,ien
-    write(*,*) "Not included yet! Select different boundary conditions"
+    write(stdout,*)
+    write(stdout,*) "Not included yet! Select different boundary conditions"
     call decomp_2d_finalize
     call mpi_finalize(ierr)
     stop

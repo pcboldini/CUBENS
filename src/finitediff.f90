@@ -229,11 +229,10 @@ contains
   use mod_param
   implicit none
   if (nrank == 0) then
-    write(stdout,* ) 
     write(stdout,* ) 'Finite differences'
-    write(stdout,* ) '-------------------------'
-    write(stdout,"(A26,I1)") ' Order convective fluxes: ',nStencilConv 
-    write(stdout,"(A25,I1)") ' Order diffusive fluxes: ',nStencilVisc
+    write(stdout,'(A)') 'o--------------------------------------------------o'
+    write(stdout,'(A, I10)') 'Order convective fluxes:              ',2*nStencilConv 
+    write(stdout,'(A, I10)') 'Order diffusive fluxes:               ',2*nStencilVisc
     write(stdout,* )
     else
   endif        

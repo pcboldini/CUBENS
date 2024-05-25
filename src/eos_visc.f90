@@ -7,6 +7,13 @@
 module mod_eos_visc
   use decomp_2d, only: mytype
   implicit none 
+! Variables container for Constant Law
+  type t_VISC_Constant
+    real(mytype) :: mu_0, ka_0
+  end type
+  type(t_VISC_Constant) :: t_const
+  !$acc declare create(t_const)
+  !$acc declare create(t_const%mu_0,t_const%ka_0)
 ! Variables container for Power Law
   type t_VISC_PowerLaw
     real(mytype) :: mu_0, ka_0
@@ -53,23 +60,64 @@ module mod_eos_visc
   !$acc                t_chu%chung_a0,t_chu%chung_a1,t_chu%chung_Arho, &
   !$acc                t_chu%chung_b0,t_chu%chung_b1,t_chu%chung_Brho)
   contains 
+! Include Constant law 
+#ifdef Constant
+! Initialize
+  subroutine init_VISCModel()
+    use mod_param
+    implicit none
+    integer                            :: ierr 
+#if defined(BL) || defined(CHA)
+    if (nrank==0) then
+      if (USE_VISC=='Constant') then
+        write(stdout,* ) 'Correct initialisation of USE_VISC'
+        write(stdout,* )
+      else
+        write(stdout,* ) 'Mismatch USE_VISC between initBL and Makefile, check both again!'
+        write(stdout,* )
+        call decomp_2d_finalize
+        call mpi_finalize(ierr)
+        stop
+      endif
+    endif
+#endif
+    ! Declare variables
+    t_const%mu_0 = 1.0_mytype/Re
+    t_const%ka_0 = 1.0_mytype/(Re*Pra*Ec)
+    !$acc update device(t_const)
+    !$acc update device(t_const%mu_0,t_const%ka_0)
+  end subroutine
+! Calculate viscosity and conductivity according to Constant law
+  subroutine calcVisc(tem, rho, mu, ka)
+    !$acc routine seq
+    implicit none
+    real(mytype), intent(IN)  :: tem, rho
+    real(mytype), intent(OUT) :: mu, ka
+    mu = t_const%mu_0*tem
+    ka = t_const%ka_0*tem
+  end subroutine
+#endif
 ! Include Power Law  
 #ifdef PowerLaw
 ! Initialize
   subroutine init_VISCModel()
     use mod_param
     implicit none
-    integer                            :: ierr                         ! ierr
+    integer                            :: ierr 
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_VISC=='PowerLaw') then
         write(stdout,* ) 'Correct initialisation of USE_VISC'
+        write(stdout,* )
       else
         write(stdout,* ) 'Mismatch USE_VISC between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr)
         stop
       endif
     endif
+#endif
     ! Declare variables
     t_pow%mu_0 = 1.0_mytype/Re
     t_pow%ka_0 = 1.0_mytype/(Re*Pra*Ec)
@@ -95,17 +143,21 @@ module mod_eos_visc
   subroutine init_VISCModel()
     use mod_param
     implicit none
-    integer                            :: ierr                         ! ierr
+    integer                            :: ierr 
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_VISC=='Sutherland') then
         write(stdout,* ) 'Correct initialisation of USE_VISC'
+        write(stdout,* )
       else
         write(stdout,* ) 'Mismatch USE_VISC between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr)
         stop
       endif
     endif
+#endif
     ! Declare variables
     t_suth%Sconst = Smuref/Tinf
     t_suth%mu_0 = 1.0_mytype/Re
@@ -131,17 +183,21 @@ module mod_eos_visc
   subroutine init_VISCModel()
     use mod_param
     implicit none
-    integer                            :: ierr                         ! ierr
+    integer                            :: ierr                   
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_VISC=='JST') then
         write(stdout,* ) 'Correct initialisation of USE_VISC'
+        write(stdout,* )
       else
         write(stdout,* ) 'Mismatch USE_VISC between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr)
         stop
       endif
     endif
+#endif
     ! Declare variables
     t_jst%mu_0 = 1.0_mytype/Re
     t_jst%ka_0 = 1.0_mytype/(Re*Pra*Ec)
@@ -154,12 +210,11 @@ module mod_eos_visc
     t_jst%coeffrho_4 = 0.040758_mytype 
     t_jst%coeffrho_5 = 0.0093324_mytype 
     t_jst%ka_factor  = 0.307*(eos_dof/2.0_mytype) + 0.539_mytype
-    select case (USE_EOS)
-    case("VdW")
-      t_jst%ZcPow5=vdw_Zc**5
-    case("PR")
-      t_jst%ZcPow5=pr_Zc**5
-    end select
+#if defined(VdW)
+    t_jst%ZcPow5=vdw_Zc**5
+#elif defined(VdW)
+    t_jst%ZcPow5=pr_Zc**5
+#endif
     !$acc update device(t_jst)
     !$acc update device(t_jst%mu_0,t_jst%ka_0,t_jst%Kref,t_jst%Muref,t_jst%eos_Ru, &
     !$acc                t_jst%coeffrho_1,t_jst%coeffrho_2,t_jst%coeffrho_3, &
@@ -211,17 +266,21 @@ module mod_eos_visc
   subroutine init_VISCModel()
     use mod_param
     implicit none
-    integer                            :: ierr                         ! ierr
+    integer                            :: ierr                        
+#if defined(BL) || defined(CHA)
     if (nrank==0) then
       if (USE_VISC=='Chung') then
         write(stdout,* ) 'Correct initialisation of USE_VISC'
+        write(stdout,* )
       else
         write(stdout,* ) 'Mismatch USE_VISC between initBL and Makefile, check both again!'
+        write(stdout,* )
         call decomp_2d_finalize
         call mpi_finalize(ierr)
         stop
       endif
     endif
+#endif
     ! Declare variables
     t_chu%mu_0 = 1.0_mytype/Re
     t_chu%ka_0 = 1.0_mytype/(Re*Pra*Ec)
@@ -230,12 +289,11 @@ module mod_eos_visc
     t_chu%chung_Vcrit = Vcrit*t_chu%mol*1E6_mytype
     t_chu%ek          = Tcrit/1.2593_mytype
     t_chu%rp_Zc = rp_Zc
-    select case (USE_EOS)
-    case("VdW")
+#if defined(VdW)
       t_chu%Zc = vdw_Zc
-    case("PR")
+#elif defined(PR)
       t_chu%Zc = pr_Zc
-    end select
+#endif
     t_chu%Kref  = Kref
     t_chu%Muref = Muref
     t_chu%chung_alpha = eos_dof/2 - 3.0_mytype/2.0_mytype
