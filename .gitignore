@@ -1,11 +1,25 @@
-*.txt
-*.bin
-__pycache__
-.ipynb_checkpoints
+# Compiled Object files
+*.o
+*.obj
+
+# Precompiled Headers
+*.h
+
+# Fortran module files
+*.mod
+
+# Executables
+./simulate
+./post
+./interpol
+
+# Output files HPC
 slurm*
 out
-*.xmf
-.DS_Store
-*.o
-*.mod
+
+# Others 
 JOB
+*.txt
+*.bin
+*.xmf
+Makefile
