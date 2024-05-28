@@ -1,0 +1,11 @@
+*.txt
+*.bin
+__pycache__
+.ipynb_checkpoints
+slurm*
+out
+*.xmf
+.DS_Store
+*.o
+*.mod
+JOB
