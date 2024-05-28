@@ -19,9 +19,9 @@ z_scale=1
 
 precision = 'double'
 
-x = np.fromfile('planes/x.bin', dtype=precision)
-y = np.fromfile('planes/y.bin', dtype=precision)
-z = np.fromfile('planes/z.bin', dtype=precision)
+x = np.fromfile('../output/planes/x.bin', dtype=precision)
+y = np.fromfile('../output/planes/y.bin', dtype=precision)
+z = np.fromfile('../output/planes/z.bin', dtype=precision)
 
 imax = np.size(x)
 jmax = np.size(y)
@@ -52,7 +52,7 @@ for i in range(0,len(array_var)):
     	if array_var[i] == var1[j]:
            index_var1[j]=i
 
-getfields(('../restart/' + 'ruvwe' ), var1, index_var1, imax, jmax, kmax, timestamps)
+getfields(('../output/restart/' + 'ruvwe' ), var1, index_var1, imax, jmax, kmax, timestamps)
 
 datanames_var= ["" for j in range(len(var1))]
 
@@ -76,7 +76,7 @@ for i in range(0, len (timestamps)):
     print('timestamp={0:07d}'.format(timestamps[i]))
     timestamps_print='{0:07d}'.format(timestamps[i])
     for j in range(0,len(var1)):
-        src_path=os.path.join(current_path,"../restart/ruvwe." + str(var1[j]) + "." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../output/restart/ruvwe." + str(var1[j]) + "." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
     src_path=os.path.join(current_path,"results/qvort." + str(timestamps_print) + ".bin")
     shutil.copy(src_path, dst_path)

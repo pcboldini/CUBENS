@@ -453,9 +453,9 @@ endif
       enddo
       ! write planes for instantaneous wall stress and heat flux
       tmpPlane(1,:,:) = Tauxz_time(count,1,:,:)
-      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/planes/Tauxz_time.'//cha//'.bin','dummy')
+      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/Tauxz_time.'//cha//'.bin','dummy')
       tmpPlane(1,:,:) = qx_time(count,1,:,:)
-      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/planes/qx_time.'//cha//'.bin','dummy')
+      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/qx_time.'//cha//'.bin','dummy')
     enddo
 
 !===============================================================================================!
@@ -531,7 +531,7 @@ endif
       if (nrank==0) write(stdout,'(A, A10)') 'reading stats:                        ', cha
       do iname = 1,size(stat_name)
         inquire(iolength=lenr) tmpPlane(1,1,iname)
-        open(10,file='postproc/stats/'//trim(stat_name(iname))//'_avg.'//cha//'.bin',&
+        open(10,file='output/stats/'//trim(stat_name(iname))//'_avg.'//cha//'.bin',&
                 form='unformatted',status="old",access='direct',recl=xsize(1)*lenr)
         do k=1,xsize(3)
           read(10, rec=k+kstart-1) (tmpPlane(i,k,iname), i=1,xsize(1))
@@ -613,8 +613,8 @@ endif
     allocate(tauw_rms_global (nz_global) )
     ! Check whether the required plane data exists
     write(cha,'(I0.7)') istart_rms
-    inquire(file='postproc/planes/xpl.1.mu.'//cha//'.bin', exist=exist1)    ! mu (i=1)
-    inquire(file='postproc/planes/xpl.1.strxz.'//cha//'.bin', exist=exist2) ! dudy (i=1)
+    inquire(file='output/planes/xpl.1.mu.'//cha//'.bin', exist=exist1)    ! mu (i=1)
+    inquire(file='output/planes/xpl.1.strxz.'//cha//'.bin', exist=exist2) ! dudy (i=1)
     if ((exist1) .and. (exist2)) then
       if (index_rms_xpl(1) .eq. 1) then ! planes at wall
         do istep = istart_rms,iend_rms,istep_rms
@@ -624,14 +624,14 @@ endif
             write(cha3,'(I0)') i
             ! Read plane data
             inquire(iolength=lenr) tmpPlane(1,1,1)
-            open(10,file='postproc/planes/xpl.'//trim(cha3)//'.mu.'//cha//'.bin',&
+            open(10,file='output/planes/xpl.'//trim(cha3)//'.mu.'//cha//'.bin',&
                     form='unformatted',status="old",access='direct',recl=xsize(2)*lenr)
             do k=1,xsize(3)
               read(10, rec=k+kstart-1) (tmpPlane(j,k,1), j=1,xsize(2))
             enddo
             close(10)
             inquire(iolength=lenr) tmpPlane(1,1,2)
-            open(10,file='postproc/planes/xpl.'//trim(cha3)//'.strxz.'//cha//'.bin',&
+            open(10,file='output/planes/xpl.'//trim(cha3)//'.strxz.'//cha//'.bin',&
                     form='unformatted',status="old",access='direct',recl=xsize(2)*lenr)
             do k=1,xsize(3)
               read(10, rec=k+kstart-1) (tmpPlane(j,k,2), j=1,xsize(2))
@@ -660,9 +660,9 @@ endif
     ! Check whether the required plane data exists
     write(cha,'(I0.7)') istart_rms
     write(cha3,'(I0)') index_rms_zpl(1)
-    inquire(file='postproc/planes/zpl.'//trim(cha3)//'.u.'//cha//'.bin', exist=exist1)
-    inquire(file='postproc/planes/zpl.'//trim(cha3)//'.w.'//cha//'.bin', exist=exist2)
-    inquire(file='postproc/planes/zpl.'//trim(cha3)//'.r.'//cha//'.bin', exist=exist3)
+    inquire(file='output/planes/zpl.'//trim(cha3)//'.u.'//cha//'.bin', exist=exist1)
+    inquire(file='output/planes/zpl.'//trim(cha3)//'.w.'//cha//'.bin', exist=exist2)
+    inquire(file='output/planes/zpl.'//trim(cha3)//'.r.'//cha//'.bin', exist=exist3)
     if ((exist1) .and. (exist2) .and. (exist3)) then
       do istep = istart_rms,iend_rms,istep_rms
         write(cha,'(I0.7)') istep
@@ -673,15 +673,15 @@ endif
             k=kglobal-kstart+1
             write(cha3,'(I0)') kglobal
             ! Read plane data
-            open(10,file='postproc/planes/zpl.'//trim(cha3)//'.u.'//cha//'.bin',&
+            open(10,file='output/planes/zpl.'//trim(cha3)//'.u.'//cha//'.bin',&
                     form='unformatted',status="old",access='stream')
             read(10)tmpPlane(:,:,1)
             close(10)
-            open(10,file='postproc/planes/zpl.'//trim(cha3)//'.w.'//cha//'.bin',&
+            open(10,file='output/planes/zpl.'//trim(cha3)//'.w.'//cha//'.bin',&
                     form='unformatted',status="old",access='stream')
             read(10)tmpPlane(:,:,2)
             close(10)
-            open(10,file='postproc/planes/zpl.'//trim(cha3)//'.r.'//cha//'.bin',&
+            open(10,file='output/planes/zpl.'//trim(cha3)//'.r.'//cha//'.bin',&
                     form='unformatted',status="old",access='stream')
             read(10)tmpPlane(:,:,3)
             close(10)
@@ -776,7 +776,7 @@ endif
   kglobal = minloc(abs(z_recycle-z_global),1) !Set k-index of your scheduled recycling position (z_recycle)
   if ((kstart .le. kglobal) .and. (kend .ge. kglobal)) then
     k=kglobal-kstart+1
-    open(18,file = 'rescale/mean_values.txt')
+    open(18,file = 'preproc/turbRE/mean_values.txt')
     write(18,*) 'u,v,w,pre,tem'
     do i=1,xsize(1)
       write(18,*) au(1,i,k),au(2,i,k),au(3,i,k),ap(i,k),aT(i,k)
@@ -879,21 +879,21 @@ endif
         if (nrank==0) write(stdout,'(A, A10)') 'reading 2D planes for FFT:            ', cha
         ! Read plane data
         inquire(iolength=lenr) tmpPlane(1,1,1)
-        open(10,file='postproc/planes/xpl.'//trim(cha3)//'.r.'//cha//'.bin',&
+        open(10,file='output/planes/xpl.'//trim(cha3)//'.r.'//cha//'.bin',&
                 form='unformatted',status="old",access='direct',recl=xsize(2)*lenr)
         do k=1,xsize(3)
           read(10, rec=k+kstart-1) (tmpPlane(j,k,1), j=1,xsize(2))
         enddo
         close(10)
         inquire(iolength=lenr) tmpPlane(1,1,2)
-        open(10,file='postproc/planes/xpl.'//trim(cha3)//'.w.'//cha//'.bin',&
+        open(10,file='output/planes/xpl.'//trim(cha3)//'.w.'//cha//'.bin',&
                 form='unformatted',status="old",access='direct',recl=xsize(2)*lenr)
         do k=1,xsize(3)
           read(10, rec=k+kstart-1) (tmpPlane(j,k,2), j=1,xsize(2))
         enddo
         close(10)
         inquire(iolength=lenr) tmpPlane(1,1,3)
-        open(10,file='postproc/planes/xpl.'//trim(cha3)//'.u.'//cha//'.bin',&
+        open(10,file='output/planes/xpl.'//trim(cha3)//'.u.'//cha//'.bin',&
                 form='unformatted',status="old",access='direct',recl=xsize(2)*lenr)
         do k=1,xsize(3)
           read(10, rec=k+kstart-1) (tmpPlane(j,k,3), j=1,xsize(2))

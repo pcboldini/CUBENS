@@ -115,7 +115,7 @@ contains
     enddo
     if(present(tmp01)) then 
       tmp = Gtmp01(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name011)//trim(cha2)//'.'//trim(name012)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name011)//trim(cha2)//'.'//trim(name012)//cha//'.bin', &
                                  'dummy',part)
     endif
   end subroutine

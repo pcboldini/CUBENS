@@ -44,15 +44,15 @@ precision = 'double'
 if interpol==1:
     print('Loading interpolated planes')
     char_y='ypl_aI'
-    x = np.fromfile('planes/x_I.bin', dtype=precision)
-    y = np.fromfile('planes/y_I.bin', dtype=precision)
-    z = np.fromfile('planes/z_I.bin', dtype=precision)
+    x = np.fromfile('../output/planes/x_I.bin', dtype=precision)
+    y = np.fromfile('../output/planes/y_I.bin', dtype=precision)
+    z = np.fromfile('../output/planes/z_I.bin', dtype=precision)
 else:
     print('Loading current planes')
     char_y='ypl'
-    x = np.fromfile('planes/x.bin', dtype=precision)
-    y = np.fromfile('planes/y.bin', dtype=precision)
-    z = np.fromfile('planes/z.bin', dtype=precision)
+    x = np.fromfile('../output/planes/x.bin', dtype=precision)
+    y = np.fromfile('../output/planes/y.bin', dtype=precision)
+    z = np.fromfile('../output/planes/z.bin', dtype=precision)
 
 imax = np.size(x)
 jmax = np.size(y)
@@ -64,7 +64,7 @@ timestamps = np.arange(time_start,time_end+1,time_step)
 print(timestamps)
 
 for j in range(0,len(var)):
-    getfluc(('planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
+    getfluc(('../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
@@ -113,9 +113,9 @@ for i in range(0, len (timestamps)):
     timestamps_print='{0:07d}'.format(timestamps[i])
 
     for j in range(0,len(var)):
-        src_path=os.path.join(current_path,"planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
 
 print('Planes copied')

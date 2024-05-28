@@ -207,26 +207,26 @@ program interpolate
 ! write the new mesh
   inquire (iolength=lenr) xnew(1)
   if (nrank == 0) then
-    open(11,file='postproc/planes/x_I.bin', status='REPLACE', access='direct', recl=inew*lenr)
+    open(11,file='output/planes/x_I.bin', status='REPLACE', access='direct', recl=inew*lenr)
     write(11,rec=1) xnew(1:inew)
     close(11)
 
-    open(11,file='postproc/planes/y_I.bin', status='REPLACE', access='direct', recl=jnew*lenr)
+    open(11,file='output/planes/y_I.bin', status='REPLACE', access='direct', recl=jnew*lenr)
     write(11,rec=1) ynew(1:jnew)
     close(11)
 
-    open(11,file='postproc/planes/z_I.bin', status='REPLACE', access='direct', recl=knew*lenr)
+    open(11,file='output/planes/z_I.bin', status='REPLACE', access='direct', recl=knew*lenr)
     write(11,rec=1) znew_global(1:knew)
     close(11)
   endif
   if ((nrank == 0) .AND. (jnew > 1)) then
-    open(11,file='restart/x_I.bin', status='REPLACE', access='direct', recl=inew*lenr)
+    open(11,file='output/restart/x_I.bin', status='REPLACE', access='direct', recl=inew*lenr)
     write(11,rec=1) xnew(1:inew)
     close(11)
-    open(11,file='restart/y_I.bin', status='REPLACE', access='direct', recl=jnew*lenr)
+    open(11,file='output/restart/y_I.bin', status='REPLACE', access='direct', recl=jnew*lenr)
     write(11,rec=1) ynew(1:jnew)
     close(11)
-    open(11,file='restart/z_I.bin', status='REPLACE', access='direct', recl=knew*lenr)
+    open(11,file='output/restart/z_I.bin', status='REPLACE', access='direct', recl=knew*lenr)
     write(11,rec=1) znew_global(1:knew) 
     close(11)
   endif

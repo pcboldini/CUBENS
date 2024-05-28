@@ -40,9 +40,9 @@ def getfluc(name,jmax,imax,timestamp):
         data_fluc_reshape.tofile("{0}.fluc.{1:07d}.bin".format(name,t)) 
 
 precision = 'double'
-x = np.fromfile('planes/x.bin', dtype=precision)
-y = np.fromfile('planes/y.bin', dtype=precision)
-z = np.fromfile('planes/z.bin', dtype=precision)
+x = np.fromfile('../output/planes/x.bin', dtype=precision)
+y = np.fromfile('../output/planes/y.bin', dtype=precision)
+z = np.fromfile('../output/planes/z.bin', dtype=precision)
 
 imax = np.size(x)
 jmax = np.size(y)
@@ -54,7 +54,7 @@ timestamps = np.arange(time_start,time_end+1,time_step)
 print(timestamps)
 
 for j in range(0,len(var)):
-    getfluc(('planes/zpl.' + str(index_z) + '.'+ str(var[j])), jmax, imax, timestamps)
+    getfluc(('../output/planes/zpl.' + str(index_z) + '.'+ str(var[j])), jmax, imax, timestamps)
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
@@ -89,9 +89,9 @@ for i in range(0, len (timestamps)):
     timestamps_print='{0:07d}'.format(timestamps[i])
 
     for j in range(0,len(var)):
-        src_path=os.path.join(current_path,"planes/zpl." + str(index_z) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../output/planes/zpl." + str(index_z) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
 
 print('Planes copied')

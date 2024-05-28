@@ -86,25 +86,25 @@ module mod_grid
     inquire (iolength=lenr) x(1)
     ! in planes folder
     if (nrank == 0) then
-      open(11,file='postproc/planes/x.bin', status='REPLACE', access='direct', recl=nx_global*lenr)
+      open(11,file='output/planes/x.bin', status='REPLACE', access='direct', recl=nx_global*lenr)
       write(11,rec=1) x(1:nx_global)
       close(11)
-      open(11,file='postproc/planes/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
+      open(11,file='output/planes/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
       write(11,rec=1) y(1:ny_global)
       close(11)
-      open(11,file='postproc/planes/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
+      open(11,file='output/planes/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
       write(11,rec=1) z_global(1:nz_global) 
       close(11)
     endif
     ! in restart folder
     if ((nrank == 0) .AND. (ny_global > 1)) then
-      open(11,file='restart/x.bin', status='REPLACE', access='direct', recl=nx_global*lenr)
+      open(11,file='output/restart/x.bin', status='REPLACE', access='direct', recl=nx_global*lenr)
       write(11,rec=1) x(1:nx_global)
       close(11)
-      open(11,file='restart/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
+      open(11,file='output/restart/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
       write(11,rec=1) y(1:ny_global)
       close(11)
-      open(11,file='restart/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
+      open(11,file='output/restart/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
       write(11,rec=1) z_global(1:nz_global) 
       close(11)
     endif

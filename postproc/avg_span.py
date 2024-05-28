@@ -13,9 +13,9 @@ y_scale=1
 z_scale=0.1
 
 precision = 'double'
-x = np.fromfile('planes/x.bin', dtype=precision)
-y = np.fromfile('planes/y.bin', dtype=precision)
-z = np.fromfile('planes/z.bin', dtype=precision)
+x = np.fromfile('../output/planes/x.bin', dtype=precision)
+y = np.fromfile('../output/planes/y.bin', dtype=precision)
+z = np.fromfile('../output/planes/z.bin', dtype=precision)
 
 imax = np.size(x)
 jmax = np.size(y)

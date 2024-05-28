@@ -175,9 +175,12 @@ clean:
 	$(RM) core mod/* obj/* *.i $(PROGRAM) fort.7 post interpol
 
 cleanfull:
-	$(RM) *.i *.txt postproc/*.txt postproc/planes/*.* postproc/stats/*.* restart/*.* *.out postproc/results/*.* postproc/results/vort/*.* \
+	$(RM) *.i *.txt output/*.txt output/planes/*.* output/stats/*.* output/restart/*.* *.out postproc/results/*.* postproc/results/vort/*.* \
 		postproc/results/fft/*.* postproc/results/Yavg/*.* postproc/results/rms/*.* postproc/*.txt \
 		postproc/visualize/xplanes/*.* postproc/visualize/yplanes/*.* postproc/visualize/zplanes/*.*
+
+cleanout:
+	$(RM) output/*.txt output/planes/*.* output/stats/*.* output/restart/*.* 
 
 cleanpost:
 	$(RM) core mod/* obj/* post

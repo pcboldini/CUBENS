@@ -476,65 +476,65 @@ module mod_auxl
     allocate(tmp(part%xsz(1),part%xsz(2),part%xsz(3)))
     write(cha,'(I0.7)') istep
     write(cha2,'(I0)') loc
-    ! all the planes are written in ./postproc/planes/
+    ! all the planes are written in ./output/planes/
     if(present(tmp01)) then 
       tmp = tmp01(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name011)//trim(cha2)//'.'//trim(name012)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name011)//trim(cha2)//'.'//trim(name012)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp02)) then 
       tmp = tmp02(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))  
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name021)//trim(cha2)//'.'//trim(name022)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name021)//trim(cha2)//'.'//trim(name022)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp03)) then 
       tmp = tmp03(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name031)//trim(cha2)//'.'//trim(name032)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name031)//trim(cha2)//'.'//trim(name032)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp04)) then 
       tmp = tmp04(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3)) 
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name041)//trim(cha2)//'.'//trim(name042)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name041)//trim(cha2)//'.'//trim(name042)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp05)) then 
       tmp = tmp05(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name051)//trim(cha2)//'.'//trim(name052)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name051)//trim(cha2)//'.'//trim(name052)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp06)) then 
       tmp =  tmp06(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3)) 
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name061)//trim(cha2)//'.'//trim(name062)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name061)//trim(cha2)//'.'//trim(name062)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp07)) then 
       tmp =  tmp07(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3)) 
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name071)//trim(cha2)//'.'//trim(name072)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name071)//trim(cha2)//'.'//trim(name072)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp08)) then 
       tmp =  tmp08(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name081)//trim(cha2)//'.'//trim(name082)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name081)//trim(cha2)//'.'//trim(name082)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp09)) then 
       tmp =  tmp09(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name091)//trim(cha2)//'.'//trim(name092)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name091)//trim(cha2)//'.'//trim(name092)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp10)) then 
       tmp =  tmp10(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name101)//trim(cha2)//'.'//trim(name102)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name101)//trim(cha2)//'.'//trim(name102)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp11)) then 
       tmp =  tmp11(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name111)//trim(cha2)//'.'//trim(name112)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name111)//trim(cha2)//'.'//trim(name112)//cha//'.bin', &
                                  'dummy',part)
     endif
     if(present(tmp12)) then 
       tmp =  tmp12(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3))
-      call decomp_2d_write_plane(1,tmp,dir,loc,'.','postproc/planes/'//trim(name121)//trim(cha2)//'.'//trim(name122)//cha//'.bin', &
+      call decomp_2d_write_plane(1,tmp,dir,loc,'.','output/planes/'//trim(name121)//trim(cha2)//'.'//trim(name122)//cha//'.bin', &
                                  'dummy',part)
     endif
     if (nrank == 0) then
@@ -579,13 +579,13 @@ module mod_auxl
     file_exists = .FALSE.
     allocate(tmp(part%xsz(1),part%xsz(2),part%xsz(3)))
     write(cha,'(I0.7)') istep
-    ! all the restart are located in ./restart
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, 'restart/ruvwe.'//cha//'.bin', &
+    ! all the restart are located in ./output/restart
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, 'output/restart/ruvwe.'//cha//'.bin', &
                        MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
     call MPI_FILE_GET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
     call decomp_2d_read_scalar(fh,disp,5,infoRestart)
-    INQUIRE (FILE='restart/ruvwe.'//cha//'.bin', EXIST=file_exists)
+    INQUIRE (FILE='output/restart/ruvwe.'//cha//'.bin', EXIST=file_exists)
     ! check if restart file exists
     if (file_exists) then
       if(nrank==0) write(stdout,'(A)') 'restart FILE exists!'
@@ -677,10 +677,10 @@ module mod_auxl
     ! all the restart files are written in ./restart
     if(interpol == 'bI') then 
       if (nrank == 0) write(stdout,* ) 'before interpolation'
-      call MPI_FILE_OPEN(MPI_COMM_WORLD, 'restart/ruvwe.'//trim(interpol)//'.'//cha//'.bin', &
+      call MPI_FILE_OPEN(MPI_COMM_WORLD, 'output/restart/ruvwe.'//trim(interpol)//'.'//cha//'.bin', &
                         MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
     else
-      call MPI_FILE_OPEN(MPI_COMM_WORLD, 'restart/ruvwe.'//cha//'.bin', &
+      call MPI_FILE_OPEN(MPI_COMM_WORLD, 'output/restart/ruvwe.'//cha//'.bin', &
                         MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
     endif
     ! writing of the restart file
@@ -721,90 +721,90 @@ module mod_auxl
 #endif
     write(cha,'(I0.7)') istep
     factAvg_inv = 1.0_mytype/factAvg
-    ! write stats planes in /postproc/stats/ 
+    ! write stats planes in /output/stats/ 
     ! for boundary layer
 #if defined(BL)
     ! density (1)
     tmpPlane(:,1,:) = qave(:,:,1)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/r_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/r_avg.'//cha//'.bin','dummy')
     ! u-velocity (2)
     tmpPlane(:,1,:) = qave(:,:,2)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/u_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/u_avg.'//cha//'.bin','dummy')
     ! v-velocity (3)
     tmpPlane(:,1,:) = qave(:,:,3)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/v_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/v_avg.'//cha//'.bin','dummy')
     ! w-velocity (4) 
     tmpPlane(:,1,:) = qave(:,:,4)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/w_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/w_avg.'//cha//'.bin','dummy')
     ! pressure (5)
     tmpPlane(:,1,:) = qave(:,:,5)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/p_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/p_avg.'//cha//'.bin','dummy')
     ! temperature (6)   
     tmpPlane(:,1,:) = qave(:,:,6)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/t_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/t_avg.'//cha//'.bin','dummy')
     ! viscosity (8)
     tmpPlane(:,1,:) = qave(:,:,8)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/mu_avg.'//cha//'.bin','dummy') 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mu_avg.'//cha//'.bin','dummy') 
     ! conductivity (9)
     tmpPlane(:,1,:) = qave(:,:,9)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/ka_avg.'//cha//'.bin','dummy') 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ka_avg.'//cha//'.bin','dummy') 
     ! ru (10)
     tmpPlane(:,1,:) = qave(:,:,10)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/ru_avg.'//cha//'.bin','dummy') 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ru_avg.'//cha//'.bin','dummy') 
     ! rv (11) 
     tmpPlane(:,1,:) = qave(:,:,11)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rv_avg.'//cha//'.bin','dummy') 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rv_avg.'//cha//'.bin','dummy') 
     ! rw (12)
     tmpPlane(:,1,:) = qave(:,:,12)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rw_avg.'//cha//'.bin','dummy') 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rw_avg.'//cha//'.bin','dummy') 
     ! rt (13)
     tmpPlane(:,1,:) = qave(:,:,13)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rt_avg.'//cha//'.bin','dummy')   
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rt_avg.'//cha//'.bin','dummy')   
     ! ruu (20)
     tmpPlane(:,1,:) = qave(:,:,20)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/ruu_avg.'//cha//'.bin','dummy')   
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruu_avg.'//cha//'.bin','dummy')   
     ! ruv (21)
     tmpPlane(:,1,:) = qave(:,:,21)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/ruv_avg.'//cha//'.bin','dummy')   
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruv_avg.'//cha//'.bin','dummy')   
     ! ruw (22)
     tmpPlane(:,1,:) = qave(:,:,22)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/ruw_avg.'//cha//'.bin','dummy')   
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruw_avg.'//cha//'.bin','dummy')   
     ! rvv (23)
     tmpPlane(:,1,:) = qave(:,:,23)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rvv_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvv_avg.'//cha//'.bin','dummy')    
     ! rvw (24)
     tmpPlane(:,1,:) = qave(:,:,24)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rvw_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvw_avg.'//cha//'.bin','dummy')    
     ! rww (25)
     tmpPlane(:,1,:) = qave(:,:,25)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/rww_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rww_avg.'//cha//'.bin','dummy')    
     ! tau_xx (26)
     tmpPlane(:,1,:) = qave(:,:,26)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauxx_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxx_avg.'//cha//'.bin','dummy')    
     ! tau_xy (27)
     tmpPlane(:,1,:) = qave(:,:,27)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauxy_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxy_avg.'//cha//'.bin','dummy')    
     ! tau_xz (28) 
     tmpPlane(:,1,:) = qave(:,:,28)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauxz_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxz_avg.'//cha//'.bin','dummy')    
     ! tau_yy (29)
     tmpPlane(:,1,:) = qave(:,:,29)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauyy_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyy_avg.'//cha//'.bin','dummy')    
     ! tau_yz (30)
     tmpPlane(:,1,:) = qave(:,:,30)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauyz_avg.'//cha//'.bin','dummy')    
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyz_avg.'//cha//'.bin','dummy')    
     ! tau_zz (31) 
     tmpPlane(:,1,:) = qave(:,:,31)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/tauzz_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauzz_avg.'//cha//'.bin','dummy')
     ! q_x (32)
     tmpPlane(:,1,:) = qave(:,:,32)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/qx_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qx_avg.'//cha//'.bin','dummy')
     ! q_y (33)
     tmpPlane(:,1,:) = qave(:,:,33)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/qy_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qy_avg.'//cha//'.bin','dummy')
     ! q_z (34)
     tmpPlane(:,1,:) = qave(:,:,34)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/qz_avg.'//cha//'.bin','dummy')
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qz_avg.'//cha//'.bin','dummy')
     ! for channel
 #elif defined(CHA) 
     ! call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
