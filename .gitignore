@@ -22,3 +22,4 @@ JOB
 *.txt
 *.bin
 *.xmf
+Makefile
