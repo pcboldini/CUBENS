@@ -776,7 +776,7 @@ endif
   kglobal = minloc(abs(z_recycle-z_global),1) !Set k-index of your scheduled recycling position (z_recycle)
   if ((kstart .le. kglobal) .and. (kend .ge. kglobal)) then
     k=kglobal-kstart+1
-    open(18,file = 'preproc/turbRE/mean_values.txt')
+    open(18,file = 'preproc/turbRR/mean_values.txt')
     write(18,*) 'u,v,w,pre,tem'
     do i=1,xsize(1)
       write(18,*) au(1,i,k),au(2,i,k),au(3,i,k),ap(i,k),aT(i,k)

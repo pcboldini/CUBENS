@@ -19,6 +19,7 @@ module mod_boundary
   real(mytype) :: beta_rescale,delta_rcy,A_FF
   integer :: nLST
 contains
+
   ! initialization boundary condition module
   subroutine init_BC()
     use decomp_2d
@@ -102,6 +103,7 @@ contains
       endif
     endif
   end subroutine
+
 ! initialization of the eigenfunctions
   subroutine initLST(nLST,w_LST_real,u_LST_real,tem_LST_real,w_LST_imag,u_LST_imag,tem_LST_imag)
   use decomp_2d
@@ -179,6 +181,7 @@ contains
   deallocate(wIntp_real,uIntp_real,tIntp_real)
   deallocate(wIntp_imag,uIntp_imag,tIntp_imag)
 end subroutine
+
 ! initialization of the rescale for turbulent boundary layer
 subroutine init_rescale()
   use decomp_2d
@@ -188,11 +191,12 @@ subroutine init_rescale()
   implicit none
   real(mytype) :: xdelta_inl
   integer :: i,ierr
-  real(mytype), parameter :: prt   = 0.89_mytype
+  real(mytype), parameter :: prt   = 0.89_mytype ! Turbulent Prandtl number
+
   allocate(au_rcy(1:xsize(1)),av_rcy(1:xsize(1)),aw_rcy(1:xsize(1)),ap_rcy(1:xsize(1)),at_rcy(1:xsize(1)))
   allocate(x_rcy_inner(1:xsize(1)),x_rcy_outer(1:xsize(1)),weight_func(1:xsize(1)))
   ! reading mean profiles from files
-  open(11,file = 'rescale/mean_values.txt',form='formatted',status="old",action="read")
+  open(11,file = 'preproc/turbRR/mean_values.txt',form='formatted',status="old",action="read")
   read(11,*)
   do i=1,xsize(1)
     read(11,*) au_rcy(i),av_rcy(i),aw_rcy(i),ap_rcy(i),at_rcy(i)
@@ -233,8 +237,9 @@ subroutine init_rescale()
   write(stdout,'(A, F10.4)') 'Beta parameter:                       ',beta_rescale
   write(stdout,* )
   !$acc enter data copyin(au_rcy,av_rcy,aw_rcy,ap_rcy,at_rcy) 
-  !$acc enter data copyin(beta_rescale,A_FF,x_rcy_inner,x_rcy_outer,xdelta_inl,weight_func) 
+  !$acc enter data copyin(x_rcy_inner,x_rcy_outer,xdelta_inl,weight_func) 
 end subroutine
+
 ! set all boundary conditions: bottom, top, inlet, outlet
 subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   use decomp_2d
@@ -616,6 +621,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
     stop
   endif
 end subroutine
+
 ! halo cells: top boundary
 subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
@@ -816,6 +822,7 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
     stop
   endif
 end subroutine
+
 ! RHS: top boundary 
 subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   use decomp_2d
@@ -964,6 +971,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
     stop
   endif
 end subroutine
+
 ! halo cells: inlet boundary
 subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   use decomp_2d
@@ -1107,6 +1115,7 @@ subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pr
     stop
   endif
 end subroutine
+
 ! rescaling the inlet boundary condition
 subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
   use mod_param
@@ -1285,6 +1294,7 @@ subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
      call calcState_PT(pre,tem,rho,ien,mu,ka,1,xsize(1),1,xsize(2),1-nHalo,1)
   endif
 end subroutine
+
 ! RHS: inlet boundary
 subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   use decomp_2d
@@ -1381,6 +1391,7 @@ subroutine setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
       call mpi_finalize(ierr)
   endif
 end subroutine
+
 ! RHS: outlet boundary
 subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
   use decomp_2d

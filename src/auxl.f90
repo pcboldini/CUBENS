@@ -12,6 +12,7 @@ module mod_auxl
   use mod_finitediff
   implicit none
   contains
+  
   ! calculation of the vorticity
   subroutine calcVort(vortx,vorty,vortz,strxz,u,v,w) 
     use decomp_2d
@@ -57,6 +58,7 @@ module mod_auxl
       enddo
     enddo
   end subroutine
+
 ! for channel flow: pressure gradient correction
   subroutine cmpbulkvel(r,w,wb)
     use decomp_2d
@@ -67,8 +69,10 @@ module mod_auxl
     integer ierr,i,j,k, nxnynz
     real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: w,r
     real(mytype) wb, da
+    ! initialization
     wb  = 0.0_mytype
-    !$acc parallel loop collapse(3) default(present) private(da) reduction(+:wb)
+    !$acc parallel default(present) copy(wb)
+    !$acc loop gang, vector collapse(3) reduction(+:wb) 
     do k=1,xsize(3)
        do j=1,xsize(2)
           do i=2,xsize(1)
@@ -77,9 +81,11 @@ module mod_auxl
           enddo
        enddo
     enddo
+    !$acc end parallel
     nxnynz = jmax*kmax*len_x
     call mpi_allreduce(MPI_IN_PLACE, wb, 1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr);   wb = wb/nxnynz
   end subroutine cmpbulkvel
+
 ! calculation of bulk properties for quick monitoring of the simulation
   subroutine cmpbulk(istep,wt1,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,wb,dp)
     use decomp_2d
@@ -91,7 +97,7 @@ module mod_auxl
     integer ierr,i,j,k,istep,ioutput,nxnynz
     real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz
     real(mytype) ddx,ddy,ddz,time,dt,isNan,isNanGlobal,CFL_new
-    real(mytype) rb,wb,preb,dp,kib,eb,str,tmp,enst,sos,Mach_old,max_Mach
+    real(mytype) rb,wb,preb,dp,kib,eb,str,tmp,enst,sos,max_Mach
     real(8) :: wt1
     ! initialization
     isNan = 0.0_mytype
@@ -114,7 +120,8 @@ module mod_auxl
     endif
     ddz = z(2)-z(1)
     ! calculation of bulk properties
-    !$acc parallel loop collapse(3) default(present) private(ddx) async(1)
+    !$acc parallel default(present) copy(rb,wb,preb,kib,eb,enst,max_Mach)
+    !$acc loop gang, vector collapse(3) reduction(+:rb,wb,preb,kib,eb,enst) reduction(max:max_Mach)
     do k=1,xsize(3)
       do j=1,xsize(2)
         do i=2,xsize(1)
@@ -133,28 +140,27 @@ module mod_auxl
           enst = enst + mu(i,j,k)*(vortx(i,j,k)**2 + vorty(i,j,k)**2 + vortz(i,j,k)**2)*ddx
           call calcSOS(rho(i,j,k),ien(i,j,k),sos)
           ! Mach number
-          Mach_old = sqrt(w(i,j,k)**2+v(i,j,k)**2+u(i,j,k)**2)/sos
-          if (Mach_old .gt. max_Mach) then
-            max_Mach = Mach_old
-          endif
+          max_Mach = max(sqrt(w(i,j,k)**2+v(i,j,k)**2+u(i,j,k)**2)/sos, max_Mach)
         enddo
       enddo
     enddo
+    !$acc end parallel
     ! Wall shear stress
-    !$acc parallel loop collapse(2) default(present) reduction(+:str) async(1)
+    !$acc parallel default(present) copy(str)
+    !$acc loop gang, vector reduction(+:str)
     do k=1,xsize(3)
       do j=1,xsize(2)
         ! approximation
         str = str + (mu(2,j,k)*w(2,j,k)/x(2)) 
       enddo
     enddo
+    !$acc end parallel
     rb = rb*ddy*ddz
     wb = wb*ddy*ddz
     preb = preb*ddy*ddz
     kib = kib*ddy*ddz
     eb = eb*ddy*ddz
     enst = enst*ddy*ddz
-    !$acc wait
     ! combine all MPI processes
     call mpi_allreduce(MPI_IN_PLACE, rb  , 1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr);   rb   = rb/nxnynz
     call mpi_allreduce(MPI_IN_PLACE, wb  , 1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr);   wb   = wb/nxnynz
@@ -192,6 +198,7 @@ module mod_auxl
       stop
     endif
   end subroutine
+
   ! calculate statistics
   subroutine calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
     use decomp_2d
@@ -450,6 +457,7 @@ module mod_auxl
 #endif  
     countAvg = countAvg + 1
   end subroutine
+
 ! I/O planes
   subroutine output2dPlane(part,nHaloIn,istep,dir,loc,tmp01,name011,name012,tmp02,name021,name022,tmp03,name031,name032,tmp04,   &
                                                       name041,name042,tmp05,name051,name052,tmp06,name061,name062,tmp07,name071, &
@@ -559,6 +567,7 @@ module mod_auxl
     endif
     deallocate(tmp)
   end subroutine
+
 ! I/O load restart
   subroutine loadRestart(istep,time,rho,u,v,w,ien,nHaloIn,part)
     use mpi
@@ -631,6 +640,7 @@ module mod_auxl
     if(nrank==0) write(stdout,'(A,E12.5,A,I0)') 'The simulation restarts at t: ',time, ' and at step: ', istep
     if(nrank==0) write(stdout,*) ''
   end subroutine
+
 ! I/O save restart
   subroutine saveRestart(istep,time,rho,u,v,w,ien,nHaloIn,part,interpol)
     use mpi

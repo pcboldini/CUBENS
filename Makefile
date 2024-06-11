@@ -4,14 +4,14 @@
 # SPDX-License-Identifier: MIT
 #
 # -
-# Compiler: gnu, cray_cpu, cray_gpu, nvhpc
-ARCH = gnu
+# Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
+ARCH = intel_cpu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
 CASE = -DTGV # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
 EOS_LAW = -DIG     # DIG # DVdW # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DSutherland   # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DSutherland  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers
@@ -25,8 +25,13 @@ ifeq ($(ARCH),gnu)
     FLAGSC  = $(FLAGS) -c -cpp
     COMP = mpif90 -ffixed-line-length-none -std=legacy -J $(MOD)
     LIB =
+else ifeq ($(ARCH),intel_cpu)
+    FLAGS = -O0 -fpp
+    FLAGSC = $(FLAGS) -c
+    COMP = mpiifort -132 -module $(MOD)
+    LIB =
 else ifeq ($(ARCH),cray_cpu)
-    FLAGS = -O3 -hfp3 -eP  -hnoacc
+    FLAGS = -O3 -hfp3 -eZ -hnoacc
     FLAGSC = $(FLAGS) -cc
     COMP = ftn -J  $(MOD)
     LIB =

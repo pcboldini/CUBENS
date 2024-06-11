@@ -394,11 +394,11 @@ program DNS
     ! I/O statistics files if condition is met 
     if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .gt. 0)) then
       if (istep .eq. saveStatsAfter) then
-        write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
+        if (nrank==0) write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
       else if ((istep .ge. saveStatsAfter) .and. (istep .ne. nsteps)) then
-        write(stdout,'(A, I10)') 'next averaging at step:               ', istep
+        if (nrank==0) write(stdout,'(A, I10)') 'next averaging at step:               ', istep
       else if ((istep .ge. saveStatsAfter) .and. (istep .eq. nsteps)) then
-        write(stdout,'(A, I10)') 'final averaging at step:              ', istep
+        if (nrank==0) write(stdout,'(A, I10)') 'final averaging at step:              ', istep
       endif
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       call calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
