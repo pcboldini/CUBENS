@@ -3,6 +3,7 @@
 *.obj
 
 # Precompiled Headers
+*.h
 
 # Fortran module files
 *.mod
@@ -21,3 +22,4 @@ JOB
 *.txt
 *.bin
 *.xmf
+Makefile

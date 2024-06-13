@@ -28,18 +28,18 @@
 !  
     CFL              = 0.5                          ! CFL number, keep < 1
     dtMax            = -3.385e-4                    ! maximum timestep, if <0 ignored
-    nsteps           = 2                            ! simulations steps
-    intvCalcCFL      = 1                            ! interval CFL calculation
+    nsteps           = 100                            ! simulations steps
+    intvCalcCFL      = 100                            ! interval CFL calculation
 !
 ! ---------------------------------- I/O ---------------------------------- 
 !     
     intvPrint        = 1                            ! on the screen
     readRestartFile  = -11                          ! if <0, not read
-    intvSaveRestart  = 10                           ! interval save restart files
-    saveRestartAfter = 10                           ! save restart files after which timestep
-    intvSavePlanes   = 1                            ! interval save planes
-    savePlanesAfter  = 0                            ! save planes after which timestep
-    intvSaveStats    = 1                            ! interval save statistics
+    intvSaveRestart  = 100                           ! interval save restart files
+    saveRestartAfter = 100                           ! save restart files after which timestep
+    intvSavePlanes   = 100                            ! interval save planes
+    savePlanesAfter  = 100                            ! save planes after which timestep
+    intvSaveStats    = 100                            ! interval save statistics
     saveStatsAfter   = -1                           ! save statistics after which timestep
     intvReadParam    = -2                           ! read variation file
 

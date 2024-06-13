@@ -18,7 +18,7 @@ module mod_halo
   end type rk
   type(rk) :: neigh
   integer :: krcy
-  character(len=30) :: char_buff_j
+  character(len=30) :: char_buff_j, char_buff_k
   ! definition of the transfer data arrays depending on the architecture
 #if defined(_OPENACC) && !defined(_GPU_DIRECT)
   real(mytype), allocatable, dimension(:,:,:,:) :: buff_send9_j, buff_send9_k, buff_recv9_j, buff_recv9_k
@@ -34,6 +34,7 @@ module mod_halo
   real(mytype), allocatable, dimension(:,:,:,:) :: send_rcy, recv_rcy
 #endif
 contains
+
 ! initialization of the MPI routine
   subroutine comm_init(myid,p_row,p_col,comm_cart,xs,imax,jmax,kmax)
     implicit none
@@ -98,14 +99,14 @@ contains
     call mpi_cart_rank(comm_cart, coords, neigh%km, ierr)
     call mpi_cart_rank(comm_cart, coordt, neigh%jp, ierr)
     call mpi_cart_rank(comm_cart, coordb, neigh%jm, ierr)
-    ! different treatment of the spanwise direction for 2-D and 3-D simulations
+    ! different treatment of the j-direction for 2-D and 3-D simulations
     if (xs(2)>1) then
       if ((p_row>1) .and. (xs(2)>6)) then
         char_buff_j='mpi_copy_3d'
-#define ACC_MPI_COPY_3D
+#define ACC_MPI_COPY_3D_J
       else if ((p_row==1) .and. (xs(2)>6)) then
         char_buff_j='local_copy_3d'
-#define ACC_LOCAL_COPY_3D
+#define ACC_LOCAL_COPY_3D_J
       else if ((p_row==1) .and. (xs(2)<6)) then
         if (myid == 0) write(*,*) "ERROR: too few points jmax<2 x Halo, increase jmax!"
           call decomp_2d_finalize
@@ -114,7 +115,25 @@ contains
       endif
     else if (xs(2)==1) then
       char_buff_j='local_copy_2d'
-#define ACC_LOCAL_COPY_2D
+#define ACC_LOCAL_COPY_2D_J
+    endif
+    ! different treatment of the z-direction for 2-D and 3-D simulations
+    if (xs(3)>1) then
+      if ((p_col>1) .and. (xs(3)>6)) then
+        char_buff_k='mpi_copy_3d'
+#define ACC_MPI_COPY_3D_K
+      else if ((p_col==1) .and. (xs(3)>6)) then
+        char_buff_k='local_copy_3d'
+#define ACC_LOCAL_COPY_3D_K
+      else if ((p_col==1) .and. (xs(3)<6)) then
+        if (myid == 0) write(*,*) "ERROR: too few points kmax<2 x Halo, increase kmax!"
+          call decomp_2d_finalize
+          call mpi_finalize(ierr) 
+          stop 
+      endif
+    else if (xs(3)==1) then
+      char_buff_k='local_copy_2d'
+#define ACC_LOCAL_COPY_2D_K
     endif
     ! size check
     if ((jmax<p_row) .or. (kmax<p_col)) then
@@ -151,6 +170,7 @@ contains
   !$acc enter data create(buff_send9_j,buff_send9_k,buff_recv9_j,buff_recv9_k) 
   !$acc enter data create(buff_send1_j,buff_send1_k,buff_recv1_j,buff_recv1_k)
   end subroutine
+
 ! initialization of the rescale MPI routine
   subroutine comm_init_rescale(z,xs)
   use decomp_2d
@@ -316,48 +336,99 @@ end subroutine
           enddo
         enddo
     end select 
-    ! sending the kM & kP
-    !$acc parallel loop collapse(3) default(present) async(2)
-    do j=1,xs(2)
-      do h=1,nHalo
-        do i=1,xs(1)
-          ! sendkM 
-          buff_send9_k(i,j,1,h)       = tmp1(i,j,xs(3)+1-h) 
-          buff_send9_k(i,j,2,h)       = tmp2(i,j,xs(3)+1-h)
-          buff_send9_k(i,j,3,h)       = tmp3(i,j,xs(3)+1-h)  
-          buff_send9_k(i,j,4,h)       = tmp4(i,j,xs(3)+1-h) 
-          buff_send9_k(i,j,5,h)       = tmp5(i,j,xs(3)+1-h)  
-          buff_send9_k(i,j,6,h)       = tmp6(i,j,xs(3)+1-h) 
-          buff_send9_k(i,j,7,h)       = tmp7(i,j,xs(3)+1-h)  
-          buff_send9_k(i,j,8,h)       = tmp8(i,j,xs(3)+1-h)  
-          buff_send9_k(i,j,9,h)       = tmp9(i,j,xs(3)+1-h)
-          ! sendkP
-          buff_send9_k(i,j,1,h+nHalo) = tmp1(i,j,h)         
-          buff_send9_k(i,j,2,h+nHalo) = tmp2(i,j,h)                 
-          buff_send9_k(i,j,3,h+nHalo) = tmp3(i,j,h)                 
-          buff_send9_k(i,j,4,h+nHalo) = tmp4(i,j,h)                 
-          buff_send9_k(i,j,5,h+nHalo) = tmp5(i,j,h)                  
-          buff_send9_k(i,j,6,h+nHalo) = tmp6(i,j,h)                      
-          buff_send9_k(i,j,7,h+nHalo) = tmp7(i,j,h)                
-          buff_send9_k(i,j,8,h+nHalo) = tmp8(i,j,h)                     
-          buff_send9_k(i,j,9,h+nHalo) = tmp9(i,j,h)         
+    ! sending or copying the kM & kP depending on *case*
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! sendkM 
+              buff_send9_k(i,j,1,h)       = tmp1(i,j,xs(3)+1-h) 
+              buff_send9_k(i,j,2,h)       = tmp2(i,j,xs(3)+1-h)
+              buff_send9_k(i,j,3,h)       = tmp3(i,j,xs(3)+1-h)  
+              buff_send9_k(i,j,4,h)       = tmp4(i,j,xs(3)+1-h) 
+              buff_send9_k(i,j,5,h)       = tmp5(i,j,xs(3)+1-h)  
+              buff_send9_k(i,j,6,h)       = tmp6(i,j,xs(3)+1-h) 
+              buff_send9_k(i,j,7,h)       = tmp7(i,j,xs(3)+1-h)  
+              buff_send9_k(i,j,8,h)       = tmp8(i,j,xs(3)+1-h)  
+              buff_send9_k(i,j,9,h)       = tmp9(i,j,xs(3)+1-h)
+              ! sendkP
+              buff_send9_k(i,j,1,h+nHalo) = tmp1(i,j,h)         
+              buff_send9_k(i,j,2,h+nHalo) = tmp2(i,j,h)                 
+              buff_send9_k(i,j,3,h+nHalo) = tmp3(i,j,h)                 
+              buff_send9_k(i,j,4,h+nHalo) = tmp4(i,j,h)                 
+              buff_send9_k(i,j,5,h+nHalo) = tmp5(i,j,h)                  
+              buff_send9_k(i,j,6,h+nHalo) = tmp6(i,j,h)                      
+              buff_send9_k(i,j,7,h+nHalo) = tmp7(i,j,h)                
+              buff_send9_k(i,j,8,h+nHalo) = tmp8(i,j,h)                     
+              buff_send9_k(i,j,9,h+nHalo) = tmp9(i,j,h)         
+            enddo
+          enddo
         enddo
-      enddo
-    enddo
+      case("local_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! copykM 
+              tmp1(i,j,xs(3)+h) = tmp1(i,j,h)
+              tmp2(i,j,xs(3)+h) = tmp2(i,j,h)
+              tmp3(i,j,xs(3)+h) = tmp3(i,j,h)
+              tmp4(i,j,xs(3)+h) = tmp4(i,j,h)
+              tmp5(i,j,xs(3)+h) = tmp5(i,j,h)
+              tmp6(i,j,xs(3)+h) = tmp6(i,j,h)
+              tmp7(i,j,xs(3)+h) = tmp7(i,j,h)
+              tmp8(i,j,xs(3)+h) = tmp8(i,j,h)
+              tmp9(i,j,xs(3)+h) = tmp9(i,j,h)
+              ! copykP 
+              tmp1(i,j,1-h) = tmp1(i,j,xs(3)+1-h) 
+              tmp2(i,j,1-h) = tmp2(i,j,xs(3)+1-h)            
+              tmp3(i,j,1-h) = tmp3(i,j,xs(3)+1-h)              
+              tmp4(i,j,1-h) = tmp4(i,j,xs(3)+1-h)              
+              tmp5(i,j,1-h) = tmp5(i,j,xs(3)+1-h)              
+              tmp6(i,j,1-h) = tmp6(i,j,xs(3)+1-h)             
+              tmp7(i,j,1-h) = tmp7(i,j,xs(3)+1-h)             
+              tmp8(i,j,1-h) = tmp8(i,j,xs(3)+1-h)              
+              tmp9(i,j,1-h) = tmp9(i,j,xs(3)+1-h)
+           enddo
+          enddo
+        enddo
+      case("local_copy_2d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! copykM 
+              tmp1(i,j,1-h) = tmp1(i,j,1)
+              tmp2(i,j,1-h) = tmp2(i,j,1)
+              tmp3(i,j,1-h) = tmp3(i,j,1)
+              tmp4(i,j,1-h) = tmp4(i,j,1)
+              tmp5(i,j,1-h) = tmp5(i,j,1)
+              tmp6(i,j,1-h) = tmp6(i,j,1)
+              tmp7(i,j,1-h) = tmp7(i,j,1)
+              tmp8(i,j,1-h) = tmp8(i,j,1)
+              tmp9(i,j,1-h) = tmp9(i,j,1)
+              ! copykP
+              tmp1(i,j,xs(3)+h) = tmp1(i,j,1)              
+              tmp2(i,j,xs(3)+h) = tmp2(i,j,1)
+              tmp3(i,j,xs(3)+h) = tmp3(i,j,1)             
+              tmp4(i,j,xs(3)+h) = tmp4(i,j,1)            
+              tmp5(i,j,xs(3)+h) = tmp5(i,j,1)            
+              tmp6(i,j,xs(3)+h) = tmp6(i,j,1)          
+              tmp7(i,j,xs(3)+h) = tmp7(i,j,1)          
+              tmp8(i,j,xs(3)+h) = tmp8(i,j,1)            
+              tmp9(i,j,xs(3)+h) = tmp9(i,j,1)
+           enddo
+          enddo
+        enddo
+    end select
     !$acc wait(2)
-! MPI call
-#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)
-  !$acc host_data use_device(buff_send9_k,buff_send9_j,buff_recv9_j,buff_recv9_k)
-#elif defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-  !$acc host_data use_device(buff_send9_k,buff_recv9_k)
-#elif defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-  !$acc host_data use_device(buff_send9_k,buff_recv9_k)
-#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)  
-  !$acc update host(buff_send9_k,buff_send9_j)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-  !$acc update host(buff_send9_k)  
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-  !$acc update host(buff_send9_k)
+! MPI call for j
+#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)
+    !$acc host_data use_device(buff_send9_j,buff_recv9_j)
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)  
+    !$acc update host(buff_send9_j)
 #endif
     select case (char_buff_j)
       case("mpi_copy_3d")  
@@ -370,23 +441,33 @@ end subroutine
                           buff_recv9_j(:,:,:,nHalo+1:nHalo*2),xs(1)*xs(3)*9*nHalo,real_type,neigh%jp,0, &
                           MPI_COMM_WORLD,istat,ierr) 
     end select
-    ! MPI kM
-    call mpi_sendrecv(buff_send9_k(:,:,:,1:nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%kp,0, &
-                      buff_recv9_k(:,:,:,1:nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%km,0, &
-                      MPI_COMM_WORLD,istat,ierr) 
-    ! MPI kP
-    call mpi_sendrecv(buff_send9_k(:,:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%km,0, &
-                      buff_recv9_k(:,:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%kp,0, &
-                      MPI_COMM_WORLD,istat,ierr) 
 ! MPI call
 #if defined(_GPU_DIRECT)
-      !$acc end host_data
-#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)
-      !$acc update device(buff_recv9_k,buff_recv9_j)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-      !$acc update device(buff_recv9_k)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-      !$acc update device(buff_recv9_k)
+    !$acc end host_data
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)
+    !$acc update device(buff_recv9_j)
+#endif
+! MPI call for k
+#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)
+    !$acc host_data use_device(buff_send9_k,buff_recv9_k)
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)  
+    !$acc update host(buff_send9_k)
+#endif
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        ! MPI kM
+        call mpi_sendrecv(buff_send9_k(:,:,:,1:nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%kp,0, &
+                          buff_recv9_k(:,:,:,1:nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%km,0, &
+                          MPI_COMM_WORLD,istat,ierr) 
+        ! MPI kP
+        call mpi_sendrecv(buff_send9_k(:,:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%km,0, &
+                          buff_recv9_k(:,:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*9*nHalo,real_type,neigh%kp,0, &
+                          MPI_COMM_WORLD,istat,ierr) 
+    end select
+#if defined(_GPU_DIRECT)
+    !$acc end host_data
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)
+    !$acc update device(buff_recv9_k)
 #endif
 !$acc wait(2)
     ! receving the jM & jP depending on *case*
@@ -420,34 +501,37 @@ end subroutine
           enddo
         enddo
     end select  
-    ! receving the kM & kP 
-    !$acc parallel loop collapse(3) default(present) async(2)
-    do j=1,xs(2)
-      do h=1,nHalo
-        do i=1,xs(1)
-          ! rcvkM
-          tmp1(i,j,1-h) = buff_recv9_k(i,j,1,h) 
-          tmp2(i,j,1-h) = buff_recv9_k(i,j,2,h)
-          tmp3(i,j,1-h) = buff_recv9_k(i,j,3,h) 
-          tmp4(i,j,1-h) = buff_recv9_k(i,j,4,h)
-          tmp5(i,j,1-h) = buff_recv9_k(i,j,5,h)
-          tmp6(i,j,1-h) = buff_recv9_k(i,j,6,h) 
-          tmp7(i,j,1-h) = buff_recv9_k(i,j,7,h) 
-          tmp8(i,j,1-h) = buff_recv9_k(i,j,8,h)
-          tmp9(i,j,1-h) = buff_recv9_k(i,j,9,h)  
-          ! rcvkP
-          tmp1(i,j,xs(3)+h) = buff_recv9_k(i,j,1,h+nHalo) 
-          tmp2(i,j,xs(3)+h) = buff_recv9_k(i,j,2,h+nHalo)      
-          tmp3(i,j,xs(3)+h) = buff_recv9_k(i,j,3,h+nHalo)        
-          tmp4(i,j,xs(3)+h) = buff_recv9_k(i,j,4,h+nHalo)          
-          tmp5(i,j,xs(3)+h) = buff_recv9_k(i,j,5,h+nHalo)         
-          tmp6(i,j,xs(3)+h) = buff_recv9_k(i,j,6,h+nHalo)         
-          tmp7(i,j,xs(3)+h) = buff_recv9_k(i,j,7,h+nHalo)         
-          tmp8(i,j,xs(3)+h) = buff_recv9_k(i,j,8,h+nHalo)          
-          tmp9(i,j,xs(3)+h) = buff_recv9_k(i,j,9,h+nHalo) 
+    ! receving the kM & kP depending on *case*
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! rcvkM
+              tmp1(i,j,1-h) = buff_recv9_k(i,j,1,h) 
+              tmp2(i,j,1-h) = buff_recv9_k(i,j,2,h)
+              tmp3(i,j,1-h) = buff_recv9_k(i,j,3,h) 
+              tmp4(i,j,1-h) = buff_recv9_k(i,j,4,h)
+              tmp5(i,j,1-h) = buff_recv9_k(i,j,5,h)
+              tmp6(i,j,1-h) = buff_recv9_k(i,j,6,h) 
+              tmp7(i,j,1-h) = buff_recv9_k(i,j,7,h) 
+              tmp8(i,j,1-h) = buff_recv9_k(i,j,8,h)
+              tmp9(i,j,1-h) = buff_recv9_k(i,j,9,h)  
+              ! rcvkP
+              tmp1(i,j,xs(3)+h) = buff_recv9_k(i,j,1,h+nHalo) 
+              tmp2(i,j,xs(3)+h) = buff_recv9_k(i,j,2,h+nHalo)      
+              tmp3(i,j,xs(3)+h) = buff_recv9_k(i,j,3,h+nHalo)        
+              tmp4(i,j,xs(3)+h) = buff_recv9_k(i,j,4,h+nHalo)          
+              tmp5(i,j,xs(3)+h) = buff_recv9_k(i,j,5,h+nHalo)         
+              tmp6(i,j,xs(3)+h) = buff_recv9_k(i,j,6,h+nHalo)         
+              tmp7(i,j,xs(3)+h) = buff_recv9_k(i,j,7,h+nHalo)         
+              tmp8(i,j,xs(3)+h) = buff_recv9_k(i,j,8,h+nHalo)          
+              tmp9(i,j,xs(3)+h) = buff_recv9_k(i,j,9,h+nHalo) 
+            enddo
+          enddo
         enddo
-      enddo
-    enddo
+    end select 
   end subroutine
   ! 1-dimensional buffer
   subroutine haloUpdate1_jk(dir,xs,tmp1)
@@ -496,30 +580,51 @@ end subroutine
           enddo
         enddo
     end select
-    ! sending the kM & kP
-    !$acc parallel loop collapse(3) default(present) async(2)
-    do j=1,xs(2)
-      do h=1,nHalo
-        do i=1,xs(1)
-          buff_send1_k(i,j,h)       = tmp1(i,j,xs(3)+1-h) 
-          buff_send1_k(i,j,h+nHalo) = tmp1(i,j,h)        
+    ! sending or copying the kM & kP depending on *case*
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! sendkM
+              buff_send1_k(i,j,h)       = tmp1(i,j,xs(3)+1-h) 
+              ! sendkP
+              buff_send1_k(i,j,h+nHalo) = tmp1(i,j,h)        
+            enddo
+          enddo
         enddo
-      enddo
-    enddo
+      case("local_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! copykM
+              tmp1(i,j,xs(3)+h) = tmp1(i,j,h)
+              ! copykP
+              tmp1(i,j,1-h) = tmp1(i,j,xs(3)+1-h)
+            enddo
+          enddo
+        enddo
+      case("local_copy_2d")
+        !$acc parallel loop collapse(3) default(present) async(2)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! copykM
+              tmp1(i,j,1-h) = tmp1(i,j,1)
+              ! copykP
+              tmp1(i,j,xs(3)+h) = tmp1(i,j,1)
+            enddo
+          enddo
+        enddo
+    end select
     !$acc wait(2)
-! MPI call
-#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)
-  !$acc host_data use_device(buff_send1_k,buff_send1_j,buff_recv1_j,buff_recv1_k)
-#elif defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-  !$acc host_data use_device(buff_send1_k,buff_recv1_k)
-#elif defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-  !$acc host_data use_device(buff_send1_k,buff_recv1_k)
-#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)  
-  !$acc update host(buff_send1_k,buff_send1_j)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-  !$acc update host(buff_send1_k)  
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-  !$acc update host(buff_send1_k)
+! MPI call for j
+#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)
+  !$acc host_data use_device(buff_send1_j,buff_recv1_j)
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)  
+  !$acc update host(buff_send1_j)
 #endif
     select case (char_buff_j)
       case("mpi_copy_3d")
@@ -532,22 +637,32 @@ end subroutine
                           buff_recv1_j(:,:,nHalo+1:nHalo*2),xs(1)*xs(3)*nHalo,real_type,neigh%jp,0, &
                           MPI_COMM_WORLD,istat,ierr) 
     end select 
-    ! MPI kM 
-    call mpi_sendrecv(buff_send1_k(:,:,1:nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%kp,0, &
-                      buff_recv1_k(:,:,1:nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%km,0, &
-                      MPI_COMM_WORLD,istat,ierr) 
-    ! MPI kP
-    call mpi_sendrecv(buff_send1_k(:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%km,0, &
-                      buff_recv1_k(:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%kp,0, &
-                      MPI_COMM_WORLD,istat,ierr) 
 #if defined(_GPU_DIRECT)
-      !$acc end host_data
-#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D)
-      !$acc update device(buff_recv1_k,buff_recv1_j)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_3D)
-      !$acc update device(buff_recv1_k)
-#elif !defined(_GPU_DIRECT) && defined(ACC_LOCAL_COPY_2D)
-      !$acc update device(buff_recv1_k)
+    !$acc end host_data
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_J)
+    !$acc update device(buff_recv1_j)
+#endif
+! MPI call for k
+#if defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)
+  !$acc host_data use_device(buff_send1_k,buff_recv1_k)
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)  
+  !$acc update host(buff_send1_k)
+#endif
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        ! MPI kM 
+        call mpi_sendrecv(buff_send1_k(:,:,1:nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%kp,0, &
+                          buff_recv1_k(:,:,1:nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%km,0, &
+                          MPI_COMM_WORLD,istat,ierr) 
+        ! MPI kP
+        call mpi_sendrecv(buff_send1_k(:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%km,0, &
+                          buff_recv1_k(:,:,nHalo+1:2*nHalo),xs(1)*xs(2)*nHalo,real_type,neigh%kp,0, &
+                          MPI_COMM_WORLD,istat,ierr) 
+    end select 
+#if defined(_GPU_DIRECT)
+    !$acc end host_data
+#elif !defined(_GPU_DIRECT) && defined(ACC_MPI_COPY_3D_K)
+    !$acc update device(buff_recv1_k)
 #endif
 !$acc wait(2)
     ! receving the jM & jP depending on *case*
@@ -565,18 +680,21 @@ end subroutine
           enddo
         enddo
     end select
-    ! receving the kM & kP 
-    !$acc parallel loop collapse(3) default(present) async(1)
-    do j=1,xs(2)
-      do h=1,nHalo
-        do i=1,xs(1)
-          ! rcvkM
-          tmp1(i,j,1-h) = buff_recv1_k(i,j,h)
-          ! rcvkP
-          tmp1(i,j,xs(3)+h) = buff_recv1_k(i,j,h+nHalo)
+    ! receving the kM & kP depending on *case*
+    select case (char_buff_k)
+      case("mpi_copy_3d")
+        !$acc parallel loop collapse(3) default(present) async(1)
+        do j=1,xs(2)
+          do h=1,nHalo
+            do i=1,xs(1)
+              ! rcvkM
+              tmp1(i,j,1-h) = buff_recv1_k(i,j,h)
+              ! rcvkP
+              tmp1(i,j,xs(3)+h) = buff_recv1_k(i,j,h+nHalo)
+            enddo
+          enddo
         enddo
-      enddo
-    enddo
+    end select
   end subroutine
 ! update halo cells in i-direction only for GPU architecture 
   subroutine haloUpdateMult_i(dir,xs,tmp1,tmp2,tmp3,tmp4,tmp5,tmp6,tmp7,tmp8,tmp9)

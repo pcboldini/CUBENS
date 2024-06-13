@@ -5,9 +5,9 @@
 #
 # -
 # Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
-ARCH = intel_cpu
+ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
-CASE = -DTGV # DBL # DCHA # DTGV
+CASE = -DBL # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
 EOS_LAW = -DIG     # DIG # DVdW # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
@@ -21,7 +21,7 @@ FFT = fftw3_f03
 
 
 ifeq ($(ARCH),gnu)
-    FLAGS  =  -O3 -march=native # -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=all
+    FLAGS  =  -O0 -march=native # -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=all
     FLAGSC  = $(FLAGS) -c -cpp
     COMP = mpif90 -ffixed-line-length-none -std=legacy -J $(MOD)
     LIB =
