@@ -29,15 +29,12 @@ P.C.Boldini, R.Hirai, P.Costa, J.W.R.Peeters, R.Pecnik, "CUBENS: development of 
 ## News
 # **[2024/../..]** CUBENS v1.0 is online!
 
-## Usage
+### Usage
 
 
 
 ## Motivation
-The application of non-ideal fluids has rapidly and widely increased the relevance of a new branch of fluid mechanics called non-ideal compressible fluid dynamics (NICFD). With regards to the rising number of industrial applications operating at non-ideal gas conditions, the development of more accurate theoretical, experimental, and numerical tools is required. In particular, one of the main challenges remains the lack of knowledge in transitional and turbulent boundary layers due to the difficulty in performing experiments at high density and temperature conditions. Therefore, high-fidelity investigations with the CUBENS solver will pave the way for future intensive research in the field of NICFD.
-
-
-
+The application of non-ideal fluids has rapidly and widely increased the relevance of a new branch of fluid mechanics called non-ideal compressible fluid dynamics. With respect to the rising number of industrial applications operating at non-ideal gas conditions, such as turbomachinery and heat exchangers, the development of more accurate theoretical, experimental, and numerical tools is required. In particular, one major challenge is the lack of knowledge in transitional and turbulent boundary layers due to the difficulty in performing experiments at high density and temperature conditions. On the contrary, high-fidelity simulations can significantly contribute to improve and accelerate the design of new engineering systems operating at non-ideal conditions. Fluids above their critical point play a key role in future energy conversion systems.
 
 ## Contributing
 
