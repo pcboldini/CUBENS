@@ -190,7 +190,7 @@ contains
     enddo
     ! update of the secondary variables
     call calcState_re(rho,ien,pre,tem,mu,ka,1,im,1,jm,1,km)
-    ! second substep k2 (internal and BC are asynchronous)
+    ! third substep k3 (internal and BC are asynchronous)
     call calcEuler_internal(drho3,drhu3,drhv3,drhw3,dret3,rho,u,v,w,ien,pre,istep)
     call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time+dt)
     !$acc wait
