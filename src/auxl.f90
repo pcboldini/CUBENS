@@ -12,7 +12,7 @@ module mod_auxl
   use mod_finitediff
   implicit none
   contains
-  
+
   ! calculation of the vorticity
   subroutine calcVort(vortx,vorty,vortz,strxz,u,v,w) 
     use decomp_2d
@@ -94,6 +94,7 @@ module mod_auxl
     use mod_grid
     use mod_eos
     implicit none 
+    character(len=100) :: filename
     integer ierr,i,j,k,istep,ioutput,nxnynz
     real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz
     real(mytype) ddx,ddy,ddz,time,dt,isNan,isNanGlobal,CFL_new
@@ -189,6 +190,17 @@ module mod_auxl
                      istep, MPI_WTIME()-wt1, dt, CFL_new, time, str, wb, rb, preb, kib, eb, enst, max_Mach
 #endif
     endif
+#if defined(TGV)
+    ! Specify the filename
+    filename = '/tests/TGV/TGV_out.txt'
+
+    if (nrank == 0) then
+     ! Open the file for writing
+      open(unit=10, file=filename, status='old', position='append', action='write')
+      write(10, '(4(ES20.10, 1X))') time, kib, eb, enst
+      close(10)
+    endif
+#endif
     ! check if there is any NaN, in case stop the simulation
     if (wb .ne. wb) isNan = 1
     call mpi_allreduce(isNan, isNanGlobal,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)

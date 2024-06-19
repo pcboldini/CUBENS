@@ -32,6 +32,7 @@ module mod_eos_var
   !$acc declare create(t_pr%Rref,t_pr%Efac_r,t_pr%cvOverR,t_pr%prefac_r, &
   !$acc                 t_pr%Cpfac_r,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%a,t_pr%b)
   contains 
+
 ! Include ideal gas EoS 
 #ifdef IG 
 ! Initialize 
@@ -68,6 +69,7 @@ module mod_eos_var
     !$acc update device(t_ig)
     !$acc update device(t_ig%gam,t_ig%Rgas,t_ig%cp,t_ig%cv,t_ig%cvInv,t_ig%prefac_r)
   end subroutine
+
 ! Calculate EoS from density and internal energy
   subroutine calcEOS_re(rho,ien,pre,tem) 
     !$acc routine seq
@@ -77,6 +79,7 @@ module mod_eos_var
     tem = t_ig%cvInv*ien
     pre = rho*t_ig%Rgas*tem
   end subroutine
+
 ! Calculate EoS from density and pressure
   subroutine calcEOS_rP(rho,pre,ien,tem)
     !$acc routine seq
@@ -86,6 +89,7 @@ module mod_eos_var
     tem = pre/t_ig%Rgas/rho 
     ien = t_ig%cv*tem 
   end subroutine
+
 ! Calculate EoS from density and temperature
   subroutine calcEOS_rT(rho,tem,ien,pre)
     !$acc routine seq
@@ -95,6 +99,7 @@ module mod_eos_var
     ien = t_ig%cv*tem
     pre = rho*t_ig%Rgas*tem
   end subroutine
+
 ! Calculate EoS from pressure and temperature
   subroutine calcEOS_PT(pre,tem,rho,ien)
     !$acc routine seq
@@ -104,6 +109,7 @@ module mod_eos_var
     rho = pre/(tem*t_ig%Rgas)
     ien = t_ig%cv * tem
   end subroutine
+
 ! Calculate speed of sound from density and internal energy
   subroutine calcSOS_re(rho,ien,sos)
     !$acc routine seq
@@ -112,6 +118,7 @@ module mod_eos_var
     real(mytype), intent(OUT) :: sos
     sos = sqrt(t_ig%gam*(t_ig%gam-1.0_mytype)*ien) 
   end subroutine
+
 ! Calculate c_p/alpha_v from density and internal energy
   subroutine calcFac_re(rho,ien,fac,tref,rhoref)
     !$acc routine seq
@@ -121,6 +128,7 @@ module mod_eos_var
     fac = t_ig%gam*ien
   end subroutine
 #endif
+
 ! Include Van der Waals EoS 
 #ifdef VdW
 ! Initialize 
@@ -157,7 +165,8 @@ module mod_eos_var
     t_vdw%Cpfac_r = Cpfac_r
     !$acc update device(t_vdw) 
     !$acc update device(t_vdw%Rref,t_vdw%a,t_vdw%prefac_r,t_vdw%Efac_r,t_vdw%Zc,t_vdw%cvOverR,t_vdw%Cpfac_r)
-  end subroutine 
+  end subroutine
+
 ! Calculate EoS from density and internal energy
   subroutine calcEOS_re(rho_r,ien,pre,tem_r)
     !$acc routine seq
@@ -178,6 +187,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     pre = pre_r*prefac_r
   end subroutine
+
 ! Calculate EoS from density and pressure
   subroutine calcEOS_rP(rho_r,pre,ien,tem_r)
     !$acc routine seq  
@@ -199,6 +209,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     ien = Efac_r*ien_r
   end subroutine
+
 ! Calculate EoS from density and temperature
   subroutine calcEOS_rT(rho_r,tem_r,ien,pre)
     !$acc routine seq  
@@ -220,6 +231,7 @@ module mod_eos_var
     pre = pre_r*prefac_r
     ien = Efac_r*ien_r
   end subroutine
+
 ! Calculate EoS from pressure and temperature
   subroutine calcEOS_PT(pre,tem_r,rho_r,ien)
     !$acc routine seq  
@@ -247,6 +259,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     ien = Efac_r*ien_r
   end subroutine
+
 ! Calculate speed of sound from density and internal energy
   subroutine calcSOS_re(rho_r,ien,sos)
     !$acc routine seq
@@ -263,6 +276,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     sos   = sqrt(sosfac_r*sos_r)
   end subroutine
+
 ! Calculate c_p/alpha_v from density and internal energy
   subroutine calcFac_re(rho_r,ien,fac,tref,rhoref)
     !$acc routine seq
@@ -289,6 +303,7 @@ module mod_eos_var
     fac     = cp/alpha_v
   end subroutine
 #endif
+
 ! Include Peng-Robinson EoS 
 #ifdef PR
 ! Initialize 
@@ -330,6 +345,7 @@ module mod_eos_var
     !$acc update device(t_pr%Rref,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%a,t_pr%b, &
     !$acc               t_pr%prefac_r,t_pr%Efac_r,t_pr%cvOverR,t_pr%Cpfac_r)
   end subroutine
+
 ! Calculate EoS from density and internal energy
   subroutine calcEOS_re(rho_r,ien,pre,tem_r)
     !$acc routine seq
@@ -362,6 +378,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     pre = pre_r*prefac_r
   end subroutine
+
 ! Calculate EoS from density and pressure
   subroutine calcEOS_rP(rho_r,pre,ien,tem_r)
     !$acc routine seq
@@ -395,6 +412,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     ien = Efac_r*ien_r
   end subroutine
+
 ! Calculate EoS from density and temperature
   subroutine calcEOS_rT(rho_r,tem_r,ien,pre)
     !$acc routine seq
@@ -425,6 +443,7 @@ module mod_eos_var
     pre = pre_r*prefac_r
     ien = Efac_r*ien_r
   end subroutine
+
 ! Calculate EoS from pressure and temperature
   subroutine calcEOS_PT(pre,tem_r,rho_r,ien)
     !$acc routine seq
@@ -433,12 +452,11 @@ module mod_eos_var
     integer :: ierr
     real(mytype), intent(IN) :: pre,tem_r
     real(mytype), intent(OUT) :: rho_r,ien
-    write(stdout,*)
-    write(stdout,*) "Not included yet! Select different boundary conditions"
-    call decomp_2d_finalize
-    call mpi_finalize(ierr)
+    if (nrank == 0) write(stdout,*)
+    if (nrank == 0) write(stdout,*) "Not included yet! Select different boundary conditions"
     stop
   end subroutine
+
 ! Calculate speed of sound from density and internal energy
   subroutine calcSOS_re(rho_r,ien,sos)
     !$acc routine seq
@@ -477,6 +495,7 @@ module mod_eos_var
     ! Non-dimensional quantities
     sos = sqrt(sosfac_r*sos_r)
   end subroutine
+
 ! Calculate c_p/alpha_v from density and internal energy
   subroutine calcFac_re(rho_r,ien,fac,tref,rhoref)
     !$acc routine seq
