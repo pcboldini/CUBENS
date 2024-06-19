@@ -19,7 +19,7 @@ slurm*
 
 # Others 
 JOB
-*.txt
+#*.txt
 #*.bin
 *.xmf
 #Makefile
