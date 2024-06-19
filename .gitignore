@@ -3,10 +3,7 @@
 *.obj
 
 # Precompiled Headers
-*.h
-!tests/TGV/
-!tests/BoundaryLayer/
-!tests/HtypeBreakdown/
+#*.h
 
 # Fortran module files
 *.mod
@@ -18,20 +15,11 @@
 
 # Output files HPC
 slurm*
-out
-!tests/TGV/
-!tests/BoundaryLayer/
-!tests/HtypeBreakdown/
+#out
 
 # Others 
 JOB
 *.txt
-*.bin
-!tests/TGV/
-!tests/BoundaryLayer/
-!tests/HtypeBreakdown/
+#*.bin
 *.xmf
-Makefile
-!tests/TGV/
-!tests/BoundaryLayer/
-!tests/HtypeBreakdown/
+#Makefile
