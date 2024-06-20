@@ -720,6 +720,7 @@ module mod_auxl
     call MPI_FILE_CLOSE(fh,ierr)
     deallocate(tmp)
   end subroutine
+
   ! I/O save statistics
   subroutine saveStats(part,istep,dt,qave,factAvg,countAvg)
     use decomp_2d
@@ -860,4 +861,5 @@ module mod_auxl
       close(11)
     endif
   end subroutine
+  
 end module

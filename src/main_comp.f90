@@ -392,7 +392,7 @@ program DNS
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
     endif
     ! I/O statistics files if condition is met 
-    if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .gt. 0)) then
+    if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
       if (istep .eq. saveStatsAfter) then
         if (nrank==0) write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
       else if ((istep .ge. saveStatsAfter) .and. (istep .ne. nsteps)) then

@@ -18,7 +18,7 @@ Run the 2-D boundary layer for:
 
 input: `config_BL.h` file with `Makefile`, for inital condition: `main_PR.ipynb` file generating files in `inputDNS`
 
-output: `ypl.1.` planes of non-conservative variables
+output: `ypl.1.` planes of non-conservative variables at `t=100000` (steady solution)
 
 ### H-type breakdown (Sec. 5.2)
 Run the initial stage of the H-type breakdown:
@@ -28,6 +28,6 @@ Run the initial stage of the H-type breakdown:
 
 input: `config_BL.h` file with `Makefile`, for inital condition: `main_IG.ipynb` file generating files in `inputDNS`
 
-output: `ruvwe.` restart file at `t=650000`
+output: `ypl.1.` planes of non-conservative variables at `t=650000` (periodic solution)
 
 
