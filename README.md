@@ -1,4 +1,4 @@
-<img src="./postproc/utils/CUBENS_logo.png" width="30%" height="30%">
+<img src="CUBENS_logo.png" width="30%" height="30%">
 
 ## Main
 CUBENS (CUBic Equation of state Navier-Stokes) is a massively-parallel GPU-accelerated high-order solver for direct numerical simulations of non-ideal wall-bounded flows. 

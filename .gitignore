@@ -1,6 +1,8 @@
 # Compiled Object files
 *.o
 *.obj
+.ipynb_checkpoints
+
 
 # Precompiled Headers
 #*.h
