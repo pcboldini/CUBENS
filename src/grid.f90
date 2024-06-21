@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_grid
   use decomp_2d
   use mod_param
@@ -14,6 +15,8 @@ module mod_grid
   real(mytype), allocatable, dimension(:) :: x,y,z,z_global
   real(mytype), allocatable, dimension(:) :: xp,xpp,zp,zpp,zp_global,zpp_global
   contains
+
+
 ! initialization of the grid variables and subroutines
   subroutine init_grid()
     use decomp_2d
@@ -138,6 +141,8 @@ module mod_grid
     !$acc enter data copyin(dx,dy,dz)
     !$acc enter data copyin(xstart,ystart,zstart,xend,yend,zend)
   end subroutine init_grid
+
+
 ! calculation of the x-stencil (wall-normal) for flat-plate
   subroutine xDistribution(xmesh_type, ReTau, stretchx, len_x, npts, x, xp, xpp)
     implicit none
@@ -176,6 +181,8 @@ module mod_grid
       enddo
     endif
   end subroutine
+
+
 ! calculation of the x-stencil (wall-normal) for channel
   subroutine xDistribution_CHA(stretchx, len_x, npts, x, xp, xpp)
     implicit none
@@ -190,6 +197,8 @@ module mod_grid
       xpp(i)  =  -stretchx**2*tanh(stretchx*factx)/tanh(stretchx*0.5_mytype)/cosh(stretchx*factx)**2*len_x
     enddo
     end subroutine
+
+
 ! calculation of the y-stencil (spanwise)
   subroutine yDistribution(npts, y, dy)
     implicit none
@@ -202,6 +211,8 @@ module mod_grid
       y(j)= facty*dy
     enddo
   end subroutine
+
+
 ! calculation of the z-stencil (streamwise)
   subroutine zDistribution(zmesh_type, xst, npts, kmax, len_z, z_1, z_2, bumpz1, bumpz2, zplus_min, zplus_max &
                           ,z_pert1, z_pert2, bumpzpert1, bumpzpert2, zpluspert_min &
@@ -271,6 +282,8 @@ module mod_grid
       zpp_global = zpp_global/z_max*len_z
     endif
   end subroutine
+
+
 ! display the grid settings and for pert_calc==1, calculate the fixed timestep
   subroutine print_init_grid()
     use decomp_2d
@@ -319,6 +332,7 @@ module mod_grid
         stop
       endif
     endif
+
     ! display settings
     if (nrank == 0) then
       write(stdout,* ) 'Mesh'
@@ -391,4 +405,6 @@ module mod_grid
     endif
     deallocate(dz_real)
   end subroutine
+
+
 end module mod_grid

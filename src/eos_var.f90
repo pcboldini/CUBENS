@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_eos_var
   use io_std_units
   use decomp_2d, only: mytype
@@ -33,9 +34,11 @@ module mod_eos_var
   !$acc                 t_pr%Cpfac_r,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%a,t_pr%b)
   contains 
 
+
 ! Include ideal gas EoS 
 #ifdef IG 
 ! Initialize 
+
   subroutine init_EOSModel()
     use mod_param
     implicit none 
@@ -129,8 +132,10 @@ module mod_eos_var
   end subroutine
 #endif
 
+
 ! Include Van der Waals EoS 
 #ifdef VdW
+
 ! Initialize 
   subroutine init_EOSModel()
     use mod_param
@@ -303,6 +308,7 @@ module mod_eos_var
     fac     = cp/alpha_v
   end subroutine
 #endif
+
 
 ! Include Peng-Robinson EoS 
 #ifdef PR
@@ -539,4 +545,6 @@ module mod_eos_var
     fac     = cp/alpha_v
   end subroutine
 #endif  
+
+  
 end module mod_eos_var

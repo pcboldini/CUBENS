@@ -1,15 +1,17 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 ! initial conditions
 module mod_init
 use io_std_units
 implicit none
 integer, parameter :: typeReadBlasius = 8
 contains
+
 
 ! boundary layer: Blasius solution loaded from external files
 subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
@@ -84,6 +86,7 @@ subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   deallocate(uRead); deallocate(uIntp)
 end subroutine
 
+
 ! 1-D wave for advection test case
 subroutine initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
@@ -125,6 +128,7 @@ subroutine initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
   call calcState_rP(rho,pre,ien,tem,mu,ka, 1,xsize(1),1,xsize(2),1,xsize(3))
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
+
 
 ! turbulent channel: Poiseuille laminar profile plus vortex pair according to Henningson & Kim, JFM 228, 1991
 subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
@@ -175,6 +179,7 @@ subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
 
+
 ! Taylor-Green Vortex: laminar-turbulent transition of a decaying vortex
 subroutine initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
@@ -212,4 +217,6 @@ subroutine initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
 call calcState_rP(rho,pre,ien,tem,mu,ka,1,part%xsz(1),1,part%xsz(2),1,part%xsz(3)) 
 !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
+
+
 end module mod_init

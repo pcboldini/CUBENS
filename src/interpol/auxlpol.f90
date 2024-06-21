@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_interpolate
   use decomp_2d
   use mod_halo
@@ -17,6 +18,7 @@ module mod_interpolate
   real(mytype), allocatable, dimension(:) :: xnew, ynew, znew, znew_global
   TYPE (DECOMP_INFO) :: part1, part2
   contains
+
 
 ! initializing the domain
   subroutine initDomain(xmesh_type,part,im,jm,km,Lx,Ly,Lz,&
@@ -62,6 +64,7 @@ module mod_interpolate
     allocate(e(part%xsz(1), part%xsz(2), part%xsz(3)))
   end subroutine
 
+
 ! initializing solution
   subroutine initSolution(part,x,z,r1,u1,v1,w1,e1)
     use mod_init
@@ -98,6 +101,7 @@ module mod_interpolate
     e1 = e(1:part%xsz(1), 1:part%xsz(2), 1:part%xsz(3))
     deallocate(r,u,v,w,e,pre,tem,mu,ka)
   end subroutine
+
 
 ! interpolate in all three directions
   subroutine interp3D(input, output, imax, jmax, kmax, inew, jnew, knew)

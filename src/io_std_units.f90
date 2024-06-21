@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module io_std_units
    use decomp_2d
    implicit none
@@ -15,4 +16,5 @@ module io_std_units
    ! no screen output but in a separate file
    integer(mytype), parameter :: stdout = 7                                     
 #endif   
+   
 end module io_std_units

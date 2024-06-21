@@ -6,6 +6,7 @@
   rhoea = rhoe(i,j,k)
   za    = zp(k)
   xa    = xp(i)
+
   !$acc loop seq
   do s=1,nStencilConv
     rhoip = rhoa+r(i+s,j,k)
@@ -69,6 +70,3 @@
     rhs_v(i,j,k) = rhs_v(i,j,k) -       conv_ddy(s)*(p(i,j+s,k)-p(i,j-s,k)) 
     rhs_w(i,j,k) = rhs_w(i,j,k) - za*conv_ddz(s)*(p(i,j,k+s)-p(i,j,k-s)) 
   enddo
-
-
-

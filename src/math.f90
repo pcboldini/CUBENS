@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
@@ -9,6 +9,8 @@ module mod_math
    implicit none
    ! definition of double precision PI
    real(mytype), parameter :: pi_const    = 4.0_mytype*atan(1.0_mytype)
+
+
 contains
    ! calculation of cubic roots for EoS
    subroutine cubic_root(A,B,C,D,x)
@@ -43,6 +45,8 @@ contains
          x=real(x3)
       endif
    end subroutine
+
+
 ! spline function for mesh cubic interpolation: calculation of the second derivative
    subroutine spline(x, y, n, y2)
       !$acc routine seq
@@ -72,6 +76,8 @@ contains
       enddo
       return
    end subroutine
+
+
 ! spline function for mesh cubic interpolation: actual interpolation with given mesh second derivatives
 subroutine splint(xa,ya,y2a,n,x,y)
    !$acc routine seq
@@ -106,4 +112,6 @@ subroutine trapzint(n,xa,ya,y)
    y=sum((ya(1+1:n-0) + ya(1+0:n-1))*(xa(1+1:n-0) - xa(1+0:n-1)))/2
    return
 end subroutine
+
+
 end module

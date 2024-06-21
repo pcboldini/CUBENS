@@ -1,13 +1,15 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_eos
   use decomp_2d, only: mytype
   !@acc use openacc
   implicit none
+
 ! Variables container for global variables  
 ! EoS: Equation of State, TP: transport properties 
   type t_INIT_PARAM
@@ -17,6 +19,7 @@ module mod_eos
   !$acc declare create(t_param)
   !$acc declare create(t_param%Rhoref,t_param%Tref)
   contains 
+
 ! Initialize global variables
   subroutine init_PARAM_EOS()
     use mod_param
@@ -26,6 +29,8 @@ module mod_eos
     !$acc update device(t_param) 
     !$acc update device(t_param%Rhoref,t_param%Tref)
   end subroutine init_PARAM_EOS
+
+
 ! Call secondary EoS and TP variables from density and internal energy
   subroutine calcState_RE(rho,ien,pre,tem,mu,ka,i1,i2,j1,j2,k1,k2)
     use mod_param, only: nHalo
@@ -47,6 +52,8 @@ module mod_eos
       enddo 
     enddo 
   end subroutine
+
+
 ! Call secondary EoS and TP variables from density and pressure
   subroutine calcState_rP(rho,pre,ien,tem,mu,ka,i1,i2,j1,j2,k1,k2)
     use mod_param, only: nHalo
@@ -68,6 +75,8 @@ module mod_eos
       enddo 
     enddo 
   end subroutine
+
+
 ! Call secondary EoS and TP variables from density and temperature
   subroutine calcState_rT(rho,tem,ien,pre,mu,ka, i1,i2,j1,j2,k1,k2)
     use mod_param, only: nHalo
@@ -88,6 +97,8 @@ module mod_eos
       enddo 
     enddo 
   end subroutine
+
+
 ! Call secondary EoS and TP variables from pressure and temperature
   subroutine calcState_PT(pre,tem,rho,ien,mu,ka, i1,i2,j1,j2,k1,k2)
     use mod_param, only: nHalo
@@ -109,6 +120,8 @@ module mod_eos
       enddo 
     enddo 
   end subroutine
+
+  
 ! Call speed of sound from density and internal energy
   subroutine calcSOS(rho,ien,sos) 
     !$acc routine seq

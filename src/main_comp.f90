@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 program DNS
   use decomp_2d
   use decomp_2d_io
@@ -26,6 +27,7 @@ program DNS
   use mod_math
   !@acc use openacc 
   implicit none
+
 
 !===============================================================================================!
 !                                       CUBENS main data
@@ -51,11 +53,13 @@ program DNS
 ! CUBENS Version number
   real(mytype), parameter                    :: version = 1.0     
 
+
 !===============================================================================================!
 !                                       INITIALIZATION
 !===============================================================================================!
 ! generate today's date
   call fdate(date) 
+
 !---------------------------------------!
 !  Read the config.h and init_BL files  !
 !---------------------------------------!
@@ -66,6 +70,7 @@ program DNS
   ! Writing parameters for user variation 
   call io_writeParams_variation()
 #endif
+
 !-----------------------------!
 !         MPI library         !
 !-----------------------------!
@@ -171,6 +176,7 @@ program DNS
     call comm_init_rescale(z,xsize)
   endif
 
+
 !===============================================================================================!
 !                                       ALLOCATION
 !===============================================================================================!
@@ -213,6 +219,7 @@ program DNS
   countAvg = 0
 ! copy common arrays to device
 !$acc enter data copyin(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz,qave)
+
 ! calculate sponge
 #if defined(BL)
   if (perBC(3) .eqv. .false.) then
@@ -241,6 +248,7 @@ program DNS
   endif
 #endif 
 
+
 !===============================================================================================!
 !                                       INITIAL CONDITION                                           
 !===============================================================================================!
@@ -249,6 +257,7 @@ program DNS
   istart = 0
   istep  = 0
   CFL_new = CFL 
+
 ! initialize initial solution or read restart file
   if (readRestartFile.lt.0)  then
 #if defined(BL)
@@ -275,6 +284,7 @@ program DNS
     call loadRestart(istart,time,rho,u,v,w,ien,nHalo,part)
     !$acc update device(rho,u,v,w,ien)
   endif
+
 ! update the other secondary variables
   if (nrank==0) write(stdout,*) 'updating initial pre,tem,mu,ka'
   call calcState_RE(rho,ien,pre,tem,mu,ka,1,xsize(1),1,xsize(2),1,xsize(3)) 
@@ -287,6 +297,7 @@ program DNS
   call print_pertBC()
 ! calculate vorticity
   call calcVort(vortx,vorty,vortz,strxz,u,v,w)
+
 ! write multiple planes  
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)
   if (yi_plane(1).gt.0)  then
@@ -316,16 +327,20 @@ program DNS
       enddo
   endif
 
+
 !===============================================================================================!
 !                                          TIME ITERATION
 !===============================================================================================!
   !$acc update device(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz)
   wt_start = MPI_WTIME()
   wt_tmp = MPI_WTIME()
+
   ! calculate bulk properties for real time monitoring
   call cmpbulk(istart,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
+
   ! calculate timestep
   if (CFL.gt.0) call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
+
   ! loop over timesteps
   do istep=istart+1, istart+nsteps
     wt_tmp = MPI_WTIME()
@@ -338,17 +353,21 @@ program DNS
     ! rescaling inlet boundary
       call setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
     endif
+
     ! recalculate timestep if condition is met
     if ((CFL.gt.0).and.(mod(istep, intvCalcCFL).eq.0))  call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
     ! time integration
+
     call rk3(part,dt,istep,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time) !
     ! advance time
     time = time + dt
+
     ! calculate bulk properties for real time monitoring
     if (mod((istep-istart),intvPrint).eq.0) then 
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
       call cmpbulk(istep,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
     endif
+
     ! I/O planes if condition is met 
     if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter)) then 
       ! set boundary conditions
@@ -385,12 +404,14 @@ program DNS
         enddo
       endif
     endif
+
     ! I/O restart files if condition is met 
     if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
     endif
+
     ! I/O statistics files if condition is met 
     if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
       if (istep .eq. saveStatsAfter) then
@@ -407,6 +428,7 @@ program DNS
         call saveStats(part,istep,dt,qave,factAvg,countAvg)
       endif
     endif
+
     ! I/O file for real-time parameter modifications
     if ((mod(istep,intvReadParam) .eq. 0) .and. (intvReadParam .gt. 0)) call io_readParams_variation()
     ! simulation can be stopped with *abortSimulation*
@@ -425,6 +447,7 @@ program DNS
   endif
   ! print total time 
   if (nrank == 0) print '("Total time = ",f10.3," minutes.")', (MPI_WTIME() - wt_start)/60.0
+
 
 !===============================================================================================!
 !                                       DEALLOCATION
@@ -457,4 +480,6 @@ program DNS
   ! stop the mpi 
   call decomp_2d_finalize
   call mpi_finalize(ierr)
+
+
 end program

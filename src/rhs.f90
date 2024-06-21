@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_rhs
   use decomp_2d
   use mod_param
@@ -18,6 +19,8 @@ module mod_rhs
   real(mytype), allocatable, dimension(:)       :: spSigX, spSigZ
   real(mytype), allocatable, dimension(:,:,:)   :: rhoe
 contains
+
+
 ! initialization allocated variables and sponge
   subroutine init_rhs()
     use decomp_2d
@@ -68,6 +71,8 @@ contains
     !$acc enter data copyin(rhoe,dil) async 
     !$acc enter data copyin(spSigX,spSigZ) async
   end subroutine
+
+
 ! calculation of divergence
   subroutine calcDivergence(u,v,w)
     use decomp_2d
@@ -90,6 +95,8 @@ contains
       enddo
     enddo
   end subroutine
+
+
 ! calculation of convective fluxes at internal mesh points
   subroutine calcEuler_internal(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p,istep) 
     use decomp_2d
@@ -158,6 +165,8 @@ contains
       enddo
     endif
   end subroutine
+
+
 ! calculation of convective fluxes at boundary mesh points, top and bottom boundaries excluded
   subroutine calcEuler_atBoundary(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p,istep)
     use decomp_2d
@@ -241,6 +250,8 @@ contains
     endif 
     !$acc wait   
   end subroutine
+
+
 ! call of the viscous (diffusive) RHS at all cells 
 ! call of the boundary conditions and sponge
   subroutine calcViscFlux(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p,tem,mu,ka)
@@ -282,6 +293,8 @@ contains
       call sponge(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e)
     endif
   end subroutine
+
+
 ! calculation of the viscous (diffusive) RHS at all cells 
   subroutine calcRHSVisc(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, r,u,v,w,e,T,mu,ka) 
     use decomp_2d
@@ -506,6 +519,8 @@ contains
       enddo
     enddo
   end subroutine
+
+
 ! print initial parameters for RHS (sponge)
   subroutine print_init_rhs()
     use decomp_2d
@@ -547,4 +562,6 @@ contains
       endif               
     endif
   end subroutine
+
+  
 end module

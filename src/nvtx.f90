@@ -1,12 +1,13 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
 !
 ! taken from https://github.com/CaNS-World/CaNS/blob/main/src/nvtx.f90
 !
+
 module mod_nvtx
 #if defined(_USE_NVTX)
   use, intrinsic :: iso_c_binding
@@ -63,6 +64,8 @@ module mod_nvtx
     end subroutine
   end interface
 contains
+
+
   subroutine nvtxStartRange(name,id,color)
     character(kind=c_char,len=*) :: name
     integer, optional :: id
@@ -109,4 +112,6 @@ contains
     call nvtxRangePop
   end subroutine
 #endif
+
+  
 end module mod_nvtx

@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_solve
   use decomp_2d
   implicit none
@@ -12,6 +13,7 @@ module mod_solve
                                                  drho3,drhu3,drhv3,drhw3,dret3, &
                                                  rhoOld,rhuOld,rhvOld,rhwOld,retOld
 contains
+
 ! initialization Runge-Kutta
   subroutine init_rk3()
     use decomp_2d
@@ -46,6 +48,8 @@ contains
     !$acc enter data create(drho3,drhu3,drhv3,drhw3,dret3)
     !$acc enter data create(rhoOld,rhuOld,rhvOld,rhwOld,retOld)
   end subroutine
+
+
 ! calculation of the timestep
   subroutine calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
     use decomp_2d
@@ -114,6 +118,8 @@ contains
       dt=dt_FFT
     endif
   end subroutine
+
+
 ! calculation of the three Runge-Kutta substeps and next timestep
   subroutine rk3(part,dt,istep,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
     use decomp_2d
@@ -213,4 +219,6 @@ contains
     ! final update of the secondary variables
     call calcState_re(rho,ien,pre,tem,mu,ka,1,im,1,jm,1,km)
   end subroutine
+
+  
 end module mod_solve

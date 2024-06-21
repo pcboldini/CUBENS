@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_perturbation
   use mod_param
   use mod_grid
@@ -16,6 +17,8 @@ module mod_perturbation
   real(mytype) :: lamda, pert_zStart, pert_zEnd, freq1, freq2, amp1, amp2
   real(mytype) :: pert_zMid_new, pert_zStart_new, pert_zEnd_new, pert_zLen_new, pert_Restart_new, pert_Remid_new, pert_Reend_new
 contains
+
+
   ! initialization perturbation module
   subroutine init_pert()
     use decomp_2d
@@ -77,6 +80,8 @@ contains
       !!!$acc enter data copyin(pert_omeg,pert_ampl,pert_beta,n3dmode,pert_ySig,pert_zMid_new,pert_zStart_new,pert_zEnd_new)
     endif
   end subroutine
+
+
 ! definition of the disturbance strip according to Sayadi et al., JFM 724, 2013
 subroutine perturbationSayadi(u,time, i_index, dudt_pert)
   use decomp_2d
@@ -113,6 +118,8 @@ subroutine perturbationSayadi(u,time, i_index, dudt_pert)
     endif
   enddo
 end subroutine
+
+
 ! definition of the disturbance strip according to Franko & Lele, JFM 730, 2013
 subroutine perturbationFrankoLele(u,time, i_index,dudt_pert)
   use decomp_2d
@@ -144,6 +151,8 @@ subroutine perturbationFrankoLele(u,time, i_index,dudt_pert)
     endif
   enddo 
 end subroutine
+
+
 ! print perturbation settings
 subroutine print_pertBC()
   use decomp_2d
@@ -191,4 +200,6 @@ subroutine print_pertBC()
     write(stdout,* ) 
   endif
   end subroutine
+
+  
 end module mod_perturbation

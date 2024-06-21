@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_auxlpro
   use decomp_2d
   use mod_param
@@ -12,8 +13,9 @@ module mod_auxlpro
   use mod_eos
   use mod_eos_var
   implicit none
-
 contains
+
+
 ! calculate Q-criterion
   subroutine calcQ(lambda,u,v,w,part)
     use mpi
@@ -76,6 +78,7 @@ contains
     enddo
   end subroutine
 
+
 ! Calculate gradients
   subroutine calcGrad(part,istep,dir,loc,tmp01,name011,name012,tmp02,tmp03,tmp04,tmp05,tmp06,tmp07,tmp08,tmp09,tmp10,tmp11,tmp12)
     use mpi
@@ -120,6 +123,7 @@ contains
     endif
   end subroutine
 
+
 ! Calculate stress tensor
   subroutine calcStrain(dilla2,sxx,sxy,sxz,syy,syz,szz,u,v,w) 
     use decomp_2d
@@ -147,6 +151,7 @@ contains
     enddo
   end subroutine
 
+
 ! Calculate temperature gradient
   subroutine calcTemp(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
     use decomp_2d
@@ -168,6 +173,7 @@ contains
     enddo
   end subroutine
 
+
 ! Calculate specific heat at constant pressure
 ! Ideal gas
 #ifdef IG
@@ -187,6 +193,8 @@ contains
     enddo
   end subroutine
 #endif
+
+  
 ! Van der Waals
 #ifdef VdW
   subroutine calcCp(Cp,rho,ien)
@@ -211,6 +219,8 @@ contains
     enddo
   end subroutine
 #endif
+
+
 ! Peng-Robinson
 #ifdef PR
   subroutine calcCp(Cp,rho,ien)
@@ -257,6 +267,7 @@ contains
     enddo
   end subroutine
 #endif
+
 
 ! FFT in spanwsie direction
   subroutine spectray(pen,speca,nfiles,part1,partf,a,b)

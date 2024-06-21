@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_halo
   use MPI
   use mod_param, only:nHalo,BC_inl_rescale
@@ -34,6 +35,7 @@ module mod_halo
   real(mytype), allocatable, dimension(:,:,:,:) :: send_rcy, recv_rcy
 #endif
 contains
+
 
 ! initialization of the MPI routine
   subroutine comm_init(myid,p_row,p_col,comm_cart,xs,imax,jmax,kmax)
@@ -171,6 +173,8 @@ contains
   !$acc enter data create(buff_send1_j,buff_send1_k,buff_recv1_j,buff_recv1_k)
   end subroutine
 
+
+
 ! initialization of the rescale MPI routine
   subroutine comm_init_rescale(z,xs)
   use decomp_2d
@@ -238,6 +242,8 @@ contains
   endif 
   !$acc enter data create(send_rcy,recv_rcy) 
 end subroutine
+
+
 ! update halo cells in j-and k-direction only for GPU architecture   
 #if defined(_OPENACC)
   ! 9-dimensional buffer
@@ -533,6 +539,8 @@ end subroutine
         enddo
     end select 
   end subroutine
+
+
   ! 1-dimensional buffer
   subroutine haloUpdate1_jk(dir,xs,tmp1)
     use mod_param
@@ -696,6 +704,8 @@ end subroutine
         enddo
     end select
   end subroutine
+
+
 ! update halo cells in i-direction only for GPU architecture 
   subroutine haloUpdateMult_i(dir,xs,tmp1,tmp2,tmp3,tmp4,tmp5,tmp6,tmp7,tmp8,tmp9)
     use mod_param
@@ -805,6 +815,8 @@ end subroutine
       enddo
     endif 
   end subroutine
+
+
 ! update inlet location with recycling position
   subroutine haloUpdate_rescale(xs,tmp1,tmp2,tmp3,tmp4,tmp5)
     use mod_param
@@ -855,6 +867,8 @@ end subroutine
       enddo
     endif
   end subroutine
+
+
 ! update halo cells only for CPU architecture   
 #else
   subroutine haloUpdateMult_CPU(dir,xs,tmp1,tmp2,tmp3,tmp4,tmp5,tmp6,tmp7,tmp8,tmp9)
@@ -931,6 +945,8 @@ end subroutine
       array(1:xs(1),1:xs(2),xs(3)+h) = rcvkP(1:xs(1),1:xs(2),h)
     enddo
   end subroutine
+
+
 ! update inlet location with recycling position
   subroutine haloUpdate_rescale(xs,tmp1,tmp2,tmp3,tmp4,tmp5)
     use mod_param
@@ -961,4 +977,6 @@ end subroutine
     endif
   end subroutine
 #endif
+
+  
 end module

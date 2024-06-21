@@ -1,15 +1,18 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
 ! parameters module
+
 module mod_param
 use decomp_2d
 use mod_math
 use io_std_units
 implicit none 
+
+
 ! general parameters  
   real(mytype) :: Re      = 0.0_mytype
   real(mytype) :: delta99 = 0.0_mytype
@@ -32,6 +35,8 @@ implicit none
   real(mytype) :: Rref    = 0.0_mytype
   real(mytype) :: Cpref   = 0.0_mytype
   real(mytype) :: SOSref  = 0.0_mytype
+
+
 ! equation of state
 #if defined(BL) || defined(CHA)
   character(len=20) :: USE_EOS 
@@ -57,6 +62,8 @@ implicit none
   real(mytype) :: pr_Zc  = 0.3112_mytype 
   ! tables (REFPROP)
   real(mytype) :: rp_Zc  = 0.274586376_mytype
+
+
 ! Transport properties
 #if defined(BL) || defined(CHA)
  character(len=20) :: USE_VISC
@@ -100,6 +107,8 @@ implicit none
   real(mytype), dimension(:), allocatable :: pert_beta 
   namelist /paramPerturbation/ pert_calc, pert_ampl, pert_F, pert_beta, &
                               pert_zLen, pert_ReMid , pert_zSig, pert_ySig
+
+
 ! timestepping
   real(mytype) :: dtMax            = 1.2e-1_mytype 
   real(mytype) :: CFL              = 0.8_mytype
@@ -118,6 +127,8 @@ implicit none
   namelist /paramTimestepping/ dtMax, CFL, nsteps, readRestartFile, intvSaveRestart, &
                          intvSavePlanes, intvSaveStats, savePlanesAfter, saveRestartAfter, saveStatsAfter, &
                          intvCalcCFL, intvPrint, intvReadParam, abortSimulation
+
+
 ! FFT values: when pert_calc=1    
   integer :: fft_samples = 50 
   integer :: fft_step    = 400 
@@ -168,9 +179,12 @@ implicit none
   namelist /paramSponge/ spInlLen, spInlStr, spInlExp, &
                          spOutLen, spOutStr, spOutExp, &
                          spTopLen, spTopStr, spTopExp
+
+
 ! numerics
   integer      :: nStencilConv = 3
   integer      :: nStencilVisc = 2
+
 
 ! postprocessing (postpro)
   integer :: p_row_pp  = 6 
@@ -194,6 +208,7 @@ implicit none
   integer :: iend_fft   = 246500                               
   integer :: istep_fft  = 500                                 
   integer :: index_fft_xpl = 15                             
+
 
 ! interpolation (interpol)
   integer :: timeStepRead = 0 ! step reading
@@ -223,7 +238,8 @@ implicit none
   integer, dimension(:), allocatable :: xi_plane_new
   integer, dimension(:), allocatable :: zi_plane_new
 contains  
-                                                                                                                
+   
+
 ! this subroutine reads the config.h file and overwrites the simulation variables                               
   subroutine read_config()
 #if defined(BL)
@@ -234,6 +250,7 @@ contains
 #include "../config_TGV.h"
 #endif
   end subroutine     
+
 
 ! this subroutine reads the init*_params.h file and overwrites the free-stream simulation variables                          
 subroutine read_init_params()
@@ -252,6 +269,7 @@ subroutine read_init_params()
 #endif
 end subroutine
 
+
 ! write various parameters in params_variation.txt for real-time parameter variation
   subroutine io_writeParams_variation()
     use decomp_2d
@@ -266,6 +284,7 @@ end subroutine
       close(17)
     endif
   end subroutine
+
 
 ! read various parameters in params_variation.txt for real-time parameter variation
   subroutine io_readParams_variation()
@@ -282,6 +301,7 @@ end subroutine
     close(17)
     call mpi_barrier(MPI_COMM_WORLD, ierr)
   end subroutine
+
 
 ! print parameters on screen                                                                                                              
     subroutine print_init_params()
@@ -397,4 +417,6 @@ end subroutine
       write(stdout,* )
     endif
   end subroutine
+
+  
 end module mod_param

@@ -1,12 +1,13 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
 !
 ! taken from https://github.com/CaNS-World/CaNS/blob/main/src/timer.f90
 !
+
 module mod_timer
   use, intrinsic :: iso_fortran_env, only: dp => real64
   use mpi
@@ -26,6 +27,8 @@ module mod_timer
                                            timer_elapsed_max(:)
   integer :: ntimers = 0
 contains
+
+
   subroutine timer_print(myid_arg)
     use, intrinsic :: iso_fortran_env, only: stdo => output_unit
     integer , parameter :: MYID_PRINT = 0
@@ -93,6 +96,8 @@ contains
       end if
     end if
   end subroutine timer_print
+
+
   subroutine timer_tic(timer_name,nvtx_id_fix,nvtx_color,nvtx_id_inc,nvtx_gpu_stream)
     !@cuf use cudafor
     character(*), intent(in) :: timer_name
@@ -259,4 +264,6 @@ contains
     deallocate(arr); allocate(arr(n+1))
     arr(1:n) = arr_tmp(:); arr(n+1) = val
   end subroutine concatenate_c
+
+  
 end module mod_timer

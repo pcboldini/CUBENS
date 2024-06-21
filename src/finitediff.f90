@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_finitediff
   use decomp_2d
   use mod_param
@@ -33,6 +34,7 @@ module mod_finitediff
   real(mytype), allocatable, dimension(:,:) :: visc_d2dx2, visc_d2dz2
   real(mytype), allocatable, dimension(: )  :: visc_d2dy2
 contains
+
 
 ! initialization finite difference coefficients
   subroutine init_derivCoeffs()
@@ -109,6 +111,7 @@ contains
     d1 = d1*xp/dx
   end subroutine
 
+
 ! backward convective difference at x-boundary
   subroutine calc_conv_BD_ddx(d1,arr,i,j,k,nH,xp,dx)
     !$acc routine seq
@@ -122,6 +125,7 @@ contains
     enddo
     d1 = d1*xp/dx
   end subroutine
+
 
 ! Forward convective difference at z-boundary
   subroutine calc_conv_FD_ddz(d1,arr,i,j,k,nH,zp,dz)
@@ -137,6 +141,7 @@ contains
     d1 = d1*zp/dz
   end subroutine
 
+
 ! backward convective difference at z-boundary
   subroutine calc_conv_BD_ddz(d1,arr,i,j,k,nH,zp,dz)
     !$acc routine seq
@@ -150,6 +155,7 @@ contains
     enddo
     d1 = d1*zp/dz
   end subroutine
+
 
 ! central diffusive difference at x-boundary
   subroutine calc_visc_ddx(d1,arr,i,j,k)
@@ -166,6 +172,7 @@ contains
     d1 = d1*xp(i)
   end subroutine
 
+
 ! central diffusive difference at y-boundary
   subroutine calc_visc_ddy(d1,arr,i,j,k)
     use decomp_2d
@@ -181,6 +188,7 @@ contains
     enddo
   end subroutine
 
+
 ! central diffusive difference at z-boundary
   subroutine calc_visc_ddz(d1,arr,i,j,k)
     use decomp_2d
@@ -195,6 +203,7 @@ contains
     enddo
     d1 = d1*zp(k)
   end subroutine
+
 
 ! central diffusive differences with loop (1st order)
   subroutine calc_visc_ddxyz(ddx,ddy,ddz,arr,i,j,k)
@@ -216,6 +225,7 @@ contains
     ddz = ddz*zp(k)
   end subroutine
 
+
 ! central diffusive differences with loop (2nd order)
   subroutine calc_d2dxyz2(d2dx2,d2dy2,d2dz2,arr,i,j,k)
     use decomp_2d
@@ -233,7 +243,8 @@ contains
       d2dz2 = d2dz2 + visc_d2dz2(c,k)*  arr(i,j,k+c) + visc_d2dz2(-c,k)*arr(i,j,k-c) 
     enddo
   end subroutine
-  
+
+
 ! print order of finite differences 
   subroutine print_init_derivCoeffs()
   use decomp_2d
@@ -248,4 +259,6 @@ contains
     else
   endif        
   end subroutine
+
+  
 end module

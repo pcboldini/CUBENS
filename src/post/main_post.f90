@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 program DNS_POST
   use decomp_2d
   use decomp_2d_fft
@@ -27,6 +28,7 @@ program DNS_POST
   use mod_boundary
   use iso_fortran_env
   implicit none
+
 
 !===============================================================================================!
 !                                       CUBENS post data
@@ -92,6 +94,7 @@ interface
   end subroutine assemble_globalz1D
 end interface
 
+
 !===============================================================================================!
 !                                       INITIALIZATION
 !===============================================================================================!
@@ -149,6 +152,7 @@ if (nrank == 0) then
     write (stdout, *) "o--------------------------------------------------o"
     write (stdout, *)
 endif
+
 
 !===============================================================================================!
 !                                       ALLOCATION
@@ -356,6 +360,7 @@ endif
   endif
   write(stdout, *) "o--------------------------------------------------o"
 
+
 !===============================================================================================!
 !                                      SPANWISE AVERAGING
 !===============================================================================================!
@@ -457,6 +462,7 @@ endif
       tmpPlane(1,:,:) = qx_time(count,1,:,:)
       call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/qx_time.'//cha//'.bin','dummy')
     enddo
+
 
 !===============================================================================================!
 !                                         OUTPUT
@@ -729,6 +735,7 @@ endif
       allocate(tauw_rms_global (nz_global) ); tauw_rms_global = 0.0_mytype;
   endif
 
+
 !===============================================================================================!
 !                                         OUTPUTS
 !===============================================================================================!
@@ -842,6 +849,7 @@ endif
         call spectray(2,spec_rw,jmax,part1,partfy,arw_fluc_FFT(ii_index,1:xsize(1),1:xsize(2),1:xsize(3)))
         call spectray(2,spec_p,jmax,part1,partfy,aP_fluc_FFT(ii_index,1:xsize(1),1:xsize(2),1:xsize(3))) 
 
+
     !===============================================================================================!
     !                                         OUTPUT
     !===============================================================================================!
@@ -935,6 +943,7 @@ endif
 ! print total time
   if (nrank == 0) print '("Total time = ",f10.3," minutes.")', (MPI_WTIME() - wt_start)/60.0
 
+
 !===============================================================================================!
 !                                       DEALLOCATION
 !===============================================================================================!
@@ -973,6 +982,7 @@ endif
   call decomp_2d_finalize
   call mpi_finalize(ierr)
 end program
+
 
 ! assemble global variables in streamwise direction
   subroutine assemble_globalz1D(local1D,global1D,kstart,kend)

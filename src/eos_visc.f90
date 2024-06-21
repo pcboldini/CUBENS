@@ -1,12 +1,14 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_eos_visc
   use decomp_2d, only: mytype
   implicit none 
+
 ! Variables container for Constant Law
   type t_VISC_Constant
     real(mytype) :: mu_0, ka_0
@@ -14,6 +16,7 @@ module mod_eos_visc
   type(t_VISC_Constant) :: t_const
   !$acc declare create(t_const)
   !$acc declare create(t_const%mu_0,t_const%ka_0)
+
 ! Variables container for Power Law
   type t_VISC_PowerLaw
     real(mytype) :: mu_0, ka_0
@@ -21,6 +24,7 @@ module mod_eos_visc
   type(t_VISC_PowerLaw) :: t_pow
   !$acc declare create(t_pow)
   !$acc declare create(t_pow%mu_0,t_pow%ka_0)
+
 ! Variables container for Sutherland
   type t_VISC_Suth
     real(mytype) :: mu_0, ka_0, Sconst
@@ -28,6 +32,7 @@ module mod_eos_visc
   type(t_VISC_Suth) :: t_suth
   !$acc declare create(t_suth)
   !$acc declare create(t_suth%mu_0,t_suth%ka_0,t_suth%Sconst)
+
 ! Variables container for JST (Jossi, Stiel, Thodos)
   type t_VISC_JST
     real(mytype) :: mu_0, ka_0
@@ -40,6 +45,7 @@ module mod_eos_visc
   !$acc                t_jst%coeffrho_1,t_jst%coeffrho_2,t_jst%coeffrho_3, &
   !$acc                t_jst%coeffrho_4,t_jst%coeffrho_5, &
   !$acc                t_jst%ka_factor,t_jst%ZcPow5)
+
 ! Variables container for Chung
   type t_VISC_Chung
     real(mytype) :: mu_0, ka_0
@@ -60,9 +66,12 @@ module mod_eos_visc
   !$acc                t_chu%chung_a0,t_chu%chung_a1,t_chu%chung_Arho, &
   !$acc                t_chu%chung_b0,t_chu%chung_b1,t_chu%chung_Brho)
   contains 
+
+
 ! Include Constant law 
 #ifdef Constant
 ! Initialize
+
   subroutine init_VISCModel()
     use mod_param
     implicit none
@@ -97,6 +106,7 @@ module mod_eos_visc
     ka = t_const%ka_0*tem
   end subroutine
 #endif
+
 ! Include Power Law  
 #ifdef PowerLaw
 ! Initialize
@@ -137,6 +147,7 @@ module mod_eos_visc
     ka = t_pow%ka_0*fact
   end subroutine
 #endif
+
 ! Include Sutherland
 #ifdef Sutherland
 ! Initialize
@@ -165,6 +176,7 @@ module mod_eos_visc
     !$acc update device(t_suth)
     !$acc update device(t_suth%Sconst,t_suth%mu_0,t_suth%ka_0)
   end subroutine
+
 ! Calculate viscosity and conductivity according to Sutherland
   subroutine calcVisc(tem, rho, mu, ka)
     !$acc routine seq  
@@ -177,9 +189,12 @@ module mod_eos_visc
     ka = t_suth%ka_0*suth
   end subroutine
 #endif
+
+
 ! Include JST
 #ifdef JST
 ! Initialize
+
   subroutine init_VISCModel()
     use mod_param
     implicit none
@@ -221,6 +236,7 @@ module mod_eos_visc
     !$acc                t_jst%coeffrho_4,t_jst%coeffrho_5, &
     !$acc                t_jst%ka_factor,t_jst%ZcPow5)
   end subroutine
+
 ! Calculate viscosity and conductivity according to JST
   subroutine calcVisc(tem_r, rho_r, mu, ka)
     !$acc routine seq
@@ -260,6 +276,8 @@ module mod_eos_visc
     ka = ka_2/t_jst%Kref*t_jst%ka_0 
   end subroutine
 #endif
+
+
 ! Include Chung
 #ifdef Chung
 ! Initialize
@@ -329,6 +347,7 @@ module mod_eos_visc
     !$acc                t_chu%chung_a0,t_chu%chung_a1,t_chu%chung_Arho, &
     !$acc                t_chu%chung_b0,t_chu%chung_b1,t_chu%chung_Brho)
  end subroutine
+
 ! Calculate viscosity and conductivity according to Chung
   subroutine calcVisc(tem_r, rho_r, mu, ka)
     !$acc routine seq  
@@ -371,4 +390,6 @@ module mod_eos_visc
     ka = (kappa_k+kappa_p)/t_chu%Kref*t_chu%ka_0
   end subroutine
 #endif
+
+  
 end module mod_eos_visc

@@ -1,9 +1,10 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
+
 module mod_boundary
   use mod_param
   use mod_grid
@@ -19,6 +20,7 @@ module mod_boundary
   real(mytype) :: beta_rescale,delta_rcy,A_FF
   integer :: nLST
 contains
+
 
   ! initialization boundary condition module
   subroutine init_BC()
@@ -104,6 +106,7 @@ contains
     endif
   end subroutine
 
+
 ! initialization of the eigenfunctions
   subroutine initLST(nLST,w_LST_real,u_LST_real,tem_LST_real,w_LST_imag,u_LST_imag,tem_LST_imag)
   use decomp_2d
@@ -182,6 +185,7 @@ contains
   deallocate(wIntp_imag,uIntp_imag,tIntp_imag)
 end subroutine
 
+
 ! initialization of the rescale for turbulent boundary layer
 subroutine init_rescale()
   use decomp_2d
@@ -240,6 +244,7 @@ subroutine init_rescale()
   !$acc enter data copyin(x_rcy_inner,x_rcy_outer,xdelta_inl,weight_func) 
 end subroutine
 
+
 ! set all boundary conditions: bottom, top, inlet, outlet
 subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   use decomp_2d
@@ -278,6 +283,8 @@ subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,p
     call setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
 end subroutine
+
+
 ! halo cells: bottom boundary
 subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
   use decomp_2d
@@ -448,6 +455,8 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
     stop
   endif
 end subroutine
+
+
 ! RHS: bottom boundary 
 subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
   use decomp_2d
@@ -621,6 +630,7 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
     stop
   endif
 end subroutine
+
 
 ! halo cells: top boundary
 subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
@@ -823,6 +833,7 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
 end subroutine
 
+
 ! RHS: top boundary 
 subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   use decomp_2d
@@ -972,6 +983,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   endif
 end subroutine
 
+
 ! halo cells: inlet boundary
 subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
   use decomp_2d
@@ -1115,6 +1127,7 @@ subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pr
     stop
   endif
 end subroutine
+
 
 ! rescaling the inlet boundary condition
 subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
@@ -1295,6 +1308,7 @@ subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
 end subroutine
 
+
 ! RHS: inlet boundary
 subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   use decomp_2d
@@ -1392,6 +1406,7 @@ subroutine setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
   endif
 end subroutine
 
+
 ! RHS: outlet boundary
 subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
   use decomp_2d
@@ -1472,4 +1487,6 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
     stop
   endif
 end subroutine
+
+
 end module mod_boundary

@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
@@ -17,6 +17,7 @@ program interpolate
   use factor
   implicit none
 
+
   !===============================================================================================!
   !                                       CUBENS interpol data
   !===============================================================================================!
@@ -29,7 +30,9 @@ program interpolate
   real(mytype), allocatable, dimension(:) :: tmp, tmp_old
   character(len=30) :: date
   ! CUBENS Version number
-   real(mytype), parameter                    :: version = 1.0                  
+   real(mytype), parameter                    :: version = 1.0       
+
+
 !===============================================================================================!
 !                                       INITIALIZATION
 !===============================================================================================!
@@ -105,11 +108,15 @@ program interpolate
     write(stdout,*)
   endif
   call init_PARAM_EOS()
+
+
 !===============================================================================================!
 !                                       ALLOCATION
 !===============================================================================================!
   allocate(tmp_old(kmax))
   allocate(tmp(knew))
+
+
 !===============================================================================================!
 !                                       CALCULATION
 !===============================================================================================!
@@ -302,6 +309,8 @@ program interpolate
   endif
 ! print total time 
   if (nrank == 0) print '("Total time = ",f10.3," minutes.")', (MPI_WTIME() - wt_start)/60.0
+
+  
   !===============================================================================================!
   !                                       DEALLOCATION
   !===============================================================================================!

@@ -1,10 +1,11 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
 ! auxiliary subroutines for parameters calculation and I/O
+
 module mod_auxl
   use decomp_2d
   use mod_param
@@ -13,7 +14,8 @@ module mod_auxl
   implicit none
   contains
 
-  ! calculation of the vorticity
+
+! calculation of the vorticity
   subroutine calcVort(vortx,vorty,vortz,strxz,u,v,w) 
     use decomp_2d
     implicit none
@@ -85,6 +87,7 @@ module mod_auxl
     nxnynz = jmax*kmax*len_x
     call mpi_allreduce(MPI_IN_PLACE, wb, 1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr);   wb = wb/nxnynz
   end subroutine cmpbulkvel
+
 
 ! calculation of bulk properties for quick monitoring of the simulation
   subroutine cmpbulk(istep,wt1,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,wb,dp)
@@ -211,7 +214,8 @@ module mod_auxl
     endif
   end subroutine
 
-  ! calculate statistics
+
+! calculate statistics
   subroutine calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
     use decomp_2d
     use mod_param
@@ -470,6 +474,7 @@ module mod_auxl
     countAvg = countAvg + 1
   end subroutine
 
+
 ! I/O planes
   subroutine output2dPlane(part,nHaloIn,istep,dir,loc,tmp01,name011,name012,tmp02,name021,name022,tmp03,name031,name032,tmp04,   &
                                                       name041,name042,tmp05,name051,name052,tmp06,name061,name062,tmp07,name071, &
@@ -580,6 +585,7 @@ module mod_auxl
     deallocate(tmp)
   end subroutine
 
+
 ! I/O load restart
   subroutine loadRestart(istep,time,rho,u,v,w,ien,nHaloIn,part)
     use mpi
@@ -653,6 +659,7 @@ module mod_auxl
     if(nrank==0) write(stdout,*) ''
   end subroutine
 
+
 ! I/O save restart
   subroutine saveRestart(istep,time,rho,u,v,w,ien,nHaloIn,part,interpol)
     use mpi
@@ -720,6 +727,7 @@ module mod_auxl
     call MPI_FILE_CLOSE(fh,ierr)
     deallocate(tmp)
   end subroutine
+
 
   ! I/O save statistics
   subroutine saveStats(part,istep,dt,qave,factAvg,countAvg)
@@ -861,5 +869,6 @@ module mod_auxl
       close(11)
     endif
   end subroutine
-  
+
+
 end module
