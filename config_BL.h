@@ -21,7 +21,7 @@
     BC_inl = "inlet_nrbc"                           ! options: inlet_nrbc, inlet_std
 
 !   recycling-rescaling:
-    BC_inl_rescale = .true.                         ! options: .true. or .false.
+    BC_inl_rescale = .false.                         ! options: .true. or .false.
     z_recycle = 100.0_mytype                        ! recycle position
     delta_inl = 2.0_mytype                          ! inlet boundary thickness
 

@@ -235,7 +235,7 @@ module mod_auxl
     real(mytype) :: tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d
 #endif
 #if defined(BL)
-    ! for boundary layer
+    ! for boundary layer 
     !$acc parallel loop gang collapse(2) default(present)
     do k=1,xsize(3)
       do i=1,xsize(1)
@@ -311,44 +311,44 @@ module mod_auxl
           qz_2d    = qz_2d    + ka(i,j,k)*dtz
         enddo
       ! primary variables
-      qave(i,k,1) = rho_2d  
-      qave(i,k,2) = u_2d  
-      qave(i,k,3) = v_2d 
-      qave(i,k,4) = w_2d
-      qave(i,k,5) = pre_2d
-      qave(i,k,6) = tem_2d
-      qave(i,k,7) = ien_2d
-      qave(i,k,8) = mu_2d
-      qave(i,k,9) = ka_2d
+      qave(i,k,1) = qave(i,k,1) + rho_2d  
+      qave(i,k,2) = qave(i,k,2) + u_2d  
+      qave(i,k,3) = qave(i,k,3) + v_2d 
+      qave(i,k,4) = qave(i,k,4) + w_2d
+      qave(i,k,5) = qave(i,k,5) + pre_2d
+      qave(i,k,6) = qave(i,k,6) + tem_2d
+      qave(i,k,7) = qave(i,k,7) + ien_2d
+      qave(i,k,8) = qave(i,k,8) + mu_2d
+      qave(i,k,9) = qave(i,k,9) + ka_2d
       ! double products
-      qave(i,k,10) = rho_2d*u_2d
-      qave(i,k,11) = rho_2d*v_2d
-      qave(i,k,12) = rho_2d*w_2d
-      qave(i,k,13) = rho_2d*tem_2d
-      qave(i,k,14) = u_2d*u_2d
-      qave(i,k,15) = u_2d*v_2d
-      qave(i,k,16) = u_2d*w_2d
-      qave(i,k,17) = v_2d*v_2d
-      qave(i,k,18) = v_2d*w_2d
-      qave(i,k,19) = w_2d*w_2d
+      qave(i,k,10) = qave(i,k,10) + rho_2d*u_2d
+      qave(i,k,11) = qave(i,k,11) + rho_2d*v_2d
+      qave(i,k,12) = qave(i,k,12) + rho_2d*w_2d
+      qave(i,k,13) = qave(i,k,13) + rho_2d*tem_2d
+      qave(i,k,14) = qave(i,k,14) + u_2d*u_2d
+      qave(i,k,15) = qave(i,k,15) + u_2d*v_2d
+      qave(i,k,16) = qave(i,k,16) + u_2d*w_2d
+      qave(i,k,17) = qave(i,k,17) + v_2d*v_2d
+      qave(i,k,18) = qave(i,k,18) + v_2d*w_2d
+      qave(i,k,19) = qave(i,k,19) + w_2d*w_2d
       ! triple products
-      qave(i,k,20) = rho_2d*u_2d*u_2d
-      qave(i,k,21) = rho_2d*u_2d*v_2d
-      qave(i,k,22) = rho_2d*u_2d*w_2d
-      qave(i,k,23) = rho_2d*v_2d*v_2d
-      qave(i,k,24) = rho_2d*v_2d*w_2d
-      qave(i,k,25) = rho_2d*w_2d*w_2d
+      qave(i,k,20) = qave(i,k,20) + rho_2d*u_2d*u_2d
+      qave(i,k,21) = qave(i,k,21) + rho_2d*u_2d*v_2d
+      qave(i,k,22) = qave(i,k,22) + rho_2d*u_2d*w_2d
+      qave(i,k,23) = qave(i,k,23) + rho_2d*v_2d*v_2d
+      qave(i,k,24) = qave(i,k,24) + rho_2d*v_2d*w_2d
+      qave(i,k,25) = qave(i,k,25) + rho_2d*w_2d*w_2d
       ! stress tensor
-      qave(i,k,26) = tauxx_2d
-      qave(i,k,27) = tauxy_2d 
-      qave(i,k,28) = tauxz_2d 
-      qave(i,k,29) = tauyy_2d 
-      qave(i,k,30) = tauyz_2d 
-      qave(i,k,31) = tauzz_2d
+      qave(i,k,26) = qave(i,k,26) + tauxx_2d
+      qave(i,k,27) = qave(i,k,27) + tauxy_2d 
+      qave(i,k,28) = qave(i,k,28) + tauxz_2d 
+      qave(i,k,29) = qave(i,k,29) + tauyy_2d 
+      qave(i,k,30) = qave(i,k,30) + tauyz_2d 
+      qave(i,k,31) = qave(i,k,31) + tauzz_2d
       ! heat flux 
-      qave(i,k,32) = qx_2d
-      qave(i,k,33) = qy_2d
-      qave(i,k,34) = qz_2d
+      qave(i,k,32) = qave(i,k,32) + qx_2d
+      qave(i,k,33) = qave(i,k,33) + qy_2d
+      qave(i,k,34) = qave(i,k,34) + qz_2d
     enddo
     enddo
     factAvg = factAvg + 1.0_mytype*xsize(2)
@@ -430,44 +430,44 @@ module mod_auxl
         enddo
       enddo
       ! primary variables
-      qave(i,1) = rho_1d  
-      qave(i,2) = u_1d  
-      qave(i,3) = v_1d 
-      qave(i,4) = w_1d
-      qave(i,5) = pre_1d
-      qave(i,6) = tem_1d
-      qave(i,7) = ien_1d
-      qave(i,8) = mu_1d
-      qave(i,9) = ka_1d
+      qave(i,1) = qave(i,1) + rho_1d  
+      qave(i,2) = qave(i,2) + u_1d  
+      qave(i,3) = qave(i,3) + v_1d 
+      qave(i,4) = qave(i,4) + w_1d
+      qave(i,5) = qave(i,5) + pre_1d
+      qave(i,6) = qave(i,6) + tem_1d
+      qave(i,7) = qave(i,7) + ien_1d
+      qave(i,8) = qave(i,8) + mu_1d
+      qave(i,9) = qave(i,9) + ka_1d
       ! double products
-      qave(i,10) = rho_1d*u_1d
-      qave(i,11) = rho_1d*v_1d
-      qave(i,12) = rho_1d*w_1d
-      qave(i,13) = rho_1d*tem_1d
-      qave(i,14) = u_1d*u_1d
-      qave(i,15) = u_1d*v_1d
-      qave(i,16) = u_1d*w_1d
-      qave(i,17) = v_1d*v_1d
-      qave(i,18) = v_1d*w_1d
-      qave(i,19) = w_1d*w_1d
+      qave(i,10) = qave(i,10) + rho_1d*u_1d
+      qave(i,11) = qave(i,11) + rho_1d*v_1d
+      qave(i,12) = qave(i,12) + rho_1d*w_1d
+      qave(i,13) = qave(i,13) + rho_1d*tem_1d
+      qave(i,14) = qave(i,14) + u_1d*u_1d
+      qave(i,15) = qave(i,15) + u_1d*v_1d
+      qave(i,16) = qave(i,16) + u_1d*w_1d
+      qave(i,17) = qave(i,17) + v_1d*v_1d
+      qave(i,18) = qave(i,18) + v_1d*w_1d
+      qave(i,19) = qave(i,19) + w_1d*w_1d
       ! triple products
-      qave(i,20) = rho_1d*u_1d*u_1d
-      qave(i,21) = rho_1d*u_1d*v_1d
-      qave(i,22) = rho_1d*u_1d*w_1d
-      qave(i,23) = rho_1d*v_1d*v_1d
-      qave(i,24) = rho_1d*v_1d*w_1d
-      qave(i,25) = rho_1d*w_1d*w_1d
+      qave(i,20) = qave(i,20) + rho_1d*u_1d*u_1d
+      qave(i,21) = qave(i,21) + rho_1d*u_1d*v_1d
+      qave(i,22) = qave(i,22) + rho_1d*u_1d*w_1d
+      qave(i,23) = qave(i,23) + rho_1d*v_1d*v_1d
+      qave(i,24) = qave(i,24) + rho_1d*v_1d*w_1d
+      qave(i,25) = qave(i,25) + rho_1d*w_1d*w_1d
       ! stress tensor
-      qave(i,26) = tauxx_1d
-      qave(i,27) = tauxy_1d 
-      qave(i,28) = tauxz_1d 
-      qave(i,29) = tauyy_1d 
-      qave(i,30) = tauyz_1d 
-      qave(i,31) = tauzz_1d
+      qave(i,26) = qave(i,26) + tauxx_1d
+      qave(i,27) = qave(i,27) + tauxy_1d 
+      qave(i,28) = qave(i,28) + tauxz_1d 
+      qave(i,29) = qave(i,29) + tauyy_1d 
+      qave(i,30) = qave(i,30) + tauyz_1d 
+      qave(i,31) = qave(i,31) + tauzz_1d
       ! heat flux 
-      qave(i,32) = qx_1d
-      qave(i,33) = qy_1d
-      qave(i,34) = qz_1d
+      qave(i,32) = qave(i,32) + qx_1d
+      qave(i,33) = qave(i,33) + qy_1d
+      qave(i,34) = qave(i,34) + qz_1d
     enddo
     factAvg = factAvg + 1.0_mytype*xsize(2)*xsize(3)
 #endif  
