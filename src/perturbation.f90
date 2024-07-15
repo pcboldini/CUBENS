@@ -184,10 +184,10 @@ subroutine print_pertBC()
         write(stdout,* ) '2D + oblique waves!'
         write(stdout,'(A, F10.4)') '2D dimensionless frequency (x 10^6):  ',freq1*1e6_mytype
         write(stdout,'(A, F10.4)') '2D angular frequency:                 ',omega1
-        write(stdout,'(A, F10.4)') '2D wave amplitude:                    ',amp1
+        write(stdout,'(A, E10.4)') '2D wave amplitude:                    ',amp1
         write(stdout,'(A, F10.4)') '3D dimensionless frequency (x 10^6):  ',freq2*1e6_mytype
         write(stdout,'(A, F10.4)') '3D angular frequency:                 ',omega2
-        write(stdout,'(A, F10.4)') '3D wave amplitude:                    ',amp2
+        write(stdout,'(A, E10.4)') '3D wave amplitude:                    ',amp2
         write(stdout,'(A, I10)') 'Number of spanwise modes:             ',n3dmode
         write(stdout,'(A, F10.4)') 'Fundamental spanwise wavenumber:      ',beta0
         if (n3dmode .gt. 1) then

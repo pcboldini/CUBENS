@@ -172,8 +172,11 @@ program DNS
   call init_BC() 
   ! Set communicator for rescale-reintroduction
   if (BC_inl_rescale .eqv. .true.) then
-    write(stdout,*) 'Initialize communication for recycling and rescaling'
     call comm_init_rescale(z,xsize)
+    if (nrank==0) then
+      write(stdout,*) 'Initialize communication for recycling and rescaling'
+      write(stdout,*)
+    endif
   endif
 
 

@@ -261,6 +261,8 @@ subroutine read_init_params()
   zStartDNS = Redelta_start**2/Re ! zStart
   zEndDNS = Redelta_end**2/Re ! zEnd
   len_z = zEndDNS - zStartDNS ! streamwise length
+  zEndDNS_new = Redelta_end_new**2/Re ! zEnd_new
+  len_z_new = zEndDNS_new - zStartDNS ! new streamwise length
   ! Richardson number
   Ri = Ri * delta99 ! Richardson_DNS
   Ri_unit = Ri_unit * delta99 ! Richardson_DNS (unit values)

@@ -12,7 +12,7 @@
 !   adiab_std,  isoth_std  : standard implementation of wall BC
 !   adiab_nrbc, isoth_nrbc : non-reflecting implementation of wall BC
 
-    BC_bot = "adiab_nrbc"                           ! see above
+    BC_bot = "isoth_nrbc"                           ! see above
  
 !   freestream BCs:
     BC_top = "free_nrbc"                            ! options: free_nrbc
@@ -21,9 +21,9 @@
     BC_inl = "inlet_nrbc"                           ! options: inlet_nrbc, inlet_std
 
 !   recycling-rescaling:
-    BC_inl_rescale = .false.                         ! options: .true. or .false.
+    BC_inl_rescale = .true.                         ! options: .true. or .false.
     z_recycle = 100.0_mytype                        ! recycle position
-    delta_inl = 2.0_mytype                          ! inlet boundary thickness
+    delta_inl = 1.5_mytype                          ! inlet boundary thickness
 
 !   outlet BCs:
     BC_out = "outlet_nrbc"                          ! options: outlet_nrbc (subsonic)
@@ -66,7 +66,7 @@
 ! --------------------------------- GRID ----------------------------------
 !
     imax = 300                                      ! number of points in x
-    jmax = 10                                       ! number of points in y
+    jmax = 1                                       ! number of points in y
     kmax = 1000                                     ! number of points in z
     
     len_x = 20.0                                    ! wall-normal length
@@ -77,7 +77,7 @@
 
     xmesh_type = "non_equid"                        ! options: "equid", "non_equid"
     gridStretchX = 5.0                              ! wall clustering in x-direction
-    ReTau = 85.0                                    ! Re_tau at the domain inlet
+    ReTau = 80                                    ! Re_tau at the domain inlet
 
     zmesh_type = "equid"                            ! options: "equid", "non_equid"
 
@@ -166,17 +166,17 @@
 ! --------------------------- ONLY FOR INTERPOL ---------------------------
 !
     p_row_intp = 1                                  ! keep at 1 
-    p_col_intp = 1                                  ! number of streamwise partitions (need to match the launch command)
+    p_col_intp = 2                                  ! number of streamwise partitions (need to match the launch command)
 
     timeStepRead = 10                               ! timestep of reading restart file
-    timeStepSave = 11                               ! timestep of writing restart file (can be = timeStepRead but then overwritten)
+    timeStepSave = 10                               ! timestep of writing restart file (can be = timeStepRead but then overwritten)
 
-    yi_plane_new = (/1/)                            ! y-index cut z-x plane 
-    xi_plane_new = (/25/)                           ! x-index cut z-y plane 
+    yi_plane_new = (/-1/)                            ! y-index cut z-x plane 
+    xi_plane_new = (/-25/)                           ! x-index cut z-y plane 
     zi_plane_new = (/-1/)                           ! z-index cut y-x plane 
 
     inew = imax                                     ! new number of points in x
-    jnew = 20                                       ! new number of points in y
+    jnew = 10                                       ! new number of points in y
     knew = kmax                                     ! new number of points in z
 
     len_x_new = len_x                               ! new wall-normal length

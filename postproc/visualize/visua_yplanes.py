@@ -4,11 +4,11 @@ import numpy as np
 from writexmf import writexmf
 
 current_path=os.getcwd()
-dst_path=os.path.join(current_path,"visualize/yplanes")
+dst_path=os.path.join(current_path,"yplanes")
 
-time_start=0
-time_end=1000
-time_step=100
+time_start=5
+time_end=10
+time_step=1
 index_y=1
 interpol=0 # 1 for interpol planes
 
@@ -44,15 +44,15 @@ precision = 'double'
 if interpol==1:
     print('Loading interpolated planes')
     char_y='ypl_aI'
-    x = np.fromfile('../output/planes/x_I.bin', dtype=precision)
-    y = np.fromfile('../output/planes/y_I.bin', dtype=precision)
-    z = np.fromfile('../output/planes/z_I.bin', dtype=precision)
+    x = np.fromfile('../../output/planes/x_I.bin', dtype=precision)
+    y = np.fromfile('../../output/planes/y_I.bin', dtype=precision)
+    z = np.fromfile('../../output/planes/z_I.bin', dtype=precision)
 else:
     print('Loading current planes')
     char_y='ypl'
-    x = np.fromfile('../output/planes/x.bin', dtype=precision)
-    y = np.fromfile('../output/planes/y.bin', dtype=precision)
-    z = np.fromfile('../output/planes/z.bin', dtype=precision)
+    x = np.fromfile('../../output/planes/x.bin', dtype=precision)
+    y = np.fromfile('../../output/planes/y.bin', dtype=precision)
+    z = np.fromfile('../../output/planes/z.bin', dtype=precision)
 
 imax = np.size(x)
 jmax = np.size(y)
@@ -64,7 +64,7 @@ timestamps = np.arange(time_start,time_end+1,time_step)
 print(timestamps)
 
 for j in range(0,len(var)):
-    getfluc(('../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
+    getfluc(('../../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
@@ -76,23 +76,23 @@ for j in range(0,len(var)):
 xa = 20
 
 if interpol==1:
-    writexmf("visualize/yplanes/yplanes_aI.xmf", precision,  \
+    writexmf("yplanes/yplanes_aI.xmf", precision,  \
             x*x_scale-xa, [y[0]]*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_var)
 else:
-    writexmf("visualize/yplanes/yplanes.xmf", precision,  \
+    writexmf("yplanes/yplanes.xmf", precision,  \
             x*x_scale, [y[0]]*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_var)
 
 if interpol==1:
-    writexmf("visualize/yplanes/yplanes_aI.fluc.xmf", precision,  \
+    writexmf("yplanes/yplanes_aI.fluc.xmf", precision,  \
             x*x_scale, [y[0]]*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
 else:
-    writexmf("visualize/yplanes/yplanes.fluc.xmf", precision,  \
+    writexmf("yplanes/yplanes.fluc.xmf", precision,  \
             x*x_scale, [y[0]]*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
@@ -113,9 +113,9 @@ for i in range(0, len (timestamps)):
     timestamps_print='{0:07d}'.format(timestamps[i])
 
     for j in range(0,len(var)):
-        src_path=os.path.join(current_path,"../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
+        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
         shutil.copy(src_path, dst_path)
 
 print('Planes copied')

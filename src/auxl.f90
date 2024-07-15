@@ -228,10 +228,14 @@ module mod_auxl
 #if defined(BL) || defined(TGV)
     real(mytype), dimension(:,:,:), intent(inout) :: qave
     real(mytype) :: rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d
+    real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d !Edited by Ryo
+    real(mytype) :: rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d               !Edited by Ryo
     real(mytype) :: tauxx_2d,tauxy_2d,tauxz_2d,tauyy_2d,tauyz_2d,tauzz_2d,qx_2d,qy_2d,qz_2d
 #elif defined(CHA) 
     real(mytype), dimension(:,:), intent(inout) :: qave
     real(mytype) :: rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d
+    real(mytype) :: rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d !Edited by Ryo
+    real(mytype) :: rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d               !Edited by Ryo
     real(mytype) :: tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d
 #endif
 #if defined(BL)
@@ -248,6 +252,22 @@ module mod_auxl
         ien_2d = 0.0_mytype
         mu_2d = 0.0_mytype
         ka_2d = 0.0_mytype
+        rhou_2d = 0.0_mytype
+        rhov_2d = 0.0_mytype
+        rhow_2d = 0.0_mytype
+        rhot_2d = 0.0_mytype
+        uu_2d = 0.0_mytype
+        uv_2d = 0.0_mytype
+        uw_2d = 0.0_mytype
+        vv_2d = 0.0_mytype
+        vw_2d = 0.0_mytype
+        ww_2d = 0.0_mytype
+        rhouu_2d = 0.0_mytype
+        rhouv_2d = 0.0_mytype
+        rhouw_2d = 0.0_mytype
+        rhovv_2d = 0.0_mytype
+        rhovw_2d = 0.0_mytype
+        rhoww_2d = 0.0_mytype
         tauxx_2d = 0.0_mytype
         tauxy_2d = 0.0_mytype
         tauxz_2d = 0.0_mytype
@@ -258,6 +278,8 @@ module mod_auxl
         qy_2d = 0.0_mytype
         qz_2d = 0.0_mytype
         !$acc loop reduction(+:rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d) &
+        !$acc reduction(+:rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d) &
+        !$acc reduction(+:rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d) &
         !$acc reduction(+:tauxx_2d,tauxy_2d,tauxz_2d,tauyy_2d,tauyz_2d,tauzz_2d,qx_2d,qy_2d,qz_2d) &
         !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz) 
         do j=1,xsize(2)
@@ -270,6 +292,22 @@ module mod_auxl
           ien_2d = ien_2d + ien(i,j,k)
           mu_2d = mu_2d + mu(i,j,k)
           ka_2d = ka_2d + ka(i,j,k)
+          rhou_2d = rhou_2d + rho(i,j,k)*u(i,j,k)
+          rhov_2d = rhov_2d + rho(i,j,k)*v(i,j,k)
+          rhow_2d = rhow_2d + rho(i,j,k)*w(i,j,k)
+          rhot_2d = rhot_2d + rho(i,j,k)*tem(i,j,k)
+          uu_2d = uu_2d + u(i,j,k)*u(i,j,k)
+          uv_2d = uv_2d + u(i,j,k)*v(i,j,k)
+          uw_2d = uw_2d + u(i,j,k)*w(i,j,k)
+          vv_2d = vv_2d + v(i,j,k)*v(i,j,k)
+          vw_2d = vw_2d + v(i,j,k)*w(i,j,k)
+          ww_2d = ww_2d + w(i,j,k)*w(i,j,k)
+          rhouu_2d = rhouu_2d + rho(i,j,k)*u(i,j,k)*u(i,j,k)
+          rhouv_2d = rhouv_2d + rho(i,j,k)*u(i,j,k)*v(i,j,k)
+          rhouw_2d = rhouw_2d + rho(i,j,k)*u(i,j,k)*w(i,j,k)
+          rhovv_2d = rhovv_2d + rho(i,j,k)*v(i,j,k)*v(i,j,k)
+          rhovw_2d = rhovw_2d + rho(i,j,k)*v(i,j,k)*w(i,j,k)
+          rhoww_2d = rhoww_2d + rho(i,j,k)*w(i,j,k)*w(i,j,k)
           dux   = 0.0_mytype
           duy   = 0.0_mytype
           duz   = 0.0_mytype
@@ -321,23 +359,23 @@ module mod_auxl
       qave(i,k,8) = qave(i,k,8) + mu_2d
       qave(i,k,9) = qave(i,k,9) + ka_2d
       ! double products
-      qave(i,k,10) = qave(i,k,10) + rho_2d*u_2d
-      qave(i,k,11) = qave(i,k,11) + rho_2d*v_2d
-      qave(i,k,12) = qave(i,k,12) + rho_2d*w_2d
-      qave(i,k,13) = qave(i,k,13) + rho_2d*tem_2d
-      qave(i,k,14) = qave(i,k,14) + u_2d*u_2d
-      qave(i,k,15) = qave(i,k,15) + u_2d*v_2d
-      qave(i,k,16) = qave(i,k,16) + u_2d*w_2d
-      qave(i,k,17) = qave(i,k,17) + v_2d*v_2d
-      qave(i,k,18) = qave(i,k,18) + v_2d*w_2d
-      qave(i,k,19) = qave(i,k,19) + w_2d*w_2d
+      qave(i,k,10) = qave(i,k,10) + rhou_2d
+      qave(i,k,11) = qave(i,k,11) + rhov_2d
+      qave(i,k,12) = qave(i,k,12) + rhow_2d
+      qave(i,k,13) = qave(i,k,13) + rhot_2d
+      qave(i,k,14) = qave(i,k,14) + uu_2d
+      qave(i,k,15) = qave(i,k,15) + uv_2d
+      qave(i,k,16) = qave(i,k,16) + uw_2d
+      qave(i,k,17) = qave(i,k,17) + vv_2d
+      qave(i,k,18) = qave(i,k,18) + vw_2d
+      qave(i,k,19) = qave(i,k,19) + ww_2d
       ! triple products
-      qave(i,k,20) = qave(i,k,20) + rho_2d*u_2d*u_2d
-      qave(i,k,21) = qave(i,k,21) + rho_2d*u_2d*v_2d
-      qave(i,k,22) = qave(i,k,22) + rho_2d*u_2d*w_2d
-      qave(i,k,23) = qave(i,k,23) + rho_2d*v_2d*v_2d
-      qave(i,k,24) = qave(i,k,24) + rho_2d*v_2d*w_2d
-      qave(i,k,25) = qave(i,k,25) + rho_2d*w_2d*w_2d
+      qave(i,k,20) = qave(i,k,20) + rhouu_2d 
+      qave(i,k,21) = qave(i,k,21) + rhouv_2d 
+      qave(i,k,22) = qave(i,k,22) + rhouw_2d 
+      qave(i,k,23) = qave(i,k,23) + rhovv_2d 
+      qave(i,k,24) = qave(i,k,24) + rhovw_2d 
+      qave(i,k,25) = qave(i,k,25) + rhoww_2d 
       ! stress tensor
       qave(i,k,26) = qave(i,k,26) + tauxx_2d
       qave(i,k,27) = qave(i,k,27) + tauxy_2d 
@@ -365,6 +403,22 @@ module mod_auxl
       ien_1d = 0.0_mytype
       mu_1d = 0.0_mytype
       ka_1d = 0.0_mytype
+      rhou_1d = 0.0_mytype
+      rhov_1d = 0.0_mytype
+      rhow_1d = 0.0_mytype
+      rhot_1d = 0.0_mytype
+      uu_1d = 0.0_mytype
+      uv_1d = 0.0_mytype
+      uw_1d = 0.0_mytype
+      vv_1d = 0.0_mytype
+      vw_1d = 0.0_mytype
+      ww_1d = 0.0_mytype
+      rhouu_1d = 0.0_mytype
+      rhouv_1d = 0.0_mytype
+      rhouw_1d = 0.0_mytype
+      rhovv_1d = 0.0_mytype
+      rhovw_1d = 0.0_mytype
+      rhoww_1d = 0.0_mytype
       tauxx_1d = 0.0_mytype
       tauxy_1d = 0.0_mytype
       tauxz_1d = 0.0_mytype
@@ -375,6 +429,8 @@ module mod_auxl
       qy_1d = 0.0_mytype
       qz_1d = 0.0_mytype
       !$acc loop collapse(2) reduction(+:rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d) &
+      !$acc reduction(+:rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d) &
+      !$acc reduction(+:rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d) &
       !$acc reduction(+:tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d) &
       !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz) 
       do k=1,xsize(3)
@@ -388,6 +444,22 @@ module mod_auxl
           ien_1d = ien_1d + ien(i,j,k)
           mu_1d = mu_1d + mu(i,j,k)
           ka_1d = ka_1d + ka(i,j,k)
+          rhou_1d = rhou_1d + rho(i,j,k)*u(i,j,k)
+          rhov_1d = rhov_1d + rho(i,j,k)*v(i,j,k)
+          rhow_1d = rhow_1d + rho(i,j,k)*w(i,j,k)
+          rhot_1d = rhot_1d + rho(i,j,k)*tem(i,j,k)
+          uu_1d = uu_1d + u(i,j,k)*u(i,j,k)
+          uv_1d = uv_1d + u(i,j,k)*v(i,j,k)
+          uw_1d = uw_1d + u(i,j,k)*w(i,j,k)
+          vv_1d = vv_1d + v(i,j,k)*v(i,j,k)
+          vw_1d = vw_1d + v(i,j,k)*w(i,j,k)
+          ww_1d = ww_1d + w(i,j,k)*w(i,j,k)
+          rhouu_1d = rhouu_1d + rho(i,j,k)*u(i,j,k)*u(i,j,k)
+          rhouv_1d = rhouv_1d + rho(i,j,k)*u(i,j,k)*v(i,j,k)
+          rhouw_1d = rhouw_1d + rho(i,j,k)*u(i,j,k)*w(i,j,k)
+          rhovv_1d = rhovv_1d + rho(i,j,k)*v(i,j,k)*v(i,j,k)
+          rhovw_1d = rhovw_1d + rho(i,j,k)*v(i,j,k)*w(i,j,k)
+          rhoww_1d = rhoww_1d + rho(i,j,k)*w(i,j,k)*w(i,j,k)
           dux   = 0.0_mytype
           duy   = 0.0_mytype
           duz   = 0.0_mytype
@@ -440,23 +512,23 @@ module mod_auxl
       qave(i,8) = qave(i,8) + mu_1d
       qave(i,9) = qave(i,9) + ka_1d
       ! double products
-      qave(i,10) = qave(i,10) + rho_1d*u_1d
-      qave(i,11) = qave(i,11) + rho_1d*v_1d
-      qave(i,12) = qave(i,12) + rho_1d*w_1d
-      qave(i,13) = qave(i,13) + rho_1d*tem_1d
-      qave(i,14) = qave(i,14) + u_1d*u_1d
-      qave(i,15) = qave(i,15) + u_1d*v_1d
-      qave(i,16) = qave(i,16) + u_1d*w_1d
-      qave(i,17) = qave(i,17) + v_1d*v_1d
-      qave(i,18) = qave(i,18) + v_1d*w_1d
-      qave(i,19) = qave(i,19) + w_1d*w_1d
+      qave(i,10) = qave(i,10) + rhou_1d
+      qave(i,11) = qave(i,11) + rhov_1d
+      qave(i,12) = qave(i,12) + rhow_1d
+      qave(i,13) = qave(i,13) + rhot_1d
+      qave(i,14) = qave(i,14) + uu_1d
+      qave(i,15) = qave(i,15) + uv_1d
+      qave(i,16) = qave(i,16) + uw_1d
+      qave(i,17) = qave(i,17) + vv_1d
+      qave(i,18) = qave(i,18) + vw_1d
+      qave(i,19) = qave(i,19) + ww_1d
       ! triple products
-      qave(i,20) = qave(i,20) + rho_1d*u_1d*u_1d
-      qave(i,21) = qave(i,21) + rho_1d*u_1d*v_1d
-      qave(i,22) = qave(i,22) + rho_1d*u_1d*w_1d
-      qave(i,23) = qave(i,23) + rho_1d*v_1d*v_1d
-      qave(i,24) = qave(i,24) + rho_1d*v_1d*w_1d
-      qave(i,25) = qave(i,25) + rho_1d*w_1d*w_1d
+      qave(i,20) = qave(i,20) + rhouu_1d
+      qave(i,21) = qave(i,21) + rhouv_1d
+      qave(i,22) = qave(i,22) + rhouw_1d
+      qave(i,23) = qave(i,23) + rhovv_1d
+      qave(i,24) = qave(i,24) + rhovw_1d
+      qave(i,25) = qave(i,25) + rhoww_1d
       ! stress tensor
       qave(i,26) = qave(i,26) + tauxx_1d
       qave(i,27) = qave(i,27) + tauxy_1d 
@@ -856,11 +928,11 @@ module mod_auxl
 #elif defined(CHA)
       write(stdout,'(A, I0)') 'Channel: writing time-, span- and stream-averaged statistics at final step: ', istep
 #endif          
-      inquire(file="postproc/stats_info.txt", exist=exist)
+      inquire(file="output/stats/stats_info.txt", exist=exist)
       if (exist) then
-        open(11,file = 'postproc/stats_info.txt',status="old",position="append",action="write")
+        open(11,file = 'output/stats/stats_info.txt',status="old",position="append",action="write")
       else
-        open(11,file = 'postproc/stats_info.txt',status="new", action="write")
+        open(11,file = 'output/stats//stats_info.txt',status="new", action="write")
       endif   
       write(11,'(A, I0)') 'step: ', istep
       write(11,'(A, I0)') 'number of averaged files: ', countAvg

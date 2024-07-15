@@ -44,7 +44,7 @@ program interpolate
 ! Reading parameters
   call read_config()
 #if defined(BL) || defined(CHA)
-  call read_initBL_params()
+  call read_init_params()
 #endif
 !-----------------------------!
 !         MPI library         !

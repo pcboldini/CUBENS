@@ -234,12 +234,14 @@ subroutine init_rescale()
       weight_func(i) = 1.0_mytype
     endif
   enddo
-  write(stdout,* ) 'Recycling and rescaling parameters'
-  write(stdout,'(A)') '------------------------------------------------'
-  write(stdout,'(A, F10.4)') 'Recycling position:                   ',z_recycle
-  write(stdout,'(A, F10.4)') 'Recycling Reynolds number:            ',(Re)**0.5_mytype*(zStartDNS+z_recycle)**0.5_mytype
-  write(stdout,'(A, F10.4)') 'Beta parameter:                       ',beta_rescale
-  write(stdout,* )
+  if (nrank == 0) then
+    write(stdout,* ) 'Recycling and rescaling parameters'
+    write(stdout,'(A)') '------------------------------------------------'
+    write(stdout,'(A, F10.4)') 'Recycling position:                   ',z_recycle
+    write(stdout,'(A, F10.4)') 'Recycling Reynolds number:            ',(Re)**0.5_mytype*(zStartDNS+z_recycle)**0.5_mytype
+    write(stdout,'(A, F10.4)') 'Beta parameter:                       ',beta_rescale
+    write(stdout,* )
+  endif
   !$acc enter data copyin(au_rcy,av_rcy,aw_rcy,ap_rcy,at_rcy) 
   !$acc enter data copyin(x_rcy_inner,x_rcy_outer,xdelta_inl,weight_func) 
 end subroutine
@@ -1138,38 +1140,40 @@ subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
   use mod_math
   implicit none
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_flu,v1d_flu,w1d_flu,p1d_flu,t1d_flu
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u1d_flu,v1d_flu,w1d_flu,p1d_flu,t1d_flu
   !$acc declare create(u1d_flu,v1d_flu,w1d_flu,p1d_flu,t1d_flu)
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: aw_rcy_vd
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: aw_rcy_vd
   !$acc declare create(aw_rcy_vd)
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_rcy_flu,v1d_rcy_flu,w1d_rcy_flu, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u1d_rcy_flu,v1d_rcy_flu,w1d_rcy_flu, &
                                                                                         p1d_rcy_flu,t1d_rcy_flu
   !$acc declare create(u1d_rcy_flu,v1d_rcy_flu,w1d_rcy_flu,p1d_rcy_flu,t1d_rcy_flu)
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u1d_rcy_ave,v1d_rcy_ave,w1d_rcy_ave, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u1d_rcy_ave,v1d_rcy_ave,w1d_rcy_ave, &
                                                                                         p1d_rcy_ave,t1d_rcy_ave
   !$acc declare create(u1d_rcy_ave,v1d_rcy_ave,w1d_rcy_ave,p1d_rcy_ave,t1d_rcy_ave)                                                                                      
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_inner_flu,v_rcy_inner_flu, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_rcy_inner_flu,v_rcy_inner_flu, &
                                                                                         w_rcy_inner_flu,p_rcy_inner_flu, &
                                                                                         t_rcy_inner_flu
   !$acc declare create(u_rcy_inner_flu,v_rcy_inner_flu,w_rcy_inner_flu,p_rcy_inner_flu,t_rcy_inner_flu)                                                                                        
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_inner_ave,v_rcy_inner_ave, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_rcy_inner_ave,v_rcy_inner_ave, &
                                                                                         w_rcy_inner_ave,p_rcy_inner_ave, &
                                                                                         t_rcy_inner_ave
   !$acc declare create(u_rcy_inner_ave,v_rcy_inner_ave,w_rcy_inner_ave,p_rcy_inner_ave,t_rcy_inner_ave)                                                                              
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_outer_flu,v_rcy_outer_flu, & 
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_rcy_outer_flu,v_rcy_outer_flu, & 
                                                                                         w_rcy_outer_flu,p_rcy_outer_flu, &
                                                                                         t_rcy_outer_flu
   !$acc declare create(u_rcy_outer_flu,v_rcy_outer_flu,w_rcy_outer_flu,p_rcy_outer_flu,t_rcy_outer_flu)                                                                                        
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_rcy_outer_ave,v_rcy_outer_ave, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_rcy_outer_ave,v_rcy_outer_ave, &
                                                                                         w_rcy_outer_ave,p_rcy_outer_ave, &
                                                                                         t_rcy_outer_ave
   !$acc declare create(u_rcy_outer_ave,v_rcy_outer_ave,w_rcy_outer_ave,p_rcy_outer_ave,t_rcy_outer_ave)                                                                                        
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_inl_inner,v_inl_inner,w_inl_inner, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_inl_inner,v_inl_inner,w_inl_inner, &
                                                                                         p_inl_inner,t_inl_inner
   !$acc declare create(u_inl_inner,v_inl_inner,w_inl_inner,p_inl_inner,t_inl_inner)  
-  real(mytype), dimension(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:1) :: u_inl_outer,v_inl_outer,w_inl_outer, &
+  real(mytype), dimension(1:xsize(1), 1:xsize(2), 1-nHalo:1) :: u_inl_outer,v_inl_outer,w_inl_outer, &
                                                                                         p_inl_outer,t_inl_outer
-  !$acc declare create(u_inl_outer,v_inl_outer,w_inl_outer,p_inl_outer,t_inl_outer)                                                                                        
+  !$acc declare create(u_inl_outer,v_inl_outer,w_inl_outer,p_inl_outer,t_inl_outer)      
+  real(mytype), dimension(1:xsize(1)) :: tmp_u_in, tmp_u_out, tmp_v_in, tmp_v_out, tmp_w_in, tmp_w_out, &
+                                         tmp_p_in, tmp_p_out, tmp_t_in, tmp_t_out                                                                                 
   integer :: i,j,k
   ! sending variables from rescaling location to inlet
   if ((neigh%inlet) .or. (neigh%recycle)) then
@@ -1193,25 +1197,45 @@ subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
       enddo
     enddo
     ! interpolation fluctuation
-    !$acc parallel loop collapse(2) default(present)
+    !$acc parallel loop collapse(2) default(present) &
+    !$acc private(tmp_u_in,tmp_v_in,tmp_w_in,tmp_p_in,tmp_t_in) &
+    !$acc private(tmp_u_out,tmp_v_out,tmp_w_out,tmp_p_out,tmp_t_out)
     do k=1-nHalo,1
       do j=1,xsize(2)
-        call spline(x,u1d_flu(1:xsize(1),j,k),xsize(1),u1d_rcy_flu(1:xsize(1),j,k))
-        call spline(x,v1d_flu(1:xsize(1),j,k),xsize(1),v1d_rcy_flu(1:xsize(1),j,k))
-        call spline(x,w1d_flu(1:xsize(1),j,k),xsize(1),w1d_rcy_flu(1:xsize(1),j,k))
-        call spline(x,p1d_flu(1:xsize(1),j,k),xsize(1),p1d_rcy_flu(1:xsize(1),j,k))
-        call spline(x,t1d_flu(1:xsize(1),j,k),xsize(1),t1d_rcy_flu(1:xsize(1),j,k))
+        tmp_u_in = u1d_flu(1:xsize(1),j,k)
+        tmp_v_in = v1d_flu(1:xsize(1),j,k)
+        tmp_w_in = w1d_flu(1:xsize(1),j,k)
+        tmp_p_in = p1d_flu(1:xsize(1),j,k)
+        tmp_t_in = t1d_flu(1:xsize(1),j,k)
+        call spline(x,tmp_u_in,xsize(1),tmp_u_out)
+        call spline(x,tmp_v_in,xsize(1),tmp_v_out)
+        call spline(x,tmp_w_in,xsize(1),tmp_w_out)
+        call spline(x,tmp_p_in,xsize(1),tmp_p_out)
+        call spline(x,tmp_t_in,xsize(1),tmp_t_out)
+        u1d_rcy_flu(1:xsize(1),j,k) = tmp_u_out
+        v1d_rcy_flu(1:xsize(1),j,k) = tmp_v_out
+        w1d_rcy_flu(1:xsize(1),j,k) = tmp_w_out
+        p1d_rcy_flu(1:xsize(1),j,k) = tmp_p_out
+        t1d_rcy_flu(1:xsize(1),j,k) = tmp_t_out
       enddo
     enddo
     ! interpolation average
-    !$acc parallel loop collapse(2) default(present)
+    !$acc parallel loop collapse(2) default(present) &
+    !$acc private(tmp_w_in) &
+    !$acc private(tmp_u_out,tmp_v_out,tmp_w_out,tmp_p_out,tmp_t_out)
     do k=1-nHalo,1
       do j=1,xsize(2)
-        call spline(x,au_rcy   ,xsize(1),u1d_rcy_ave(1:xsize(1),j,k))
-        call spline(x,av_rcy   ,xsize(1),v1d_rcy_ave(1:xsize(1),j,k))
-        call spline(x,aw_rcy_vd(1:xsize(1),j,k),xsize(1),w1d_rcy_ave(1:xsize(1),j,k))
-        call spline(x,ap_rcy   ,xsize(1),p1d_rcy_ave(1:xsize(1),j,k))
-        call spline(x,at_rcy   ,xsize(1),t1d_rcy_ave(1:xsize(1),j,k))
+        tmp_w_in = aw_rcy_vd(1:xsize(1),j,k)
+        call spline(x,au_rcy   ,xsize(1),tmp_u_out)
+        call spline(x,av_rcy   ,xsize(1),tmp_v_out)
+        call spline(x,tmp_w_in ,xsize(1),tmp_w_out)
+        call spline(x,ap_rcy   ,xsize(1),tmp_p_out)
+        call spline(x,at_rcy   ,xsize(1),tmp_t_out)
+        u1d_rcy_ave(1:xsize(1),j,k) = tmp_u_out
+        v1d_rcy_ave(1:xsize(1),j,k) = tmp_v_out
+        w1d_rcy_ave(1:xsize(1),j,k) = tmp_w_out
+        p1d_rcy_ave(1:xsize(1),j,k) = tmp_p_out
+        t1d_rcy_ave(1:xsize(1),j,k) = tmp_t_out
       enddo
     enddo
     !$acc parallel loop collapse(3) default(present)

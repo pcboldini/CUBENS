@@ -9,9 +9,9 @@ ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
 CASE = -DBL # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
-EOS_LAW = -DIG     # DIG # DVdW # DPR
+EOS_LAW = -DVdW     # DIG # DVdW # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DSutherland  # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DJST  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers
@@ -171,7 +171,8 @@ $(OBJ)init.o $(OBJ)auxlpol.o $(OBJ)main_interpol.o
 
 interpol: $(OBJS_intp)
 	$(COMP) $(FLAGS) $(OBJS_intp) $(LIB) -o interpol
-$(OBJ)main_interpol.o: $(SRC)interpol/main_interpol.f90
+
+$(OBJ)main_interpol.o: $(SRC)interpol/main_interpol.f90 $(SRC)param.f90
 	$(COMP)  $(CASE) $(FLAGSC) $(SRC)interpol/main_interpol.f90 -o $(OBJ)main_interpol.o
 $(OBJ)auxlpol.o: $(SRC)interpol/auxlpol.f90
 	$(COMP)  $(CASE) $(FLAGSC) $(SRC)interpol/auxlpol.f90 -o $(OBJ)auxlpol.o

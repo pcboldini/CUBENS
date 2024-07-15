@@ -243,14 +243,14 @@ module mod_eos_visc
     implicit none
     real(mytype), intent(IN)  :: tem_r, rho_r
     real(mytype), intent(OUT) :: mu, ka
-    real(mytype) :: mu1_r, f_rho_mu, mu_diff, mu_2, kappa1_r, f_rho_ka, ka_diff, ka_2, ZcPow5
+    real(mytype) :: mu1_r, mu_diff, mu_2, kappa1_r, f_rho_ka, ka_diff, ka_2, ZcPow5
     ! Viscosity
     if (tem_r .le. 1.50_mytype) then
         mu1_r = 34E-5_mytype*tem_r**0.94_mytype
     else
         mu1_r = 17.78E-5_mytype*(4.58_mytype*tem_r-1.67_mytype)**(5.0_mytype/8.0_mytype)
     endif 
-    f_rho_mu =  (t_jst%coeffrho_1           &
+    mu_diff =  (t_jst%coeffrho_1           &
                 + t_jst%coeffrho_2*rho_r**1 &
                 + t_jst%coeffrho_3*rho_r**2 &
                 - t_jst%coeffrho_4*rho_r**3 & 

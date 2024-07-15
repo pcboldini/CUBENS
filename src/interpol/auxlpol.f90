@@ -114,6 +114,7 @@ module mod_interpolate
     real(mytype), allocatable, dimension(:,:,:) :: tmpArray1,tmpArray2, out_y,out_z
     real(mytype), allocatable, dimension(:) :: tmpInt1,tmpInt2
     TYPE (DECOMP_INFO) :: tmpPart
+    
     allocate(out_y(part2%ysz(1),part2%ysz(2),part2%ysz(3)))
     allocate(out_z(part2%zsz(1),part2%zsz(2),part2%zsz(3)))
     call transpose_x_to_y(output, out_y, part2)
@@ -146,8 +147,8 @@ module mod_interpolate
     allocate(tmpInt1(jmax))
     allocate(tmpInt2(jmax))
     if (jnew == 1) then 
-        tmpArray1(:,1,:) = tmpArray2(:,1,:)
-    else
+      tmpArray1(:,1,:) = tmpArray2(:,1,:)
+    else if (jmax /= 1) then
       do k=1,tmpPart%ysz(3)
         do i=1,tmpPart%ysz(1)
           do j=1,jmax
@@ -156,6 +157,14 @@ module mod_interpolate
           call spline(yold,tmpInt1,jmax,tmpInt2)
           do j=1,jnew
            call splint(yold,tmpInt1,tmpInt2,jmax,ynew(j),tmpArray1(i,j,k))
+          enddo
+        enddo
+      enddo
+    else if (jmax == 1) then
+      do k=1,tmpPart%ysz(3)
+        do i=1,tmpPart%ysz(1)
+          do j=1,jnew
+            tmpArray1(i,j,k) = tmpArray2(i,jmax,k)
           enddo
         enddo
       enddo
