@@ -225,6 +225,24 @@ contains
     ddz = ddz*zp(k)
   end subroutine
 
+  ! central diffusive differences with loop (1st order)
+  subroutine calc_visc_ddxyz_2d(ddx,ddz,arr,i,k)
+    use decomp_2d
+    use mod_param
+    implicit none
+    real(mytype), dimension(1-nHalo:, 1-nHalo:) :: arr
+    real(mytype) :: ddx,ddz
+    integer :: i,k,c
+    ddx = 0.0_mytype
+    ddz = 0.0_mytype
+    do c = 1, nStencilVisc
+      ddx = ddx + visc_ddx(c)*(arr(i+c,k) - arr(i-c,k))
+      ddz = ddz + visc_ddz(c)*(arr(i,k+c) - arr(i,k-c))
+    enddo
+    ddx = ddx*xp(i)
+    ddz = ddz*zp(k)
+  end subroutine
+
 
 ! central diffusive differences with loop (2nd order)
   subroutine calc_d2dxyz2(d2dx2,d2dy2,d2dz2,arr,i,j,k)

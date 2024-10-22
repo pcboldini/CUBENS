@@ -12,11 +12,37 @@ time_step=1
 index_y=1
 interpol=0 # 1 for interpol planes
 
-var=["r","u","v","w","e","t"]
+var=["r","w"]
 
 x_scale=1
 y_scale=1
 z_scale=1
+
+precision = 'double'
+
+if interpol==1:
+    print('Loading interpolated planes')
+    char_y='ypl_aI'
+    x = np.fromfile('../../output/planes/x_I.bin', dtype=precision)
+    y = np.fromfile('../../output/planes/y_I.bin', dtype=precision)
+    z = np.fromfile('../../output/planes/z_I.bin', dtype=precision)
+else:
+    print('Loading current planes')
+    char_y='ypl'
+    x = np.fromfile('../../output/planes/x.bin', dtype=precision)
+    y = np.fromfile('../../output/planes/y.bin', dtype=precision)
+    z = np.fromfile('../../output/planes/z.bin', dtype=precision)
+
+imax = np.size(x)
+jmax = np.size(y)
+kmax = np.size(z)
+print(imax,jmax,kmax)
+
+slice_flag='off'
+inew1=0
+inew2=100
+knew1=500
+knew2=1000
 
 ## functions
 
@@ -39,41 +65,53 @@ def getfluc(name,imax,kmax,timestamp):
         data_fluc_reshape=np.reshape(data_fluc, (imax*kmax))
         data_fluc_reshape.tofile("{0}.fluc.{1:07d}.bin".format(name,t)) 
 
-precision = 'double'
 
-if interpol==1:
-    print('Loading interpolated planes')
-    char_y='ypl_aI'
-    x = np.fromfile('../../output/planes/x_I.bin', dtype=precision)
-    y = np.fromfile('../../output/planes/y_I.bin', dtype=precision)
-    z = np.fromfile('../../output/planes/z_I.bin', dtype=precision)
-else:
-    print('Loading current planes')
-    char_y='ypl'
-    x = np.fromfile('../../output/planes/x.bin', dtype=precision)
-    y = np.fromfile('../../output/planes/y.bin', dtype=precision)
-    z = np.fromfile('../../output/planes/z.bin', dtype=precision)
+## code
 
-imax = np.size(x)
-jmax = np.size(y)
-kmax = np.size(z)
-
-print(imax,jmax,kmax)
+imaxnew=inew2-inew1
+kmaxnew=knew2-knew1
 
 timestamps = np.arange(time_start,time_end+1,time_step)
 print(timestamps)
 
-for j in range(0,len(var)):
-    getfluc(('../../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
+for i in range(0, len (timestamps)):
+    print('timestamp={0:07d}'.format(timestamps[i]))
+    timestamps_print='{0:07d}'.format(timestamps[i])
+
+if slice_flag=='on':
+    for j in range(0,len(var)):
+        for i in range(0, len (timestamps)):
+            data=np.fromfile(os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+            data_reshape=np.reshape(data, (kmax, 1, imax))
+            data_slice= data_reshape[knew1:knew2, :, inew1:inew2]
+            data_slice_reshape = np.reshape(data_slice, (kmaxnew*1*imaxnew))
+            data_slice_reshape.tofile(os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+
+if slice_flag=='on':
+    for j in range(0,len(var)):
+        getfluc(('../../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j]) + '.slice'), imaxnew, kmaxnew, timestamps)
+else:
+    for j in range(0,len(var)):
+        getfluc(('../../output/planes/' + str(char_y) + '.' + str(index_y) + '.'+ str(var[j])), imax, kmax, timestamps)
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
 
 for j in range(0,len(var)):
-    datanames_var[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]))
-    datanames_fluc[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.fluc')
+    if slice_flag=='on':
+        datanames_var[j]  =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.slice')
+    else:
+        datanames_var[j]  =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]))
+    if slice_flag=='on':
+        datanames_fluc[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.slice.fluc')
+    else:
+        datanames_fluc[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.fluc')
 
 xa = 20
+
+if slice_flag=='on':
+    x=x[inew1:inew2]
+    z=z[knew1:knew2]
 
 if interpol==1:
     writexmf("yplanes/yplanes_aI.xmf", precision,  \
@@ -97,25 +135,19 @@ else:
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
 
-#xa = 22
-#for i in range(0, 5):
-#    writexmf("visualize_fields/yplane2.{}.xmf".format(i), precision, \
-#             x-i*xa, [y[0]], z*1.0, \
-#             timestamp = timestamps, dt = 1.0, \
-#             dataNames = ['ypl.u.fluc',\
-#                          'ypl.v.fluc',\
-#                          'ypl.w.fluc',\
-#                          'ypl.r.fluc',\
-#                          'ypl.p.fluc'])
 
-for i in range(0, len (timestamps)):
-    print('timestamp={0:07d}'.format(timestamps[i]))
-    timestamps_print='{0:07d}'.format(timestamps[i])
+for j in range(0,len(var)):
+    for i in range(0, len (timestamps)):
+        if slice_flag=='on':
+            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)
+            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
+            shutil.copy(src_path, dst_path)  
+        else:
+            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  "." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)
+            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)       
 
-    for j in range(0,len(var)):
-        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
-        shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
-        shutil.copy(src_path, dst_path)
 
 print('Planes copied')

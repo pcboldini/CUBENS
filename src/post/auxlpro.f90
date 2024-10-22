@@ -80,7 +80,7 @@ contains
 
 
 ! Calculate gradients
-  subroutine calcGrad(part,istep,dir,loc,tmp01,name011,name012,tmp02,tmp03,tmp04,tmp05,tmp06,tmp07,tmp08,tmp09,tmp10,tmp11,tmp12)
+  subroutine calcGradabs(part,istep,dir,loc,tmp01,name011,name012,tmp02,tmp03,tmp04,tmp05,tmp06,tmp07,tmp08,tmp09,tmp10,tmp11,tmp12)
     use mpi
     use decomp_2d
     use decomp_2d_io
@@ -152,23 +152,41 @@ contains
   end subroutine
 
 
-! Calculate temperature gradient
-  subroutine calcTemp(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
+! Calculate 3-D gradient
+  subroutine calcGrad(tmp_x_arr,tmp_y_arr,tmp_z_arr,tmp01) 
     use decomp_2d
     implicit none
     integer i,j,k
-    real(mytype), dimension(:,:,:)   :: tmp_x_arr,tmp_y_arr,tmp_z_arr
-    real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:) :: tem
-    real(mytype) :: dTx, dTy, dTz
+    real(mytype), dimension(:,:,:), intent(OUT) :: tmp_x_arr,tmp_y_arr,tmp_z_arr
+    real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:), intent(IN) :: tmp01
+    real(mytype) :: dGradx, dGrady, dGradz
 
     do k=1,xsize(3)
       do j=1,xsize(2)
         do i=1,xsize(1)
-          call calc_visc_ddxyz(dTx, dTy, dTz, tem, i,j,k)
-          tmp_x_arr(i,j,k) = dTx
-          tmp_y_arr(i,j,k) = dTy
-          tmp_z_arr(i,j,k) = dTz
+          call calc_visc_ddxyz(dGradx, dGrady, dGradz, tmp01, i,j,k)
+          tmp_x_arr(i,j,k) = dGradx
+          tmp_y_arr(i,j,k) = dGrady
+          tmp_z_arr(i,j,k) = dGradz
         enddo
+      enddo
+    enddo
+  end subroutine
+
+  ! Calculate 2-D gradient
+  subroutine calcGrad2D(tmp_x_arr,tmp_z_arr,tmp01) 
+    use decomp_2d
+    implicit none
+    integer i,k
+    real(mytype), dimension(:,:), intent(OUT) :: tmp_x_arr,tmp_z_arr
+    real(mytype), dimension(:,:), intent(IN) :: tmp01
+    real(mytype) :: dGradx, dGradz
+
+    do k=1,xsize(3)
+      do i=1,xsize(1)
+        call calc_visc_ddxyz_2d(dGradx, dGradz, tmp01, i,k)
+        tmp_x_arr(i,k) = dGradx
+        tmp_z_arr(i,k) = dGradz
       enddo
     enddo
   end subroutine

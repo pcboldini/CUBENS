@@ -3,7 +3,7 @@
   va    = v(i,j,k)
   wa    = w(i,j,k)
   pa    = p(i,j,k)
-  rhoea = rhoe(i,j,k)
+  ea    = e(i,j,k)
   za    = zp(k)
   xa    = xp(i)
 
@@ -33,36 +33,38 @@
     wjm = wa+w(i,j-s,k)
     wkp = wa+w(i,j,k+s)
     wkm = wa+w(i,j,k-s)
-    rhoeip = rhoea+rhoe(i+s,j,k)
-    rhoeim = rhoea+rhoe(i-s,j,k)
-    rhoejp = rhoea+rhoe(i,j+s,k)
-    rhoejm = rhoea+rhoe(i,j-s,k)
-    rhoekp = rhoea+rhoe(i,j,k+s)
-    rhoekm = rhoea+rhoe(i,j,k-s)
-    rhs_r(i,j,k) = rhs_r(i,j,k) - xa*0.5_mytype*conv_ddx(s)*( rhoip*uip - rhoim*uim ) &
-                                -       0.5_mytype*conv_ddy(s)*( rhojp*vjp - rhojm*vjm ) &
-                                - za*0.5_mytype*conv_ddz(s)*( rhokp*wkp - rhokm*wkm ) 
-    rhs_u(i,j,k) = rhs_u(i,j,k) - xa*0.25_mytype*conv_ddx(s)*( rhoip*uip*uip - rhoim*uim*uim ) &
-                                -       0.25_mytype*conv_ddy(s)*( rhojp*vjp*ujp - rhojm*vjm*ujm ) &
-                                - za*0.25_mytype*conv_ddz(s)*( rhokp*wkp*ukp - rhokm*wkm*ukm ) 
-    rhs_v(i,j,k) = rhs_v(i,j,k) - xa*0.25_mytype*conv_ddx(s)*( rhoip*uip*vip - rhoim*uim*vim ) &
-                                -       0.25_mytype*conv_ddy(s)*( rhojp*vjp*vjp - rhojm*vjm*vjm ) &
-                                - za*0.25_mytype*conv_ddz(s)*( rhokp*wkp*vkp - rhokm*wkm*vkm ) 
-    rhs_w(i,j,k) = rhs_w(i,j,k) - xa*0.25_mytype*conv_ddx(s)*( rhoip*uip*wip - rhoim*uim*wim ) &
-                                -       0.25_mytype*conv_ddy(s)*( rhojp*vjp*wjp - rhojm*vjm*wjm ) &
-                                - za*0.25_mytype*conv_ddz(s)*( rhokp*wkp*wkp - rhokm*wkm*wkm ) 
-    rhs_e(i,j,k) = rhs_e(i,j,k) - xa*0.5_mytype*conv_ddx(s)*(rhoeip*uip-rhoeim*uim) &
-                                - xa*0.25_mytype*conv_ddx(s)*(+rhoip*uip*(ua*u(i+s,j,k)+va*v(i+s,j,k)+wa*w(i+s,j,k)) &
+    eip = ea+e(i+s,j,k)
+    eim = ea+e(i-s,j,k)
+    ejp = ea+e(i,j+s,k)
+    ejm = ea+e(i,j-s,k)
+    ekp = ea+e(i,j,k+s)
+    ekm = ea+e(i,j,k-s)
+    rhs_r(i,j,k) = rhs_r(i,j,k) - xa*0.5*conv_ddx(s)*( rhoip*uip - rhoim*uim ) &
+                                -       0.5*conv_ddy(s)*( rhojp*vjp - rhojm*vjm ) &
+                                - za*0.5*conv_ddz(s)*( rhokp*wkp - rhokm*wkm ) 
+    rhs_u(i,j,k) = rhs_u(i,j,k) - xa*0.25*conv_ddx(s)*( rhoip*uip*uip - rhoim*uim*uim ) &
+                                -       0.25*conv_ddy(s)*( rhojp*vjp*ujp - rhojm*vjm*ujm ) &
+                                - za*0.25*conv_ddz(s)*( rhokp*wkp*ukp - rhokm*wkm*ukm ) 
+    rhs_v(i,j,k) = rhs_v(i,j,k) - xa*0.25*conv_ddx(s)*( rhoip*uip*vip - rhoim*uim*vim ) &
+                                -       0.25*conv_ddy(s)*( rhojp*vjp*vjp - rhojm*vjm*vjm ) &
+                                - za*0.25*conv_ddz(s)*( rhokp*wkp*vkp - rhokm*wkm*vkm ) 
+    rhs_w(i,j,k) = rhs_w(i,j,k) - xa*0.25*conv_ddx(s)*( rhoip*uip*wip - rhoim*uim*wim ) &
+                                -       0.25*conv_ddy(s)*( rhojp*vjp*wjp - rhojm*vjm*wjm ) &
+                                - za*0.25*conv_ddz(s)*( rhokp*wkp*wkp - rhokm*wkm*wkm ) 
+    rhs_e(i,j,k) = rhs_e(i,j,k) - xa*0.25*conv_ddx(s)*(rhoip*uip*(eip)-rhoim*uim*(eim) &
+                                             +rhoip*uip*(ua*u(i+s,j,k)+va*v(i+s,j,k)+wa*w(i+s,j,k)) &
                                              -rhoim*uim*(ua*u(i-s,j,k)+va*v(i-s,j,k)+wa*w(i-s,j,k))) &
                                 - xa*conv_ddx(s)*( (ua*p(i+s,j,k) + pa*u(i+s,j,k)) &
                                             - (ua*p(i-s,j,k) + pa*u(i-s,j,k)) ) &
-                                -  0.5_mytype*conv_ddy(s)*(rhoejp*vjp-rhoejm*vjm) &
-                                - 0.25_mytype*conv_ddy(s)*(+rhojp*vjp*(ua*u(i,j+s,k)+va*v(i,j+s,k)+wa*w(i,j+s,k)) &
+                                ! 
+                                -      0.25*conv_ddy(s)*(rhojp*vjp*(ejp)-rhojm*vjm*(ejm) &
+                                             +rhojp*vjp*(ua*u(i,j+s,k)+va*v(i,j+s,k)+wa*w(i,j+s,k)) &
                                              -rhojm*vjm*(ua*u(i,j-s,k)+va*v(i,j-s,k)+wa*w(i,j-s,k))) &
                                 -      conv_ddy(s)*( (va*p(i,j+s,k) + pa*v(i,j+s,k)) &
                                             - (va*p(i,j-s,k) + pa*v(i,j-s,k)) ) &
-                                - za*0.5_mytype*conv_ddz(s)*(rhoekp*wkp-rhoekm*wkm) &
-                                - za*0.25_mytype*conv_ddz(s)*(+rhokp*wkp*(ua*u(i,j,k+s)+va*v(i,j,k+s)+wa*w(i,j,k+s)) &
+                                ! 
+                                - za*0.25*conv_ddz(s)*(rhokp*wkp*(ekp)-rhokm*wkm*(ekm) &
+                                             +rhokp*wkp*(ua*u(i,j,k+s)+va*v(i,j,k+s)+wa*w(i,j,k+s)) &
                                              -rhokm*wkm*(ua*u(i,j,k-s)+va*v(i,j,k-s)+wa*w(i,j,k-s))) &
                                 - za*conv_ddz(s)*( (wa*p(i,j,k+s) + pa*w(i,j,k+s)) &
                                             - (w(i,j,k)*p(i,j,k-s) + pa*w(i,j,k-s)) )

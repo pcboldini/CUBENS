@@ -132,6 +132,7 @@ module mod_eos
     real(mytype), intent(OUT) :: sos
     call calcSOS_re(rho*t_param%Rhoref, ien, sos)
   end subroutine
+  
 ! Call c_p/alpha_v from density and internal energy (for boundary conditions)
   subroutine calcFac(rho,ien,fac) 
     !$acc routine seq

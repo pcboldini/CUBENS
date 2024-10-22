@@ -458,8 +458,8 @@ module mod_eos_var
     integer :: ierr
     real(mytype), intent(IN) :: pre,tem_r
     real(mytype), intent(OUT) :: rho_r,ien
-    if (nrank == 0) write(stdout,*)
-    if (nrank == 0) write(stdout,*) "Not included yet! Select different boundary conditions"
+    write(stdout,*)
+    write(stdout,*) "Not included yet! Select different boundary conditions"
     stop
   end subroutine
 

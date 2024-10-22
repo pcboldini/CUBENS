@@ -7,11 +7,11 @@
 # Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
 ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
-CASE = -DBL # DBL # DCHA # DTGV
+CASE = -DTGV # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
-EOS_LAW = -DVdW     # DIG # DVdW # DPR
+EOS_LAW = -DIG     # DIG # DVdW # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DJST  # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DPowerLaw  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers
@@ -21,7 +21,7 @@ FFT = fftw3_f03
 
 
 ifeq ($(ARCH),gnu)
-    FLAGS  =  -O0 -march=native # -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=all
+    FLAGS  =  -O0 -march=native# -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=all
     FLAGSC  = $(FLAGS) -c -cpp
     COMP = mpif90 -ffixed-line-length-none -std=legacy -J $(MOD)
     LIB =
@@ -89,7 +89,7 @@ $(PROGRAM): $(OBJS)
 
 $(OBJ)main_comp.o: $(SRC)main_comp.f90
 	$(COMP)  $(CASE) $(FLAGSC) $(SRC)main_comp.f90 -o $(OBJ)main_comp.o 
-$(OBJ)rhs.o: $(SRC)rhs.f90 $(SRC)eulerFlux.f90
+$(OBJ)rhs.o: $(SRC)rhs.f90 $(SRC)eulerFlux.f90 $(SRC)eulerFlux_pep.f90
 	$(COMP)  $(FLAGSC) $(SRC)rhs.f90 -o $(OBJ)rhs.o  
 $(OBJ)rk3.o: $(SRC)rk3.f90 
 	$(COMP)  $(FLAGSC) $(SRC)rk3.f90 -o $(OBJ)rk3.o

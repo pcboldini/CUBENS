@@ -28,8 +28,8 @@
 !  
     CFL              = 0.5                          ! CFL number, keep < 1
     dtMax            = -3.385e-4                    ! maximum timestep, if <0 ignored
-    nsteps           = 100                            ! simulations steps
-    intvCalcCFL      = 100                            ! interval CFL calculation
+    nsteps           = 10                            ! simulations steps
+    intvCalcCFL      = 1                            ! interval CFL calculation
 !
 ! ---------------------------------- I/O ---------------------------------- 
 !     
@@ -37,20 +37,21 @@
     readRestartFile  = -11                          ! if <0, not read
     intvSaveRestart  = 100                           ! interval save restart files
     saveRestartAfter = 100                           ! save restart files after which timestep
-    intvSavePlanes   = 100                            ! interval save planes
-    savePlanesAfter  = 100                            ! save planes after which timestep
+    intvSavePlanes   = 1                            ! interval save planes
+    savePlanesAfter  = 1                            ! save planes after which timestep
     intvSaveStats    = 100                            ! interval save statistics
     saveStatsAfter   = -1                           ! save statistics after which timestep
     intvReadParam    = -2                           ! read variation file
 
-    xi_plane = (/pi_const/)                         ! y-index cut z-x plane 
-    yi_plane = (/pi_const/)                         ! x-index cut z-y plane 
-    zi_plane = (/pi_const/)                         ! z-index cut y-x plane 
+    xi_plane = (/1/)                         ! y-index cut z-x plane 
+    yi_plane = (/1/)                         ! x-index cut z-y plane 
+    zi_plane = (/1/)                         ! z-index cut y-x plane 
 !
 ! -------------------------------- NUMERICS -------------------------------
 ! 
     nStencilConv = 3                                ! order/2 convective fluxes
     nStencilVisc = 2                                ! order/2 diffusive fluxes 
+    keep_flag = "pep"                               ! KEEP-scheme: "classic" or "pep" (pressure equilibrium)
 !
 ! --------------------------------- GRID ----------------------------------
 !

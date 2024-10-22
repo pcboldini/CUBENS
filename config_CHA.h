@@ -51,6 +51,7 @@
 ! 
     nStencilConv = 3                                ! order/2 convective fluxes
     nStencilVisc = 2                                ! order/2 diffusive fluxes  
+    keep_flag = "pep"                               ! KEEP-scheme: "classic" or "pep" (pressure equilibrium)
 !
 ! --------------------------------- GRID ----------------------------------
 !

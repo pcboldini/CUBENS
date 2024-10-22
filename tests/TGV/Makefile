@@ -1,11 +1,11 @@
 # -
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
 # SPDX-License-Identifier: MIT
 #
 # -
 # Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
-ARCH = gnu
+ARCH = nvhpc
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
 CASE = -DTGV # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)

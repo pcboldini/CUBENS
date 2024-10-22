@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -                                                                                                             
@@ -62,6 +62,7 @@
 ! 
     nStencilConv = 3                                ! order/2 convective fluxes
     nStencilVisc = 2                                ! order/2 diffusive fluxes
+    keep_flag = "pep"
 !
 ! --------------------------------- GRID ----------------------------------
 !

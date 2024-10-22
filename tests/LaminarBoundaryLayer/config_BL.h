@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini and the CUBENS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -                                                                                                             
@@ -34,17 +34,17 @@
 !  
     CFL              = 0.8                          ! CFL number, keep < 1
     dtMax            = -0.1                         ! maximum timestep, if <0 ignored (only applies to pert_bc=0)
-    nsteps           = 100000                       ! simulations steps
-    intvCalcCFL      = 1000                         ! interval CFL calculation
+    nsteps           = 2360000                       ! simulations steps
+    intvCalcCFL      = 100                         ! interval CFL calculation
 !
 ! ---------------------------------- I/O ----------------------------------
 !     
     intvPrint        = 1000                         ! on the screen
     readRestartFile  = -11                          ! if <0, not read
-    intvSaveRestart  = 10000                        ! interval save restart files
+    intvSaveRestart  = 2300000                        ! interval save restart files
     saveRestartAfter = 1                            ! save restart files after which timestep
-    intvSavePlanes   = 10000                        ! interval save planes
-    savePlanesAfter  = 1                            ! save planes after which timestep
+    intvSavePlanes   = 1000                        ! interval save planes
+    savePlanesAfter  = 2300000                            ! save planes after which timestep
     intvSaveStats    = -1                            ! interval save statistics
     saveStatsAfter   = -1                            ! save statistics after which timestep
     intvReadParam    = -2                           ! read variation file
@@ -62,6 +62,7 @@
 ! 
     nStencilConv = 3                                ! order/2 convective fluxes
     nStencilVisc = 2                                ! order/2 diffusive fluxes
+    keep_flag = "pep"
 !
 ! --------------------------------- GRID ----------------------------------
 !
@@ -114,15 +115,15 @@
 !
 ! ---------------------------- BLOWING/SUCTION  ---------------------------
 !
-    pert_calc=0                                     ! options: 1 on, 0 off
+    pert_calc=1                                     ! options: 1 on, 0 off
 
     pert_zLen = 10                                  ! length perturbation
-    pert_ReMid = 320                                ! Re_delta for mid point perturbation
+    pert_ReMid = 780                                ! Re_delta for mid point perturbation
 
     beta0 = 2.0*pi_const/len_y                      ! fundamental spanwise wavenumber
 
-    pert_ampl = (/5.0e-7,5.0e-7/)                   ! amplitude 2-D and 3-D wave
-    pert_F    = (/100.000e-6,62.000e-6/)            ! frequency 2-D and 3-D wave
+    pert_ampl = (/5.0e-7,0.0e-7/)                   ! amplitude 2-D and 3-D wave
+    pert_F    = (/80.000e-6,1.000e-6/)            ! frequency 2-D and 3-D wave
 
     ! Sayadi et al., JFM 724, 2013
 

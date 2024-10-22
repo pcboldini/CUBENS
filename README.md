@@ -1,4 +1,4 @@
-<img src="CUBENS_logo.png" width="30%" height="30%">
+<img src="CUBENS_logo.png" width="40%" height="40%">
 
 ## Main
 CUBENS (CUBic Equation of state Navier-Stokes) is a massively-parallel GPU-accelerated high-order solver for direct numerical simulations of non-ideal wall-bounded flows. 
@@ -7,6 +7,7 @@ It incorporates:
  - non-ideal, strongly non-linear thermodynamics,
  - a wall-normal buoyant force,
  - high-order finite-difference schemes with convective terms in split and kinetic-energy- and entropy-preserving form,
+ - pressure-equilibrium-preserving scheme,
  - non-ideal non-reflecting boundary conditions,
  - GPU-acceleration using OpenACC directives for computation offloading and asynchronous CUDA-aware MPI for GPU-GPU communication.
 
@@ -30,7 +31,7 @@ Any contributions and feedback that can improve CUBENS are appreciated. If you w
 ### Reference 
 For more information on CUBENS:
 
-P.C.Boldini, R.Hirai, P.Costa, J.W.R.Peeters, R.Pecnik, "CUBENS: development of a GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Submitted to ..., 2024. [link_to_paper](http://example.com)
+P.C.~Boldini, R.~Hirai, P.~Costa, J.W.R.~Peeters, R.~Pecnik, "CUBENS: development of a GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Submitted to Computer Physics Communications, 2024. [link_to_paper](http://example.com)
 
 ## News
 # **[2024/../..]** CUBENS v1.0 is online!
@@ -84,7 +85,7 @@ NOTE: for `CASE = BL` and `CHA`, the initial condition in folder `preproc` has t
  1. initBL: calculation of the compressible laminar solution and flow parameters -> `inputDNS/...`
  2. initBL: calculation of the flow parameters -> `inputDNS/...`
 
-NOTE: for `CASE = turbRR`, the mean profiles have to be present in `preproc/turbRR`
+NOTE: for recycling-rescaling method `BC_inl_rescale = true`, the mean profiles have to be present in `preproc/turbRR`
 
 On GPUs, the distribution of MPI and accelerators depends on the cluster architecture. An example for 8 GPUs on the Dutch National Supercomputer (Snellius, SURF), where one node is composed of 72 CPUs and 4 GPUs:
 ```

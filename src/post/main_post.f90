@@ -34,7 +34,7 @@ program DNS_POST
 !                                       CUBENS post data
 !===============================================================================================!
   integer(kind=MPI_OFFSET_KIND) :: filesize, disp
-  integer :: fh, ierr,i,j,k,ii_index
+  integer :: fh, ierr,i,j,k,ii_index,c,count_deriv
   integer :: istep,nfiles,count,size_spany
   integer :: nfiles_rms,nfiles_fft,kstart,kend,kglobal,iname,lenr,izpl
   TYPE (DECOMP_INFO) :: part1,partfy 
@@ -46,23 +46,29 @@ program DNS_POST
   character(len=30) :: date
   real(8) :: wt_start
   logical :: exist1,exist2,exist3
+  character(5) :: stat_name(27)
+  character(5) :: stat_name_2D(9)
 ! CUBENS Version number
   real(mytype), parameter                    :: version = 1.0
-  real(mytype) :: factAvg, time,theta, dTx
+  real(mytype) :: factAvg, time,theta, dTx, DeltaT
   ! 3-D properties
   real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka,Cp
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
   real(mytype), allocatable, dimension(:,:,:) :: qvort,omx,omy,omz,vortx,vorty,vortz
   real(mytype), allocatable, dimension(:,:,:) :: dilla2,sxx,sxy,sxz,syy,syz,szz
   real(mytype), allocatable, dimension(:,:,:) :: tmp_x_arr,tmp_y_arr, tmp_z_arr
-  real(mytype), allocatable, dimension(:,:,:) :: tmpPlane, inputfft
+  real(mytype), allocatable, dimension(:,:,:) :: tmpPlane,inputfft,tmpPlane2
   ! spanwise averaged properties
-  character(5) :: stat_name(27)
-  real(mytype), allocatable, dimension(:,:) ::  arho, aT, aP, amu, aka, arT, aCp, adwdx
+  real(mytype), allocatable, dimension(:,:) ::  arho, aT, aP, amu, aka, arT, aCp, adwdx, avorty, tmp_x_arr_2D, tmp_z_arr_2D
   real(mytype), allocatable, dimension(:,:,:) :: au, aru, auu, aruu, aTauij, aqj
-  ! 3-D and time properties
+  ! 2-D time properties
+  real(mytype), allocatable, dimension(:,:,:,:) :: ddx_temp,ddz_temp
+  ! fluc properties
+  real(mytype), allocatable, dimension(:,:,:) :: arho_fluc, au_fluc, av_fluc, aw_fluc, aT_fluc, aP_fluc
+  real(mytype), allocatable, dimension(:,:,:) :: amu_fluc, aka_fluc, avorty_fluc
+  ! 3-D time properties
   real(mytype), allocatable, dimension(:,:,:,:) :: arho_time, au_time, av_time, aw_time, aT_time, aP_time
-  real(mytype), allocatable, dimension(:,:,:,:) :: aCp_time, amu_time, aka_time, arw_time
+  real(mytype), allocatable, dimension(:,:,:,:) :: aCp_time, amu_time, aka_time, arw_time, avorty_time
   real(mytype), allocatable, dimension(:,:,:,:) :: Tauxz_time,qx_time
   !RMS (tauw)
   real(mytype), allocatable, dimension(:)   ::  tauw_rms, tauw_rms_global
@@ -72,7 +78,7 @@ program DNS_POST
   integer, allocatable, dimension(:,:,:) :: countQ4
   real(mytype) :: u_flu, w_flu
   ! FFT properties
-  real(mytype), allocatable, dimension(:,:,:) :: arho_fluc, aw_fluc, au_fluc
+  real(mytype), allocatable, dimension(:,:,:) :: arho_fluc_stats, aw_fluc_stats, au_fluc_stats
   real(mytype), allocatable, dimension(:,:,:,:) :: aw_fluc_FFT, aP_fluc_FFT, arw_fluc_FFT
   complex(mytype), allocatable, dimension(:,:,:) :: spec_rho, spec_w, spec_u, spec_rw, spec_p 
   complex(mytype), allocatable, dimension(:,:,:) :: tmp_complex
@@ -173,6 +179,7 @@ endif
   allocate( amu(  xsize(1),xsize(3)));     amu  = 0.0_mytype;
   allocate( aka(  xsize(1),xsize(3)));     aka = 0.0_mytype;
   allocate( arT(  xsize(1),xsize(3)));     arT  = 0.0_mytype;
+  allocate( avorty(  xsize(1),xsize(3)));     avorty = 0.0_mytype;
   allocate(    au(3,xsize(1),xsize(3)));   au     = 0.0_mytype;  !3 components
   allocate(   aru(3,xsize(1),xsize(3)));   aru    = 0.0_mytype;  !3 components
   allocate(  aruu(6,xsize(1),xsize(3)));   aruu   = 0.0_mytype;  !6 components
@@ -224,31 +231,52 @@ endif
   allocate(Re_tau_sl(xsize(1),xsize(3)));  Re_tau_sl=0.0_mytype;
   allocate(u_tau(xsize(1),xsize(3)));      u_tau = 0.0_mytype;
   allocate(u_tau_sl(xsize(1),xsize(3)));   u_tau_sl = 0.0_mytype;
-
+! 2-D time properties
+  if (avg_flag == 'planes_2D')  then
+    allocate(arho_fluc(nfiles,xsize(1),xsize(3)))     
+    arho_fluc = 0.0_mytype
+    allocate(au_fluc(nfiles,xsize(1),xsize(3))) 
+    au_fluc = 0.0_mytype
+    allocate(av_fluc(nfiles,xsize(1),xsize(3))) 
+    av_fluc = 0.0_mytype
+    allocate(aw_fluc(nfiles,xsize(1),xsize(3))) 
+    aw_fluc = 0.0_mytype
+    allocate(aT_fluc(nfiles,xsize(1),xsize(3))) 
+    aT_fluc = 0.0_mytype
+    allocate(amu_fluc(nfiles,xsize(1),xsize(3))) 
+    amu_fluc = 0.0_mytype
+    allocate(aka_fluc(nfiles,xsize(1),xsize(3))) 
+    aka_fluc = 0.0_mytype
+    allocate(aP_fluc(nfiles,xsize(1),xsize(3))) 
+    aP_fluc = 0.0_mytype
+    allocate(avorty_fluc(nfiles,xsize(1),xsize(3)))  
+    avorty_fluc = 0.0_mytype
+  endif
 ! for FFT or RMS properties
-  if ((fft_flag==1) .OR. (rms_flag==1))  then 
-  allocate(    arho_time( nfiles,xsize(1),xsize(2),xsize(3)));      arho_time = 0.0_mytype;  
-  allocate(    au_time( nfiles,xsize(1),xsize(2),xsize(3)));        au_time = 0.0_mytype;
-  allocate(    av_time( nfiles,xsize(1),xsize(2),xsize(3)));        av_time = 0.0_mytype;
-  allocate(    aw_time( nfiles,xsize(1),xsize(2),xsize(3)));        aw_time = 0.0_mytype;
-  allocate(    aT_time( nfiles,xsize(1),xsize(2),xsize(3)));        aT_time = 0.0_mytype;
-  allocate(    aP_time( nfiles,xsize(1),xsize(2),xsize(3)));        aP_time = 0.0_mytype;
-  allocate(    amu_time( nfiles,xsize(1),xsize(2),xsize(3)));        amu_time = 0.0_mytype;
-  allocate(    aka_time( nfiles,xsize(1),xsize(2),xsize(3)));        aka_time = 0.0_mytype;
-  allocate(    aCp_time( nfiles,xsize(1),xsize(2),xsize(3)));        aCp_time = 0.0_mytype;
-  allocate(    arw_time( nfiles,xsize(1),xsize(2),xsize(3)));        arw_time = 0.0_mytype;
-  allocate(    aw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aw_fluc_FFT = 0.0_mytype;
-  allocate(    arw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));        arw_fluc_FFT = 0.0_mytype;
-  allocate(    aP_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aP_fluc_FFT = 0.0_mytype;
+  if ((fft_flag==1) .OR. (rms_flag==1) .OR. (avg_flag == 'planes_2D'))  then 
+    allocate(    arho_time( nfiles,xsize(1),xsize(2),xsize(3)));      arho_time = 0.0_mytype;  
+    allocate(    au_time( nfiles,xsize(1),xsize(2),xsize(3)));        au_time = 0.0_mytype;
+    allocate(    av_time( nfiles,xsize(1),xsize(2),xsize(3)));        av_time = 0.0_mytype;
+    allocate(    aw_time( nfiles,xsize(1),xsize(2),xsize(3)));        aw_time = 0.0_mytype;
+    allocate(    aT_time( nfiles,xsize(1),xsize(2),xsize(3)));        aT_time = 0.0_mytype;
+    allocate(    aP_time( nfiles,xsize(1),xsize(2),xsize(3)));        aP_time = 0.0_mytype;
+    allocate(    amu_time( nfiles,xsize(1),xsize(2),xsize(3)));        amu_time = 0.0_mytype;
+    allocate(    aka_time( nfiles,xsize(1),xsize(2),xsize(3)));        aka_time = 0.0_mytype;
+    allocate(    aCp_time( nfiles,xsize(1),xsize(2),xsize(3)));        aCp_time = 0.0_mytype;
+    allocate(    avorty_time( nfiles,xsize(1),xsize(2),xsize(3)));        avorty_time = 0.0_mytype;
+    allocate(    arw_time( nfiles,xsize(1),xsize(2),xsize(3)));        arw_time = 0.0_mytype;
+    allocate(    aw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aw_fluc_FFT = 0.0_mytype;
+    allocate(    arw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));        arw_fluc_FFT = 0.0_mytype;
+    allocate(    aP_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aP_fluc_FFT = 0.0_mytype;
   endif
 ! for FFT properties
   if (fft_flag==1)  then 
-  allocate( inputfft(1:partfy%xsz(1),1:partfy%xsz(2),1:partfy%xsz(3))   )
-  allocate( spec_rho(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
-  allocate( spec_w(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
-  allocate( spec_u(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
-  allocate( spec_rw(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
-  allocate( spec_p(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
+    allocate( inputfft(1:partfy%xsz(1),1:partfy%xsz(2),1:partfy%xsz(3))   )
+    allocate( spec_rho(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
+    allocate( spec_w(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
+    allocate( spec_u(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
+    allocate( spec_rw(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
+    allocate( spec_p(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   ) 
   endif
 ! Print the initial simulation parameters
   call print_init_params()
@@ -323,7 +351,7 @@ endif
 #endif
 ! initialize restart averaging
 ! initialize planes averaging
-if (avg_flag == 'planes') then
+if (avg_flag == 'stats') then
   if (nrank==0) then
     write(stdout, *) "o--------------------------------------------------o"
     write(stdout,*) 'Initializing planes averaging'
@@ -358,7 +386,7 @@ endif
     index_fft_span=1
     size_spany=1
   endif
-  write(stdout, *) "o--------------------------------------------------o"
+  if (nrank==0) write(stdout, *) "o--------------------------------------------------o"
 
 
 !===============================================================================================!
@@ -368,8 +396,8 @@ endif
   count=0
   wt_start = MPI_WTIME()
   if (avg_flag == 'restart') then
-    write(stdout,*) 'Average with restart files'
-    write(stdout,*) 
+    if (nrank==0) write(stdout,*) 'Average with restart files'
+    if (nrank==0) write(stdout,*) 
     nfiles = (iend_pp-istart_pp)/istep_pp+1
     if (nrank==0) write(stdout,'(A, I10)') 'number of files to time average:      ', nfiles-1
     factAvg = 1.0*xsize(2)*(nfiles-1)
@@ -395,13 +423,13 @@ endif
       ! normalised gradient
       if (yi_plane(1).gt.0)  then
         do i=1,size(yi_plane)
-          call calcGrad(part1,istep,2,yi_plane(i),rho,'ypl.','gradR.')
+          call calcGradabs(part1,istep,2,yi_plane(i),rho,'ypl.','gradR.')
         enddo
       endif
       ! calculate stress-tensor
-       call calcStrain(dilla2,sxx,sxy,sxz,syy,syz,szz,u,v,w) 
+      call calcStrain(dilla2,sxx,sxy,sxz,syy,syz,szz,u,v,w) 
       ! calculate temperature gradient
-       call calcTemp(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
+      call calcGrad(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
       ! streamwise and wall-normal loop for spanwise averaging
       do k=1,xsize(3)
         do i=1,xsize(1)
@@ -509,8 +537,8 @@ endif
   tmpPlane(1,:,:) = tTauxz_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tTauxz_w.bin','dummy')
   tmpPlane(1,:,:) = tqx_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tqx_w.bin','dummy')
   deallocate(tmpPlane)
-  else if (avg_flag == 'planes') then
-    write(stdout,*) 'Average with planes files'
+  else if (avg_flag == 'stats') then
+    if (nrank==0) write(stdout,*) 'Average with planes files'
     !Check number of stats
     if (nrank==0) write(stdout,'(A, I10)') 'number of stats files:                ', size(stats_step)
     if (nrank==0) write(stdout,*) 
@@ -574,9 +602,57 @@ endif
       aqj(3,:,:) = aqj(3,:,:) + tmpPlane(:,:,27) !q_z
     enddo
     deallocate(tmpPlane)
+  else if (avg_flag == 'planes_2D') then
+    if (nrank==0) write(stdout,*) 'Average with planes_2D files'
+    if (nrank==0) write(stdout,*) 
+    nfiles = (iend_pp-istart_pp)/istep_pp+1
+    if (nrank==0) write(stdout,'(A, I10)') 'number of files to time average:      ', nfiles-1
+    factAvg = 1.0*(nfiles-1)
+    stat_name_2D = ['r    ','u    ','v    ','w    ','p    ','t    ','mu   ', 'ka   ', &
+                    'vorty']
+    allocate(tmpPlane2(xsize(1),xsize(3), size(stat_name_2D))); tmpPlane2 = 0.0_mytype; !size(stat_name_2D)
+    ! main time loop
+    do istep = istart_pp, (iend_pp-istep_pp), istep_pp
+      count=count+1
+      write(cha,'(I0.7)') istep
+      if (nrank==0) write(stdout,'(A, A10)') 'reading planes:                        ', cha
+      !Main do loop
+      do iname = 1,size(stat_name_2D)
+        inquire(iolength=lenr) tmpPlane2(1,1,iname)
+        open(10,file='output/planes/ypl.1.'//trim(adjustl(stat_name_2D(iname)))//'.'//cha//'.bin',&
+                 status="old",access='direct',form='unformatted',recl=xsize(1)*lenr) 
+        do k=1,xsize(3)
+          read(10, rec=k+kstart-1) (tmpPlane2(i,k,iname), i=1,xsize(1))
+        enddo
+        close(10)
+       enddo
+      ! for fluctuations
+      arho_time(count,:,1,:)=tmpPlane2(:,:,1)
+      au_time(count,:,1,:)  =tmpPlane2(:,:,2)
+      av_time(count,:,1,:)  =tmpPlane2(:,:,3)
+      aw_time(count,:,1,:)  =tmpPlane2(:,:,4)
+      aP_time(count,:,1,:)  =tmpPlane2(:,:,5)
+      aT_time(count,:,1,:)  =tmpPlane2(:,:,6)
+      amu_time(count,:,1,:) =tmpPlane2(:,:,7)
+      aka_time(count,:,1,:) =tmpPlane2(:,:,8)
+      avorty_time(count,:,1,:)=tmpPlane2(:,:,9)
+      ! average
+      tmpPlane2 = tmpPlane2/factAvg
+      arho(:,:) = arho(:,:) + tmpPlane2(:,:,1)
+      au(1,:,:) = au(1,:,:) + tmpPlane2(:,:,2)
+      au(2,:,:) = au(2,:,:) + tmpPlane2(:,:,3)
+      au(3,:,:) = au(3,:,:) + tmpPlane2(:,:,4)
+      ap(:,:)   = ap(:,:)   + tmpPlane2(:,:,5)
+      aT(:,:)   = aT(:,:)   + tmpPlane2(:,:,6)
+      amu(:,:)  = amu(:,:)  + tmpPlane2(:,:,7)
+      aka(:,:)  = aka(:,:)  + tmpPlane2(:,:,8)
+      avorty(:,:) = avorty(:,:) + tmpPlane2(:,:,9)
+    enddo
+    deallocate(tmpPlane2)
   endif
-  write(stdout,*)
-  write(stdout,*) " averaging done!"
+
+  if (nrank==0) write(stdout,*)
+  if (nrank==0) write(stdout,*) " averaging done!"
 ! 1-D and 2-D wall properties
   tauw = aTauij(3,1,:) ! mu*dudy
   qw = aqj(1,1,:) ! absolute value
@@ -609,9 +685,9 @@ endif
   call assemble_globalz1D(theta_vector,theta_global,kstart,kend)
 ! Perturbation and RMS values
   if (rms_flag==1) then
-    write(stdout,*) "o--------------------------------------------------o"
-    write(stdout,*) 'RMS'
-    write(stdout,*)
+    if (nrank==0) write(stdout,*) "o--------------------------------------------------o"
+    if (nrank==0) write(stdout,*) 'RMS'
+    if (nrank==0) write(stdout,*)
     nfiles_rms = (iend_rms-istart_rms)/istep_rms+1
     ! Obtain rms of tauw by reading x-planes
     allocate(tmpPlane (xsize(2),xsize(3),2))
@@ -817,6 +893,129 @@ endif
     write(stdout,*) 'Output properties done!'
   endif
 
+! 2-D vorticity
+  if (avg_flag == 'planes_2D') then 
+    if (nrank == 0) then
+      write(stdout,*) "o--------------------------------------------------o"
+      write(stdout,*) '2-D vorticity fluctuation equation'
+      write(stdout,*)
+    endif
+    allocate(tmpPlane (xsize(1),xsize(2),xsize(3))) 
+    do ii_index=1,count
+      do k=1,xsize(3)
+          do i=1,xsize(1)
+            !arho_fluc(ii_index,i,k)   = arho_time(ii_index,i,1,k)-arho(i,k)
+            !aka_fluc(ii_index,i,k)    = aka_time(ii_index,i,1,k) -aka(i,k)
+            !amu_fluc(ii_index,i,k)    = amu_time(ii_index,i,1,k) -amu(i,k)
+            au_fluc(ii_index,i,k)     = au_time(ii_index,i,1,k) -au(1,i,k)
+            !av_fluc(ii_index,i,k)     = av_time(ii_index,i,1,k) -au(2,i,k)
+            !aw_fluc(ii_index,i,k)     = aw_time(ii_index,i,1,k) -au(3,i,k)
+            !aT_fluc(ii_index,i,k)     = aT_time(ii_index,i,1,k) -aT(i,k)
+            aP_fluc(ii_index,i,k)     = aP_time(ii_index,i,1,k) -ap(i,k)    
+            avorty_fluc(ii_index,i,k) = avorty_time(ii_index,i,1,k)-avorty(i,k)
+          enddo
+      enddo
+    enddo
+    ! call haloUpdateMult_CPU((/.true.,.false.,.true./), xsize, arho_fluc(1,:,:,:)) 
+    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, aw_fluc(1,:,:,:)) 
+    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, au_fluc(1,:,:,:))
+    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, aP_fluc(1,:,:,:))  
+    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, avorty_fluc(1,:,:,:))  
+    ! Write out 2D-planes of fluctuating quantities (written in /postproc/results/planes2d/)
+    ! tmpPlane(:,1,:) = arho_fluc(1,:,1,:);    call decomp_2d_write_plane(1,tmpPlane,2,1,'.',&
+    !                                                                  'postproc/results/planes2d/rho_fluc_2D.bin','dummy')
+    ! tmpPlane(:,1,:) = aw_fluc(1,:,1,:);      call decomp_2d_write_plane(1,tmpPlane,2,1,'.',&
+    !                                                                  'postproc/results/planes2d/w_fluc_2D.bin','dummy')
+    ! Derivatives
+count_deriv = 8
+allocate(ddx_temp(nfiles,xsize(1),xsize(3),count_deriv))
+allocate(ddz_temp(nfiles,xsize(1),xsize(3),count_deriv))
+ddx_temp  = 0.0_mytype
+ddz_temp  = 0.0_mytype
+
+ii_index=1
+   do k=1+nStencilVisc,xsize(3)-nStencilVisc
+      do i=1+nStencilVisc,xsize(1)-nStencilVisc
+         do c = 1, nStencilVisc
+            ddx_temp(ii_index,i,k,1) = ddx_temp(ii_index,i,k,1) &
+                 + visc_ddx(c)*( arho(i+c,k)               -  arho(i-c,k)            )*xp(i)   !r_mean
+            ddx_temp(ii_index,i,k,2) = ddx_temp(ii_index,i,k,2) &
+                 + visc_ddx(c)*( au(3,i+c,k)               -  au(3,i-c,k)            )*xp(i)   !w_mean
+            !ddx_temp(ii_index,i,k,3) = ddx_temp(ii_index,i,k,3) &
+            !     + visc_ddx(c)*( aw_fluc(ii_index,i+c,k)   -  aw_fluc(ii_index,i-c,k))*xp(i)   !w_fluc
+            !ddx_temp(ii_index,i,k,4) = ddx_temp(ii_index,i,k,4) &
+            !     + visc_ddx(c)*( au_fluc(ii_index,i+c,k)   -  au_fluc(ii_index,i-c,k))*xp(i)   !u_fluc
+            !ddx_temp(ii_index,i,k,5) = ddx_temp(ii_index,i,k,5) &
+            !     + visc_ddx(c)*( arho_fluc(ii_index,i+c,k) -  arho_fluc(ii_index,i-c,k))*xp(i) !r_fluc
+            !ddx_temp(ii_index,i,k,6) = ddx_temp(ii_index,i,k,6) &
+            !     + visc_ddx(c)*( aP_fluc(ii_index,i+c,k)   -  aP_fluc(ii_index,i-c,k))*xp(i)   !p_fluc
+            !ddx_temp(ii_index,i,k,7) = ddx_temp(ii_index,i,k,7) &
+            !     + visc_ddx(c)*( avorty_fluc(ii_index,i+c,k) -  avorty_fluc(ii_index,i-c,k))*xp(i) !omy_fluc
+            !ddx_temp(ii_index,i,k,9) = ddx_temp(ii_index,i,k,9) &
+            !     + visc_ddx(c)*( au(1,i+c,k)               -  au(1,i-c,k)            )*xp(i)   !u_mean
+            !ddx_temp(ii_index,i,k,11)= ddx_temp(ii_index,i,k,11)&
+            !     + visc_ddx(c)*( ap(i+c,k)                 -  ap(i-c,k)              )*xp(i)   !p_mean
+
+            !ddz_temp(ii_index,i,k,1) = ddz_temp(ii_index,i,k,1) &
+            !     + visc_ddz(c)*( arho(i,k+c)               -  arho(i,k-c)            )*zp(k)   !r_mean
+            !ddz_temp(ii_index,i,k,2) = ddz_temp(ii_index,i,k,2) &
+            !     + visc_ddz(c)*( au(3,i,k+c)               -  au(3,i,k-c)            )*zp(k)   !w_mean
+            !ddz_temp(ii_index,i,k,3) = ddz_temp(ii_index,i,k,3) &
+            !     + visc_ddz(c)*( aw_fluc(ii_index,i,k+c)   -  aw_fluc(ii_index,i,k-c))*zp(k)   !w_fluc
+!            ddz_temp(ii_index,i,k,4) = ddz_temp(ii_index,i,k,4) &
+!                 + visc_ddz(c)*( au_fluc(ii_index,i,k+c)   -  au_fluc(ii_index,i,k-c))*zp(k)   !u_fluc
+!            ddz_temp(ii_index,i,k,5) = ddz_temp(ii_index,i,k,5) &
+!                 + visc_ddz(c)*( arho_fluc(ii_index,i,k+c) -  arho_fluc(ii_index,i,k-c))*zp(k) !r_fluc
+            ddz_temp(ii_index,i,k,6) = ddz_temp(ii_index,i,k,6) &
+                 + visc_ddz(c)*( aP_fluc(ii_index,i,k+c)   -  aP_fluc(ii_index,i,k-c))*zp(k)   !p_fluc
+!            ddz_temp(ii_index,i,k,7) = ddz_temp(ii_index,i,k,7) &
+!                 + visc_ddz(c)*( avorty_fluc(ii_index,i,k+c) -  avorty_fluc(ii_index,i,k-c))*zp(k) !omy_fluc
+!            ddz_temp(ii_index,i,k,9) = ddz_temp(ii_index,i,k,9) &
+!                 + visc_ddz(c)*( au(1,i,k+c)               -  au(1,i,k-c)            )*zp(k)   !u_mean
+!            ddz_temp(ii_index,i,k,11)= ddz_temp(ii_index,i,k,11)&
+!                 + visc_ddz(c)*( ap(i,k+c)                 -  ap(i,k-c)              )*zp(k)   !p_mean
+
+         enddo     
+      enddo
+   enddo
+    do k=1+nStencilVisc,xsize(3)-nStencilVisc
+        do i=1+nStencilVisc,xsize(1)-nStencilVisc
+           do c = 1, nStencilVisc
+              ddx_temp(ii_index,i,k,8) = ddx_temp(ii_index,i,k,8) &
+                   + visc_ddx(c)*( ddx_temp(ii_index,i+c,k,2) -  ddx_temp(ii_index,i-c,k,2))*xp(i) !w_mean_x
+              !ddx_temp(ii_index,i,k,10)= ddx_temp(ii_index,i,k,10)&
+              !     + visc_ddx(c)*( ddz_temp(ii_index,i+c,k,9) -  ddz_temp(ii_index,i-c,k,9))*xp(i) !u_mean_z
+
+              !ddz_temp(ii_index,i,k,8) = ddz_temp(ii_index,i,k,8) &
+              !    + visc_ddz(c)*( ddx_temp(ii_index,i,k+c,2) -  ddx_temp(ii_index,i,k-c,2))*zp(k) !w_mean_x
+              !ddz_temp(ii_index,i,k,10)= ddz_temp(ii_index,i,k,10)&
+              !     + visc_ddz(c)*( ddz_temp(ii_index,i,k+c,9) -  ddz_temp(ii_index,i,k-c,9))*zp(k) !u_mean_z
+           enddo
+        enddo
+     enddo
+    ! Spanwise-vorticity perturbation balance
+    ! Instantaneous: write out 2D-planes of fluctuating derivative quantities (written in /postproc/results/planes2d/)
+    !ii_index = 1
+    ! LHS
+    tmpPlane(:,1,:) = avorty_fluc(ii_index,:,:)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
+    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_LHS.bin','dummy')
+    ! Shear
+    tmpPlane(:,1,:) = au_fluc(ii_index,:,:)*ddx_temp(ii_index,:,:,8)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
+    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
+    ! Shear
+    ! tmpPlane(:,1,:) = au_fluc_2D(ii_index,:,:)*ddx_temp(ii_index,:,:,8)
+    ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
+    ! ! Compressible stretching
+    ! tmpPlane(:,1,:) = ddx_temp(ii_index,:,:,2)*( ddz_temp(ii_index,:,:,3) + ddx_temp(ii_index,:,:,4) )
+    ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_stretch.bin','dummy')
+    ! ! Baroclinic
+    tmpPlane(:,1,:) = -ddx_temp(ii_index,:,:,1)*ddz_temp(ii_index,:,:,6)/arho(:,:)/arho(:,:)
+    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_baroc.bin','dummy')
+    deallocate(tmpPlane)
+    deallocate(ddx_temp)
+    deallocate(ddz_temp)
+  endif
+
 ! Spanwise and time FFT
   if (fft_flag==1)  then 
     if (nrank == 0) then
@@ -873,11 +1072,11 @@ endif
           !                           '.','postproc/results/fft/fft_u_span'//cha2//'_'//cha//'.bin', 'dummy')     
         enddo  
       enddo 
-    else if (avg_flag == 'planes') then
+    else if (avg_flag == 'stats') then
       allocate(tmpPlane (xsize(2),xsize(3),3))
-      allocate(arho_fluc(xsize(1),xsize(2),xsize(3)));  arho_fluc = 0.0_mytype;
-      allocate(aw_fluc  (xsize(1),xsize(2),xsize(3)));  aw_fluc = 0.0_mytype;
-      allocate(au_fluc  (xsize(1),xsize(2),xsize(3)));  au_fluc = 0.0_mytype;
+      allocate(arho_fluc_stats(xsize(1),xsize(2),xsize(3)));  arho_fluc_stats = 0.0_mytype;
+      allocate(aw_fluc_stats  (xsize(1),xsize(2),xsize(3)));  aw_fluc_stats = 0.0_mytype;
+      allocate(au_fluc_stats  (xsize(1),xsize(2),xsize(3)));  au_fluc_stats = 0.0_mytype;
       if (nrank==0) write(stdout,'(A, I10)') 'fft_xplane:                           ', index_fft_xpl
       write(cha3,'(I0)') index_fft_xpl
       count=0
@@ -911,15 +1110,15 @@ endif
         do k=1,xsize(3)
           do i=1,xsize(1)
             ! At index_fft_xpl in wall-normal direction 
-            arho_fluc(i,1:xsize(2),k) =tmpPlane(1:xsize(2),k,1)-rho_bl(index_fft_xpl,1:xsize(2),k)!arho(index_fft_xpl,k)
-            aw_fluc(i,1:xsize(2),k)   =tmpPlane(1:xsize(2),k,2)-w_bl(index_fft_xpl,1:xsize(2),k)
-            au_fluc(i,1:xsize(2),k)   =tmpPlane(1:xsize(2),k,3)-u_bl(index_fft_xpl,1:xsize(2),k)
+            arho_fluc_stats(i,1:xsize(2),k) =tmpPlane(1:xsize(2),k,1)-rho_bl(index_fft_xpl,1:xsize(2),k)!arho(index_fft_xpl,k)
+            aw_fluc_stats(i,1:xsize(2),k)   =tmpPlane(1:xsize(2),k,2)-w_bl(index_fft_xpl,1:xsize(2),k)
+            au_fluc_stats(i,1:xsize(2),k)   =tmpPlane(1:xsize(2),k,3)-u_bl(index_fft_xpl,1:xsize(2),k)
           enddo
         enddo
         ! FFT in spanwise direction
-        call spectray(2,spec_rho,jmax,part1,partfy,arho_fluc(1:xsize(1),1:xsize(2),1:xsize(3)))
-        call spectray(2,spec_w,jmax,part1,partfy,aw_fluc(1:xsize(1),1:xsize(2),1:xsize(3))) 
-        call spectray(2,spec_u,jmax,part1,partfy,au_fluc(1:xsize(1),1:xsize(2),1:xsize(3)))
+        call spectray(2,spec_rho,jmax,part1,partfy,arho_fluc_stats(1:xsize(1),1:xsize(2),1:xsize(3)))
+        call spectray(2,spec_w,jmax,part1,partfy,aw_fluc_stats(1:xsize(1),1:xsize(2),1:xsize(3))) 
+        call spectray(2,spec_u,jmax,part1,partfy,au_fluc_stats(1:xsize(1),1:xsize(2),1:xsize(3)))
         do j=1,size_spany
           write(cha2,'(I0)') index_fft_span(j)     
           tmp_complex = spec_rho(1:xsize(1),1:xsize(2),1:xsize(3))
@@ -967,7 +1166,7 @@ endif
     deallocate(syz)
     deallocate(szz)
   endif
-  if (perBC(3) .eqv. .false.) then
+  if ((perBC(3) .eqv. .false.) .and. (fft_flag==1)) then
     deallocate(rho_bl)
     deallocate(u_bl)
     deallocate(v_bl)

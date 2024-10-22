@@ -137,7 +137,6 @@ implicit none
   integer :: imax,jmax,kmax
   integer :: p_row = 1, &
              p_col = 1
-  integer :: nHalo = 3
   real(mytype) :: len_x = 20.0_mytype         ! wall-normal
   real(mytype) :: len_y = 1.0_mytype          ! spanwise
   real(mytype) :: Redelta_start = 1.0_mytype
@@ -184,6 +183,8 @@ implicit none
 ! numerics
   integer      :: nStencilConv = 3
   integer      :: nStencilVisc = 2
+  integer      :: nHalo = 1
+  character(len=30) :: keep_flag = "classic" ! classic, pep
 
 
 ! postprocessing (postpro)
@@ -193,6 +194,7 @@ implicit none
   integer :: istart_pp = 147000
   integer :: iend_pp   = 246500
   integer :: istep_pp  = 500
+  integer :: dt_step   = 0.001
   integer, dimension(:), allocatable :: stats_step             
   real(mytype), dimension(:), allocatable :: stats_time_rate
   integer :: rms_flag   = 1                                    
@@ -242,6 +244,8 @@ contains
 
 ! this subroutine reads the config.h file and overwrites the simulation variables                               
   subroutine read_config()
+  ! the number of halo cells is equal to the stencil of the convective fluxes
+  nhalo=nStencilConv
 #if defined(BL)
 #include "../config_BL.h"
 #elif defined(CHA)

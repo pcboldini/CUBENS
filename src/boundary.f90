@@ -259,6 +259,7 @@ subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,p
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
   real(mytype) :: time
   TYPE (DECOMP_INFO), intent(IN) :: part
+
   ! communication: halo cells data transfer
 #if defined(_OPENACC)
   ! GPU

@@ -7,7 +7,7 @@
 
 module mod_halo
   use MPI
-  use mod_param, only:nHalo,BC_inl_rescale
+  use mod_param, only:nHalo,nStencilConv,nStencilVisc,BC_inl_rescale
   use decomp_2d 
   use mod_timer
   implicit none
@@ -45,6 +45,7 @@ contains
     integer, dimension(2) :: dimens,coordr,coordn,coords,coordt,coordb
     logical, dimension(2) :: period
     integer, dimension(3) :: xs
+    ! the number of halo cells is equal to the order/2 of the convection terms
 #if defined(_OPENACC)
     ! sending data buffer 9-dimensional
     allocate(buff_send9_j(xs(1),xs(3),9,2*nHalo), &
@@ -103,13 +104,13 @@ contains
     call mpi_cart_rank(comm_cart, coordb, neigh%jm, ierr)
     ! different treatment of the j-direction for 2-D and 3-D simulations
     if (xs(2)>1) then
-      if ((p_row>1) .and. (xs(2)>6)) then
+      if ((p_row>1) .and. (xs(2)>2*nHalo)) then
         char_buff_j='mpi_copy_3d'
 #define ACC_MPI_COPY_3D_J
-      else if ((p_row==1) .and. (xs(2)>6)) then
+      else if ((p_row==1) .and. (xs(2)>2*nHalo)) then
         char_buff_j='local_copy_3d'
 #define ACC_LOCAL_COPY_3D_J
-      else if ((p_row==1) .and. (xs(2)<6)) then
+      else if ((p_row==1) .and. (xs(2)<2*nHalo)) then
         if (myid == 0) write(*,*) "ERROR: too few points jmax<2 x Halo, increase jmax!"
           call decomp_2d_finalize
           call mpi_finalize(ierr) 
@@ -121,13 +122,13 @@ contains
     endif
     ! different treatment of the z-direction for 2-D and 3-D simulations
     if (xs(3)>1) then
-      if ((p_col>1) .and. (xs(3)>6)) then
+      if ((p_col>1) .and. (xs(3)>2*nHalo)) then
         char_buff_k='mpi_copy_3d'
 #define ACC_MPI_COPY_3D_K
-      else if ((p_col==1) .and. (xs(3)>6)) then
+      else if ((p_col==1) .and. (xs(3)>2*nHalo)) then
         char_buff_k='local_copy_3d'
 #define ACC_LOCAL_COPY_3D_K
-      else if ((p_col==1) .and. (xs(3)<6)) then
+      else if ((p_col==1) .and. (xs(3)<2*nHalo)) then
         if (myid == 0) write(*,*) "ERROR: too few points kmax<2 x Halo, increase kmax!"
           call decomp_2d_finalize
           call mpi_finalize(ierr) 

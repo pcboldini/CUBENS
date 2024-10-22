@@ -114,8 +114,10 @@ contains
     real(mytype) :: uip, uim, ujp, ujm, ukp, ukm
     real(mytype) :: vip, vim, vjp, vjm, vkp, vkm
     real(mytype) :: wip, wim, wjp, wjm, wkp, wkm
+    real(mytype) :: eip, eim, ejp, ejm, ekp, ekm
     real(mytype) :: rhoeip, rhoeim, rhoejp, rhoejm, rhoekp, rhoekm
-    real(mytype) :: rhoa, ua, va, wa, pa, rhoea, za, xa
+    real(mytype) :: rhoa, ua, va, wa, pa, ea, rhoea, za, xa
+
     im = xsize(1)
     jm = xsize(2)
     km = xsize(3)
@@ -132,34 +134,29 @@ contains
         enddo
       enddo
     enddo
-    ! calculation of rho*e, needed for internal energy flux
-    !$acc parallel loop collapse(3) default(present) async(1)
-    do k=1-nHalo,xsize(3)+nHalo
-      do j=1-nHalo,xsize(2)+nHalo
-        do i=1-nHalo,xsize(1)+nHalo
-          rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+    if ( keep_flag == "pep" ) then
+      ! calculation of rho*e, needed for internal energy flux
+      !$acc parallel loop collapse(3) default(present) async(1)
+      do k=1,km
+        do j=1,jm
+          do i=1,im
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
         enddo
       enddo
-    enddo
-    ! boundary cells 
-    i1 = 1
-    i2 = im 
-    if (perBC(1) .eqv. .false.) then 
-      i1 = 2
-      i2 = im-1 
-    endif 
-    k1 = 1 
-    k2 = km
-    if ((perBC(3) .eqv. .false.) .and. (neigh%inlet ))   k1 = 2
-    if ((perBC(3) .eqv. .false.) .and. (neigh%outlet))   k2 = km-1
+    endif
     ! only in the internal cells
-    if ((jm > 2*nHalo) .or. (km > 2*nHalo)) then
+    if ((im > 2*nHalo) .and. (jm > 2*nHalo) .and. (km > 2*nHalo)) then
       !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(1)
-      do k=nHalo+1,km-nHalo 
-        do j=nHalo+1,jm-nHalo
-          do i=i1,i2    
-          ! routine for fluxes calculation  
+      do k=1+nHalo,km-nHalo 
+        do j=1+nHalo,jm-nHalo
+          do i=1+nHalo,im-nHalo
+            ! routine for fluxes calculation 
+            if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
+            elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+            endif
           enddo
         enddo
       enddo
@@ -174,7 +171,7 @@ contains
     use mod_halo
     use mod_boundary
     implicit none
-    integer :: im,jm,km, i1,i2,k1,k2,istep,i,j,k, jminHalo, jmaxHalo, kminHalo, kmaxHalo
+    integer :: im,jm,km,i1,i2,k1,k2,istep,i,j,k,iminHalo,imaxHalo,jminHalo,jmaxHalo,kminHalo,kmaxHalo
     real(mytype), dimension(:,:,:) :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
     real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:)  :: r,u,v,w,e,p
     real(mytype) :: dprex, dprey, dprez
@@ -183,8 +180,10 @@ contains
     real(mytype) :: uip, uim, ujp, ujm, ukp, ukm
     real(mytype) :: vip, vim, vjp, vjm, vkp, vkm
     real(mytype) :: wip, wim, wjp, wjm, wkp, wkm
+    real(mytype) :: eip, eim, ejp, ejm, ekp, ekm
     real(mytype) :: rhoeip, rhoeim, rhoejp, rhoejm, rhoekp, rhoekm
-    real(mytype) :: rhoa, ua, va, wa, pa, rhoea, za, xa
+    real(mytype) :: rhoa, ua, va, wa, pa, ea, rhoea, za, xa
+
     im = xsize(1)
     jm = xsize(2)
     km = xsize(3)
@@ -197,58 +196,163 @@ contains
     endif 
     k1 = 1 
     k2 = km
-    jminHalo=max(xsize(2)-nHalo+1,nHalo+1)
-    jmaxHalo=min(nHalo,xsize(2))
-    kminHalo=max(xsize(3)-nHalo+1,nHalo+1)
     if ((perBC(3) .eqv. .false.) .and. (neigh%inlet )) then 
       k1 = 2
     endif
     if ((perBC(3) .eqv. .false.) .and. (neigh%outlet)) then
       k2 = km-1
     endif
+    imaxHalo=min(nHalo,i2)
+    iminHalo=max(im-nHalo+1,nHalo+1)
+    jmaxHalo=min(nHalo,jm)
+    jminHalo=max(jm-nHalo+1,nHalo+1)
     kmaxHalo=min(nHalo,k2)
-    ! loop over inlet boundary
-    !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(1)
+    kminHalo=max(km-nHalo+1,nHalo+1)
+    if ( keep_flag == "pep" ) then
+      ! calculation of rho*e, needed for internal energy flux
+      ! k face min
+      !$acc parallel loop collapse(3) default(present) async(1)
+      do k=1-nHalo,0
+        do j=1,jm
+          do i=1,im
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      ! k face max
+      !$acc parallel loop collapse(3) default(present) async(2)
+      do k=km+1,km+nHalo
+        do j=1,jm
+          do i=1,im
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      ! j face min
+      !$acc parallel loop collapse(3) default(present) async(3)
+      do k=1,km
+        do j=1-nHalo,0
+          do i=1,im
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      ! j face max
+      !$acc parallel loop collapse(3) default(present) async(4)
+      do k=1,km
+        do j=jm+1,jm+nHalo
+          do i=1,im
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      ! i face min
+      !$acc parallel loop collapse(3) default(present) async(5)
+      do k=1,km
+        do j=1,jm
+          do i=1-nHalo,0
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      ! i face max
+      !$acc parallel loop collapse(3) default(present) async(6)
+      do k=1,km
+        do j=1,jm
+          do i=im+1,im+nHalo
+            rhoe(i,j,k)=r(i,j,k)*e(i,j,k)
+          enddo
+        enddo
+      enddo
+      !$acc wait
+    endif
+    ! loop over k-minus boundary
+    !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(1)
     do k=k1,kmaxHalo
-      do j=1,xsize(2)
+      do j=1,jm
         do i=i1,i2
+          if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
+          elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+          endif
         enddo
       enddo
     enddo
-    ! loop over outlet boundary
-    if (xsize(3)>nHalo) then
-      !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(2)
+    ! loop over k-plus boundary
+    if (km>nHalo) then
+      !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(2)
       do k=kminHalo,k2
-        do j=1,xsize(2)
+        do j=1,jm
           do i=i1,i2
+            if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
+            elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+            endif
           enddo
         enddo
       enddo
     endif
-    ! loop over one spanwise boundary 
-    !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(3)
-    do k=nHalo+1,xsize(3)-nHalo
+    ! loop over j-minus boundary 
+    !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(3)
+    do k=kmaxHalo+1,kminHalo-1
       do j=1,jmaxHalo
         do i=i1,i2
+          if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
+          elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+          endif
         enddo
       enddo
     enddo
-    ! loop over the other spanwise boundary 
-    if (xsize(2)>nHalo) then
-      ! j face max
-      !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(4)
-      do k=nHalo+1,xsize(3)-nHalo
-        do j=jminHalo,xsize(2)
+    ! loop over j-plus boundary 
+    if (jm>nHalo) then
+      !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(4)
+      do k=kmaxHalo+1,kminHalo-1
+        do j=jminHalo,jm
           do i=i1,i2
+            if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
+            elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+            endif
           enddo
         enddo
       enddo
-    endif 
-    !$acc wait   
+    endif   
+    if (jm > 2*nHalo) then
+      ! loop over i-minus boundary 
+      !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(5)
+      do k=kmaxHalo+1,kminHalo-1
+        do j=jmaxHalo+1,jminHalo-1
+          do i=i1,imaxHalo
+            if ( keep_flag == "classic" ) then 
+#include "eulerFlux.f90"
+            elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+            endif
+          enddo
+        enddo
+      enddo
+      ! loop over i-plus boundary 
+      if (im>nHalo) then
+        !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,ea,rhoea,za,xa) async(6)
+        do k=kmaxHalo+1,kminHalo-1
+          do j=jmaxHalo+1,jminHalo-1
+            do i=iminHalo,i2
+              if ( keep_flag == "classic" ) then 
+#include "eulerFlux.f90"
+              elseif ( keep_flag == "pep" ) then 
+#include "eulerFlux_pep.f90"
+              endif
+            enddo
+          enddo
+        enddo
+      endif 
+    endif
+    !$acc wait
   end subroutine
 
 

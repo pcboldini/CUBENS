@@ -312,7 +312,7 @@ program DNS
   endif
   if (xi_plane(1).gt.0)  then  
     do i=1,size(xi_plane)
-      if (xi_plane(i) .eq. 1) then !planes at lower wall
+      if ((xi_plane(i) .eq. 1) .and. (perBC(1) .eqv. .false.)) then !planes at lower wall
         call output2dPlane(part,nHalo,istart,1,xi_plane(i),rho,'xpl.','r.', tem,'xpl.','t.', mu,'xpl.','mu.', &
                                                                                              strxz,'xpl.','strxz.')
       else
@@ -367,12 +367,13 @@ program DNS
 
     ! calculate bulk properties for real time monitoring
     if (mod((istep-istart),intvPrint).eq.0) then 
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
       call cmpbulk(istep,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
     endif
 
     ! I/O planes if condition is met 
-    if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter)) then 
+    if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
       ! set boundary conditions
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
@@ -388,7 +389,7 @@ program DNS
       ! write x-planes
       if (xi_plane(1).gt.0)  then
         do i=1,size(xi_plane)
-          if (xi_plane(i) .eq. 1) then !planes at lower wall
+          if ((xi_plane(i) .eq. 1) .and. (perBC(1) .eqv. .false.)) then !planes at lower wall
             call output2dPlane(part,nHalo,istep,1,xi_plane(i),rho,'xpl.','r.', tem,'xpl.','t.', mu,'xpl.','mu.', &
                                                                                                 strxz,'xpl.','strxz.')
           else
@@ -409,7 +410,7 @@ program DNS
     endif
 
     ! I/O restart files if condition is met 
-    if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter)) then
+    if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)

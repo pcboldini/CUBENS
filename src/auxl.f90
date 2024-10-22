@@ -195,13 +195,19 @@ module mod_auxl
     endif
 #if defined(TGV)
     ! Specify the filename
-    filename = '/tests/TGV/TGV_out.txt'
+    filename = 'tests/TGV/output.txt'
 
     if (nrank == 0) then
      ! Open the file for writing
-      open(unit=10, file=filename, status='old', position='append', action='write')
-      write(10, '(4(ES20.10, 1X))') time, kib, eb, enst
-      close(10)
+      if (istep==0) then
+        open(unit=10, file=filename, status='old', action='write')
+        write(10, '(4(ES20.10, 1X))') time, kib, eb, enst
+        close(10)
+      else
+        open(unit=10, file=filename, status='old', position='append', action='write')
+        write(10, '(4(ES20.10, 1X))') time, kib, eb, enst
+        close(10)
+      endif
     endif
 #endif
     ! check if there is any NaN, in case stop the simulation
@@ -228,14 +234,14 @@ module mod_auxl
 #if defined(BL) || defined(TGV)
     real(mytype), dimension(:,:,:), intent(inout) :: qave
     real(mytype) :: rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d
-    real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d !Edited by Ryo
-    real(mytype) :: rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d               !Edited by Ryo
+    real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d
+    real(mytype) :: rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d               
     real(mytype) :: tauxx_2d,tauxy_2d,tauxz_2d,tauyy_2d,tauyz_2d,tauzz_2d,qx_2d,qy_2d,qz_2d
 #elif defined(CHA) 
     real(mytype), dimension(:,:), intent(inout) :: qave
     real(mytype) :: rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d
-    real(mytype) :: rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d !Edited by Ryo
-    real(mytype) :: rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d               !Edited by Ryo
+    real(mytype) :: rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d
+    real(mytype) :: rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d               
     real(mytype) :: tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d
 #endif
 #if defined(BL)

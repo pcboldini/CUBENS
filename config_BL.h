@@ -12,7 +12,7 @@
 !   adiab_std,  isoth_std  : standard implementation of wall BC
 !   adiab_nrbc, isoth_nrbc : non-reflecting implementation of wall BC
 
-    BC_bot = "isoth_nrbc"                           ! see above
+    BC_bot = "adiab_nrbc"                           ! see above
  
 !   freestream BCs:
     BC_top = "free_nrbc"                            ! options: free_nrbc
@@ -21,7 +21,7 @@
     BC_inl = "inlet_nrbc"                           ! options: inlet_nrbc, inlet_std
 
 !   recycling-rescaling:
-    BC_inl_rescale = .true.                         ! options: .true. or .false.
+    BC_inl_rescale = .false.                         ! options: .true. or .false.
     z_recycle = 100.0_mytype                        ! recycle position
     delta_inl = 1.5_mytype                          ! inlet boundary thickness
 
@@ -46,7 +46,7 @@
     intvSavePlanes   = 1                            ! interval save planes
     savePlanesAfter  = 5                            ! save planes after which timestep
     intvSaveStats    = 1                            ! interval save statistics
-    saveStatsAfter   = 5                            ! save statistics after which timestep
+    saveStatsAfter   = -5                            ! save statistics after which timestep
     intvReadParam    = -2                           ! read variation file
 
     yi_plane = (/1/)                                ! y-index cut z-x plane  
@@ -62,11 +62,12 @@
 ! 
     nStencilConv = 3                                ! order/2 convective fluxes
     nStencilVisc = 2                                ! order/2 diffusive fluxes
+    keep_flag = "pep"                               ! KEEP-scheme: "classic" or "pep" (pressure equilibrium)
 !
 ! --------------------------------- GRID ----------------------------------
 !
     imax = 300                                      ! number of points in x
-    jmax = 1                                       ! number of points in y
+    jmax = 10                                        ! number of points in y
     kmax = 1000                                     ! number of points in z
     
     len_x = 20.0                                    ! wall-normal length
@@ -147,14 +148,16 @@
     stats_step      = (/10/)                        ! "stats": timestep at which averaging is obtained from ./simulate
     stats_time_rate = (/1/)                         ! "stats": time rate for different statistics timesteps
 
-    rms_flag = 1                                    ! options: 1 on, 0 off
+    dt_step   = 0.1612041E-02                       ! "planes_2D": time step for vorticity equation
+
+    rms_flag = 0                                    ! options: 1 on, 0 off
     istart_rms = 5                                  ! start RMS calculation       
     iend_rms   = 10                                 ! end RMS calculation         
     istep_rms  = 1                                  ! step RMS calculation         
     index_rms_xpl = (/1/)                           ! index x-plane for RMS calculation              
     index_rms_zpl = (/446/)                         ! index z-plane for RMS calculation  
 
-    fft_flag = 1                                    ! options: 1 on, 0 off 
+    fft_flag = 0                                    ! options: 1 on, 0 off 
     index_fft_span = (/0,1,2/)                      ! spanwise modes
 
     ! in use when avg_flag = 'stats'; else istart_pp,iend_pp,istep_pp are used
