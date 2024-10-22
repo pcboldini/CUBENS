@@ -21,8 +21,8 @@ slurm*
 
 # Others 
 JOB
-#*.txt
-#*.bin
+*.txt
+*.bin
 *.xmf
 Makefile
 DS.Store
