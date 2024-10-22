@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! Right-Hand-Side module
 
 module mod_rhs
   use decomp_2d

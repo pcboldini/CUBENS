@@ -4,8 +4,8 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! initial conditions module
 
-! initial conditions
 module mod_init
 use io_std_units
 implicit none

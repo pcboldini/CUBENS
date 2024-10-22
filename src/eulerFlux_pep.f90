@@ -70,3 +70,5 @@
     rhs_v(i,j,k) = rhs_v(i,j,k) -       conv_ddy(s)*(p(i,j+s,k)-p(i,j-s,k)) 
     rhs_w(i,j,k) = rhs_w(i,j,k) - za*conv_ddz(s)*(p(i,j,k+s)-p(i,j,k-s)) 
   enddo
+  rhs_u(i,j,k) = rhs_u(i,j,k) - Ri_unit*(rhoa-1.0_mytype)
+  rhs_e(i,j,k) = rhs_e(i,j,k) - Ri_unit*(rhoa-1.0_mytype)*ua

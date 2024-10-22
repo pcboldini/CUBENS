@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! viscosity and conductivity module
 
 module mod_eos_visc
   use decomp_2d, only: mytype

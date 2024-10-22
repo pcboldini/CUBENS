@@ -1,4 +1,11 @@
-
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
+! This is part of look-up table module for REFPROP-properties
+! NOT IN USE
 module mod_table
 
   use decomp_2d

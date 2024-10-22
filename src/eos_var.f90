@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! equation of state module
 
 module mod_eos_var
   use io_std_units

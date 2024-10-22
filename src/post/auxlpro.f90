@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! auxiliary routines for postprocessing
 
 module mod_auxlpro
   use decomp_2d

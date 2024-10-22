@@ -1,22 +1,10 @@
-!----------------------------------------------------------------------------------------------------------------------------------!
-!                                                                                                                                  !
-!      Peng-Robinson routines                                                                                                      !
-!                                                                                                                                  !
-!      DESCRIPTION:                                                                                                                !
-!      ------------                                                                                                                !
-!      This module is for the Peng-Robinson EoS                                                                                    !
-!                                                                                                                                  !
-!                                                                                                                                  !
-!      CHANGELOG:                                                                                                                  !
-!      ----------                                                                                                                  !
-!         xx.xx.2022: module created (Pietro)                                                                                      !
-!                                                                                                                                  !
-!----------------------------------------------------------------------------------------------------------------------------------!
-  
-
-
-
-
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2024 Pietro Carlo Boldini, Rene Pecnik and the CUBENS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
+! This the look-up table module for REFPROP-properties
   type(EOSModel_lookup) function init_EOSModel_lookup()
     init_EOSModel_lookup%name="look-up-table"
     call init_EOSModel_lookup%initEOS()

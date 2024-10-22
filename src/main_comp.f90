@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! main module
 
 program DNS
   use decomp_2d

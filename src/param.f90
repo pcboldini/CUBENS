@@ -4,7 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
-! parameters module
+! parameters module for the definition of all parameters of CUBENS
 
 module mod_param
 use decomp_2d
@@ -19,7 +19,7 @@ implicit none
   real(mytype) :: Pra     = 0.0_mytype
   real(mytype) :: Ma      = 0.0_mytype
   real(mytype) :: Ec      = 0.0_mytype
-  real(mytype) :: Ri      = 0.0_mytype 
+  real(mytype) :: Ri_wall = 0.0_mytype 
   real(mytype) :: Ri_unit = 0.0_mytype 
   real(mytype) :: dpdz    = 0.0_mytype
   real(mytype) :: Tinf    = 0.0_mytype
@@ -267,9 +267,6 @@ subroutine read_init_params()
   len_z = zEndDNS - zStartDNS ! streamwise length
   zEndDNS_new = Redelta_end_new**2/Re ! zEnd_new
   len_z_new = zEndDNS_new - zStartDNS ! new streamwise length
-  ! Richardson number
-  Ri = Ri * delta99 ! Richardson_DNS
-  Ri_unit = Ri_unit * delta99 ! Richardson_DNS (unit values)
 #elif defined(CHA)
 #include "../preproc/initCHA/inputDNS/initCHA_params.h"
 #endif
@@ -332,7 +329,7 @@ end subroutine
       write(stdout, '(A, F10.4)') 'Eckert number:                        ', Ec
       write(stdout, '(A, F10.4)') 'Prandtl number:                       ', Pra
       write(stdout, '(A, F10.4)') 'Pref:                                 ', Pref
-      write(stdout, '(A, F10.4)') 'Richardson number:                    ', Ri
+      write(stdout, '(A, F10.4)') 'Wall Richardson number:               ', Ri_wall
       write(stdout, '(A, F10.4)') 'Richardson number (unit values):      ', Ri_unit
 #if defined(BL)
       write(stdout, '(A, F10.4)') 'Inlet friction Reynolds number:       ', ReTau

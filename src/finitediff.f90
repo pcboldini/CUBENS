@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! finite-difference scheme module
 
 module mod_finitediff
   use decomp_2d

@@ -4,6 +4,8 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! math routines module
+
 module mod_math
    use decomp_2d
    implicit none

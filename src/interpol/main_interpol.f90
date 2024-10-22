@@ -4,6 +4,8 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! main interpolation module
+
 program interpolate
   use mod_interpolate
   use mod_eos

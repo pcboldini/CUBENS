@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! auxiliary routines for interpolation
 
 module mod_interpolate
   use decomp_2d

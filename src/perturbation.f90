@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! disturbance strip module
 
 module mod_perturbation
   use mod_param
@@ -161,6 +162,8 @@ subroutine print_pertBC()
   use mod_halo
   use mod_finitediff
   implicit none
+  integer :: i
+
   if (nrank == 0) then
     write(stdout,* ) 'Perturbation: blowing/suction'
     write(stdout,'(A)') 'o--------------------------------------------------o'
@@ -191,7 +194,9 @@ subroutine print_pertBC()
         write(stdout,'(A, I10)') 'Number of spanwise modes:             ',n3dmode
         write(stdout,'(A, F10.4)') 'Fundamental spanwise wavenumber:      ',beta0
         if (n3dmode .gt. 1) then
-          write(stdout,'(A, F10.4)') 'Spanwise wavenumbers:                 ',pert_beta
+          do i = 1, size(pert_beta)
+              write(*,'(A, F10.4)') 'Spanwise wavenumber:      ', pert_beta(i)
+          end do
         endif
         write(stdout,* ) 
       endif

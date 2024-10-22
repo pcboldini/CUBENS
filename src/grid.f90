@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! physical and numerical grid module
 
 module mod_grid
   use decomp_2d

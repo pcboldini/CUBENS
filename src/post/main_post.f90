@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+! main postprocessing module
 
 program DNS_POST
   use decomp_2d

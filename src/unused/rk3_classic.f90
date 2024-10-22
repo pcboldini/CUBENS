@@ -5,6 +5,7 @@
 !
 ! -
 ! This Runge Kutta is explicit, third-order, following the classical implementation with high-storage impact
+! NOT IN USE
 module mod_solve
   use decomp_2d
   implicit none
