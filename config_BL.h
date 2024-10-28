@@ -139,7 +139,7 @@
 !
     p_row_pp  = 1                                   ! keep at 1
     p_col_pp  = 1                                   ! number of streamwise partitions (needs to match the launch command)
-    avg_flag = "restart"                            ! options: "restart" or "stats"
+    post_flag = "restart"                            ! options: "restart", "stats", or "planes_2D"
 
     istart_pp = 5                                   ! "restart": start timestep for averaging
     iend_pp   = 10                                  ! "restart": end timestep for averaging
@@ -149,6 +149,8 @@
     stats_time_rate = (/1/)                         ! "stats": time rate for different statistics timesteps
 
     dt_step   = 0.1612041E-02                       ! "planes_2D": time step for vorticity equation
+
+    avg_flag = 0                                    ! options: 1 on, 0 off 
 
     rms_flag = 0                                    ! options: 1 on, 0 off
     istart_rms = 5                                  ! start RMS calculation       

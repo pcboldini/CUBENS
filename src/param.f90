@@ -190,13 +190,14 @@ implicit none
 ! postprocessing (postpro)
   integer :: p_row_pp  = 6 
   integer :: p_col_pp  = 72 
-  character(len=30) :: avg_flag
+  character(len=30) :: post_flag
   integer :: istart_pp = 147000
   integer :: iend_pp   = 246500
   integer :: istep_pp  = 500
   integer :: dt_step   = 0.001
   integer, dimension(:), allocatable :: stats_step             
   real(mytype), dimension(:), allocatable :: stats_time_rate
+  integer :: avg_flag   = 1 
   integer :: rms_flag   = 1                                    
   integer :: istart_rms = 147000                               
   integer :: iend_rms   = 246500                               

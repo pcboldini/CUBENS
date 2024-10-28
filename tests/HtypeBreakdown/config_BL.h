@@ -122,7 +122,7 @@
 
     beta0 = 2.0*pi_const/len_y                      ! fundamental spanwise wavenumber
 
-    pert_ampl = (/7.5e-3,8.5e-5/)                   ! amplitude 2-D and 3-D wave
+    pert_ampl = (/7.5e-3,1.0e-4/)                   ! amplitude 2-D and 3-D wave
     pert_F    = (/124.000e-6,62.000e-6/)            ! frequency 2-D and 3-D wave
 
     ! Sayadi et al., JFM 724, 2013
@@ -138,17 +138,17 @@
 ! ----------------------------- ONLY FOR POST -----------------------------
 !
     p_row_pp  = 1                                   ! keep at 1
-    p_col_pp  = 1                                   ! number of streamwise partitions (needs to match the launch command)
+    p_col_pp  = 128                                   ! number of streamwise partitions (needs to match the launch command)
     avg_flag = "restart"                            ! options: "restart" or "stats"
 
-    istart_pp = 5                                   ! "restart": start timestep for averaging
-    iend_pp   = 10                                  ! "restart": end timestep for averaging
-    istep_pp  = 1                                   ! "restart": averaging timestep
+    istart_pp = 650000                                   ! "restart": start timestep for averaging
+    iend_pp   = 680000                                  ! "restart": end timestep for averaging
+    istep_pp  = 1000                                   ! "restart": averaging timestep
 
     stats_step      = (/10/)                        ! "stats": timestep at which averaging is obtained from ./simulate
     stats_time_rate = (/1/)                         ! "stats": time rate for different statistics timesteps
 
-    rms_flag = 1                                    ! options: 1 on, 0 off
+    rms_flag = -1                                    ! options: 1 on, 0 off
     istart_rms = 5                                  ! start RMS calculation       
     iend_rms   = 10                                 ! end RMS calculation         
     istep_rms  = 1                                  ! step RMS calculation         

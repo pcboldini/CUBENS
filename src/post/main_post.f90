@@ -174,66 +174,67 @@ endif
   allocate(tem(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(mu (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(ka (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  allocate(arho(  xsize(1),xsize(3)));     arho = 0.0_mytype;
-  allocate(  ap(  xsize(1),xsize(3)));     ap   = 0.0_mytype;
-  allocate(  aT(  xsize(1),xsize(3)));     aT   = 0.0_mytype;
-  allocate( amu(  xsize(1),xsize(3)));     amu  = 0.0_mytype;
-  allocate( aka(  xsize(1),xsize(3)));     aka = 0.0_mytype;
-  allocate( arT(  xsize(1),xsize(3)));     arT  = 0.0_mytype;
-  allocate( avorty(  xsize(1),xsize(3)));     avorty = 0.0_mytype;
-  allocate(    au(3,xsize(1),xsize(3)));   au     = 0.0_mytype;  !3 components
-  allocate(   aru(3,xsize(1),xsize(3)));   aru    = 0.0_mytype;  !3 components
-  allocate(  aruu(6,xsize(1),xsize(3)));   aruu   = 0.0_mytype;  !6 components
-  allocate(aTauij(6,xsize(1),xsize(3)));   aTauij = 0.0_mytype;  !6 components
-  allocate(   aqj(3,xsize(1),xsize(3)));   aqj    = 0.0_mytype;  !3 components
-if (avg_flag == 'restart')  then
-  allocate(   aCp(  xsize(1),xsize(3)));       aCp = 0.0_mytype;
-  allocate(   adwdx(  xsize(1),xsize(3)));     adwdx = 0.0_mytype;
-  allocate(   auu(6,xsize(1),xsize(3)));       auu = 0.0_mytype; !6 components
-  allocate(tTauxz_w(xsize(2),xsize(3)));     tTauxz_w=0.0_mytype;
-  allocate(tqx_w(xsize(2),xsize(3)));        tqx_w=0.0_mytype;
   allocate(Cp(xsize(1),xsize(2),xsize(3)))
-  allocate(qvort(xsize(1),xsize(2),xsize(3))); qvort = 0.0_mytype;
-  allocate(dilla2(xsize(1),xsize(2),xsize(3)))
-  allocate(sxx(xsize(1),xsize(2),xsize(3)))
-  allocate(sxy(xsize(1),xsize(2),xsize(3)))
-  allocate(sxz(xsize(1),xsize(2),xsize(3)))
-  allocate(syy(xsize(1),xsize(2),xsize(3)))
-  allocate(syz(xsize(1),xsize(2),xsize(3)))
-  allocate(szz(xsize(1),xsize(2),xsize(3)))
-  allocate(tmp_x_arr(xsize(1),xsize(2),xsize(3)))
-  allocate(tmp_y_arr(xsize(1),xsize(2),xsize(3)))
-  allocate(tmp_z_arr(xsize(1),xsize(2),xsize(3)))
-  allocate(omx(xsize(1),xsize(2),xsize(3)))
-  allocate(omy(xsize(1),xsize(2),xsize(3)))
-  allocate(omz(xsize(1),xsize(2),xsize(3)))
-  allocate(tmpPlane (xsize(1),xsize(2),xsize(3)))
-  allocate(tmp_complex (xsize(1),xsize(2),xsize(3)))
-  allocate(Tauxz_time( nfiles,xsize(1),xsize(2),xsize(3)));        Tauxz_time = 0.0_mytype;
-  allocate(qx_time( nfiles,xsize(1),xsize(2),xsize(3)));        qx_time = 0.0_mytype;
-endif
-  allocate( Tw(1:partfy%ysz(3))    )
-  allocate( rhow(1:partfy%ysz(3))    )
-  allocate( muw(1:partfy%ysz(3))    )
-  allocate( kaw(1:partfy%ysz(3))    )
-  allocate( tauw(1:partfy%ysz(3))    )
-  allocate( qw(1:partfy%ysz(3))    )
-  allocate( Re_tauw(1:partfy%ysz(3))    )
-  allocate( theta_vector(1:partfy%ysz(3)) )
-  allocate( Tw_global(nz_global)   )
-  allocate( rhow_global(nz_global)   )
-  allocate( muw_global(nz_global)   )
-  allocate( kaw_global(nz_global)   )
-  allocate( tauw_global(nz_global)   )
-  allocate( qw_global(nz_global)   )
-  allocate( Re_tauw_global(nz_global)   )
-  allocate( theta_global(nz_global) )
-  allocate(Re_tau(xsize(1),xsize(3)));     Re_tau=0.0_mytype;
-  allocate(Re_tau_sl(xsize(1),xsize(3)));  Re_tau_sl=0.0_mytype;
-  allocate(u_tau(xsize(1),xsize(3)));      u_tau = 0.0_mytype;
-  allocate(u_tau_sl(xsize(1),xsize(3)));   u_tau_sl = 0.0_mytype;
+  if (avg_flag == 1)  then
+    allocate(arho(  xsize(1),xsize(3)));     arho = 0.0_mytype;
+    allocate(  ap(  xsize(1),xsize(3)));     ap   = 0.0_mytype;
+    allocate(  aT(  xsize(1),xsize(3)));     aT   = 0.0_mytype;
+    allocate( amu(  xsize(1),xsize(3)));     amu  = 0.0_mytype;
+    allocate( aka(  xsize(1),xsize(3)));     aka = 0.0_mytype;
+    allocate( arT(  xsize(1),xsize(3)));     arT  = 0.0_mytype;
+    allocate( avorty(  xsize(1),xsize(3)));     avorty = 0.0_mytype;
+    allocate(    au(3,xsize(1),xsize(3)));   au     = 0.0_mytype;  !3 components
+    allocate(   aru(3,xsize(1),xsize(3)));   aru    = 0.0_mytype;  !3 components
+    allocate(  aruu(6,xsize(1),xsize(3)));   aruu   = 0.0_mytype;  !6 components
+    allocate(aTauij(6,xsize(1),xsize(3)));   aTauij = 0.0_mytype;  !6 components
+    allocate(   aqj(3,xsize(1),xsize(3)));   aqj    = 0.0_mytype;  !3 components
+    if (post_flag == 'restart')  then
+      allocate(   aCp(  xsize(1),xsize(3)));       aCp = 0.0_mytype;
+      allocate(   adwdx(  xsize(1),xsize(3)));     adwdx = 0.0_mytype;
+      allocate(   auu(6,xsize(1),xsize(3)));       auu = 0.0_mytype; !6 components
+      allocate(tTauxz_w(xsize(2),xsize(3)));     tTauxz_w=0.0_mytype;
+      allocate(tqx_w(xsize(2),xsize(3)));        tqx_w=0.0_mytype;
+      allocate(qvort(xsize(1),xsize(2),xsize(3))); qvort = 0.0_mytype;
+      allocate(dilla2(xsize(1),xsize(2),xsize(3)))
+      allocate(sxx(xsize(1),xsize(2),xsize(3)))
+      allocate(sxy(xsize(1),xsize(2),xsize(3)))
+      allocate(sxz(xsize(1),xsize(2),xsize(3)))
+      allocate(syy(xsize(1),xsize(2),xsize(3)))
+      allocate(syz(xsize(1),xsize(2),xsize(3)))
+      allocate(szz(xsize(1),xsize(2),xsize(3)))
+      allocate(tmp_x_arr(xsize(1),xsize(2),xsize(3)))
+      allocate(tmp_y_arr(xsize(1),xsize(2),xsize(3)))
+      allocate(tmp_z_arr(xsize(1),xsize(2),xsize(3)))
+      allocate(omx(xsize(1),xsize(2),xsize(3)))
+      allocate(omy(xsize(1),xsize(2),xsize(3)))
+      allocate(omz(xsize(1),xsize(2),xsize(3)))
+      allocate(tmpPlane (xsize(1),xsize(2),xsize(3)))
+      allocate(Tauxz_time( nfiles,xsize(1),xsize(2),xsize(3)));        Tauxz_time = 0.0_mytype;
+      allocate(qx_time( nfiles,xsize(1),xsize(2),xsize(3)));        qx_time = 0.0_mytype;
+    endif
+    allocate( Tw(1:partfy%ysz(3))    )
+    allocate( rhow(1:partfy%ysz(3))    )
+    allocate( muw(1:partfy%ysz(3))    )
+    allocate( kaw(1:partfy%ysz(3))    )
+    allocate( tauw(1:partfy%ysz(3))    )
+    allocate( qw(1:partfy%ysz(3))    )
+    allocate( Re_tauw(1:partfy%ysz(3))    )
+    allocate( theta_vector(1:partfy%ysz(3)) )
+    allocate( Tw_global(nz_global)   )
+    allocate( rhow_global(nz_global)   )
+    allocate( muw_global(nz_global)   )
+    allocate( kaw_global(nz_global)   )
+    allocate( tauw_global(nz_global)   )
+    allocate( qw_global(nz_global)   )
+    allocate( Re_tauw_global(nz_global)   )
+    allocate( theta_global(nz_global) )
+    allocate(Re_tau(xsize(1),xsize(3)));     Re_tau=0.0_mytype;
+    allocate(Re_tau_sl(xsize(1),xsize(3)));  Re_tau_sl=0.0_mytype;
+    allocate(u_tau(xsize(1),xsize(3)));      u_tau = 0.0_mytype;
+    allocate(u_tau_sl(xsize(1),xsize(3)));   u_tau_sl = 0.0_mytype;
+  endif
 ! 2-D time properties
-  if (avg_flag == 'planes_2D')  then
+  if (post_flag == 'planes_2D')  then
     allocate(arho_fluc(nfiles,xsize(1),xsize(3)))     
     arho_fluc = 0.0_mytype
     allocate(au_fluc(nfiles,xsize(1),xsize(3))) 
@@ -254,7 +255,7 @@ endif
     avorty_fluc = 0.0_mytype
   endif
 ! for FFT or RMS properties
-  if ((fft_flag==1) .OR. (rms_flag==1) .OR. (avg_flag == 'planes_2D'))  then 
+  if ((fft_flag==1) .OR. (rms_flag==1) .OR. (post_flag == 'planes_2D'))  then 
     allocate(    arho_time( nfiles,xsize(1),xsize(2),xsize(3)));      arho_time = 0.0_mytype;  
     allocate(    au_time( nfiles,xsize(1),xsize(2),xsize(3)));        au_time = 0.0_mytype;
     allocate(    av_time( nfiles,xsize(1),xsize(2),xsize(3)));        av_time = 0.0_mytype;
@@ -272,6 +273,7 @@ endif
   endif
 ! for FFT properties
   if (fft_flag==1)  then 
+    allocate( tmp_complex (xsize(1),xsize(2),xsize(3)))
     allocate( inputfft(1:partfy%xsz(1),1:partfy%xsz(2),1:partfy%xsz(3))   )
     allocate( spec_rho(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
     allocate( spec_w(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
@@ -352,7 +354,7 @@ endif
 #endif
 ! initialize restart averaging
 ! initialize planes averaging
-if (avg_flag == 'stats') then
+if (post_flag == 'stats') then
   if (nrank==0) then
     write(stdout, *) "o--------------------------------------------------o"
     write(stdout,*) 'Initializing planes averaging'
@@ -396,7 +398,7 @@ endif
 ! through all steps
   count=0
   wt_start = MPI_WTIME()
-  if (avg_flag == 'restart') then
+  if (post_flag == 'restart') then
     if (nrank==0) write(stdout,*) 'Average with restart files'
     if (nrank==0) write(stdout,*) 
     nfiles = (iend_pp-istart_pp)/istep_pp+1
@@ -413,63 +415,68 @@ endif
       call calcCp(Cp,rho,ien)
       if (nrank==0) write(stdout,*) 'setting boundary conditions'
       call setBC(part1,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
-      if (nrank==0) write(stdout,*) 'calculating Q-criterion'
-      ! Q-criterion
-      call calcQ(qvort,u,v,w,part1) 
-      call decomp_2d_write_one(1,qvort, 'postproc/results/vort/qvort.'//cha//'.bin')
-      !if (nrank==0) write(*,*) 'calculating vorticity' 
-      !call calcVort(vortx,vorty,vortz,strxz,u,v,w) ! vorticity
-      !call decomp_2d_write_one(1,vortz,'postproc/results/vortz.'//cha//'.bin')
-      if (nrank==0) write(stdout,*) 'calculate wall-normal gradients' 
-      ! normalised gradient
-      if (yi_plane(1).gt.0)  then
-        do i=1,size(yi_plane)
-          call calcGradabs(part1,istep,2,yi_plane(i),rho,'ypl.','gradR.')
-        enddo
+      if (avg_flag==1)  then
+        if (nrank==0) write(stdout,*) 'calculating Q-criterion'
+        ! Q-criterion
+        call calcQ(qvort,u,v,w,part1) 
+        call decomp_2d_write_one(1,qvort, 'postproc/results/vort/qvort.'//cha//'.bin')
+        !if (nrank==0) write(*,*) 'calculating vorticity' 
+        !call calcVort(vortx,vorty,vortz,strxz,u,v,w) ! vorticity
+        !call decomp_2d_write_one(1,vortz,'postproc/results/vortz.'//cha//'.bin')
+        if (nrank==0) write(stdout,*) 'calculate wall-normal gradients' 
+        ! normalised gradient
+        if (yi_plane(1).gt.0)  then
+          do i=1,size(yi_plane)
+            call calcGradabs(part1,istep,2,yi_plane(i),rho,'ypl.','gradR.')
+          enddo
+        endif
+        ! calculate stress-tensor
+        call calcStrain(dilla2,sxx,sxy,sxz,syy,syz,szz,u,v,w) 
+        ! calculate temperature gradient
+        call calcGrad(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
       endif
-      ! calculate stress-tensor
-      call calcStrain(dilla2,sxx,sxy,sxz,syy,syz,szz,u,v,w) 
-      ! calculate temperature gradient
-      call calcGrad(tmp_x_arr,tmp_y_arr,tmp_z_arr,tem) 
       ! streamwise and wall-normal loop for spanwise averaging
       do k=1,xsize(3)
         do i=1,xsize(1)
-          arho(i,k) =    arho(i,k) + sum(rho(i,1:xsize(2),k))/factAvg
-          aT(i,k)   =    aT(i,k) + sum(tem(i,1:xsize(2),k))/factAvg
-          aP(i,k)   =    aP(i,k) + sum(pre(i,1:xsize(2),k))/factAvg
-          amu(i,k)  =    amu(i,k) + sum(mu(i,1:xsize(2),k))/factAvg
-          aka(i,k)  =    aka(i,k) + sum(ka(i,1:xsize(2),k))/factAvg
-          adwdx(i,k)=    adwdx(i,k) + sum(sxz(i,1:xsize(2),k))/factAvg
-          au(1,i,k) =   au(1,i,k) + sum(u(i,1:xsize(2),k))/factAvg
-          au(2,i,k) =   au(2,i,k) + sum(v(i,1:xsize(2),k))/factAvg
-          au(3,i,k) =   au(3,i,k) + sum(w(i,1:xsize(2),k))/factAvg   
-          aru(1,i,k) =  aru(1,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
-          aru(2,i,k) =  aru(2,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
-          aru(3,i,k) =  aru(3,i,k) + sum(rho(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg 
-          arT(i,k)   =  arT(i,k)   + sum(rho(i,1:xsize(2),k)*tem(i,1:xsize(2),k))/factAvg        
-          auu(1,i,k) =  auu(1,i,k) + sum(u(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
-          auu(2,i,k) =  auu(2,i,k) + sum(u(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
-          auu(3,i,k) =  auu(3,i,k) + sum(u(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          auu(4,i,k) =  auu(4,i,k) + sum(v(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
-          auu(5,i,k) =  auu(5,i,k) + sum(v(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          auu(6,i,k) =  auu(6,i,k) + sum(w(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          aruu(1,i,k) = aruu(1,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
-          aruu(2,i,k) = aruu(2,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
-          aruu(3,i,k) = aruu(3,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          aruu(4,i,k) = aruu(4,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
-          aruu(5,i,k) = aruu(5,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          aruu(6,i,k) = aruu(6,i,k) + sum(rho(i,1:xsize(2),k)*w(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
-          aTauij(1,i,k) = aTauij(1,i,k) + sum(mu(i,1:xsize(2),k)*sxx(i,1:xsize(2),k))/factAvg ! xx
-          aTauij(2,i,k) = aTauij(2,i,k) + sum(mu(i,1:xsize(2),k)*sxy(i,1:xsize(2),k))/factAvg ! xy
-          aTauij(3,i,k) = aTauij(3,i,k) + sum(mu(i,1:xsize(2),k)*sxz(i,1:xsize(2),k))/factAvg ! xz
-          aTauij(4,i,k) = aTauij(4,i,k) + sum(mu(i,1:xsize(2),k)*syy(i,1:xsize(2),k))/factAvg ! yy
-          aTauij(5,i,k) = aTauij(5,i,k) + sum(mu(i,1:xsize(2),k)*syz(i,1:xsize(2),k))/factAvg ! yz
-          aTauij(6,i,k) = aTauij(6,i,k) + sum(mu(i,1:xsize(2),k)*szz(i,1:xsize(2),k))/factAvg ! zz
-          aqj(1,i,k) = aqj(1,i,k) + sum(ka(i,1:xsize(2),k)*tmp_x_arr(i,1:xsize(2),k))/factAvg ! x
-          aqj(2,i,k) = aqj(2,i,k) + sum(ka(i,1:xsize(2),k)*tmp_y_arr(i,1:xsize(2),k))/factAvg ! y
-          aqj(3,i,k) = aqj(3,i,k) + sum(ka(i,1:xsize(2),k)*tmp_z_arr(i,1:xsize(2),k))/factAvg ! z
-          aCp(i,k) = aCp(i,k) + sum(Cp(i,1:xsize(2),k))/factAvg
-          if ((fft_flag==1) .OR. (rms_flag==1))  then 
+          if (avg_flag==1)  then 
+            arho(i,k) =    arho(i,k) + sum(rho(i,1:xsize(2),k))/factAvg
+            aT(i,k)   =    aT(i,k) + sum(tem(i,1:xsize(2),k))/factAvg
+            aP(i,k)   =    aP(i,k) + sum(pre(i,1:xsize(2),k))/factAvg
+            amu(i,k)  =    amu(i,k) + sum(mu(i,1:xsize(2),k))/factAvg
+            aka(i,k)  =    aka(i,k) + sum(ka(i,1:xsize(2),k))/factAvg
+            adwdx(i,k)=    adwdx(i,k) + sum(sxz(i,1:xsize(2),k))/factAvg
+            au(1,i,k) =   au(1,i,k) + sum(u(i,1:xsize(2),k))/factAvg
+            au(2,i,k) =   au(2,i,k) + sum(v(i,1:xsize(2),k))/factAvg
+            au(3,i,k) =   au(3,i,k) + sum(w(i,1:xsize(2),k))/factAvg   
+            aru(1,i,k) =  aru(1,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
+            aru(2,i,k) =  aru(2,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
+            aru(3,i,k) =  aru(3,i,k) + sum(rho(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg 
+            arT(i,k)   =  arT(i,k)   + sum(rho(i,1:xsize(2),k)*tem(i,1:xsize(2),k))/factAvg        
+            auu(1,i,k) =  auu(1,i,k) + sum(u(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
+            auu(2,i,k) =  auu(2,i,k) + sum(u(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
+            auu(3,i,k) =  auu(3,i,k) + sum(u(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            auu(4,i,k) =  auu(4,i,k) + sum(v(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
+            auu(5,i,k) =  auu(5,i,k) + sum(v(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            auu(6,i,k) =  auu(6,i,k) + sum(w(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            aruu(1,i,k) = aruu(1,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*u(i,1:xsize(2),k))/factAvg
+            aruu(2,i,k) = aruu(2,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
+            aruu(3,i,k) = aruu(3,i,k) + sum(rho(i,1:xsize(2),k)*u(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            aruu(4,i,k) = aruu(4,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k)*v(i,1:xsize(2),k))/factAvg
+            aruu(5,i,k) = aruu(5,i,k) + sum(rho(i,1:xsize(2),k)*v(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            aruu(6,i,k) = aruu(6,i,k) + sum(rho(i,1:xsize(2),k)*w(i,1:xsize(2),k)*w(i,1:xsize(2),k))/factAvg
+            aTauij(1,i,k) = aTauij(1,i,k) + sum(mu(i,1:xsize(2),k)*sxx(i,1:xsize(2),k))/factAvg ! xx
+            aTauij(2,i,k) = aTauij(2,i,k) + sum(mu(i,1:xsize(2),k)*sxy(i,1:xsize(2),k))/factAvg ! xy
+            aTauij(3,i,k) = aTauij(3,i,k) + sum(mu(i,1:xsize(2),k)*sxz(i,1:xsize(2),k))/factAvg ! xz
+            aTauij(4,i,k) = aTauij(4,i,k) + sum(mu(i,1:xsize(2),k)*syy(i,1:xsize(2),k))/factAvg ! yy
+            aTauij(5,i,k) = aTauij(5,i,k) + sum(mu(i,1:xsize(2),k)*syz(i,1:xsize(2),k))/factAvg ! yz
+            aTauij(6,i,k) = aTauij(6,i,k) + sum(mu(i,1:xsize(2),k)*szz(i,1:xsize(2),k))/factAvg ! zz
+            aqj(1,i,k) = aqj(1,i,k) + sum(ka(i,1:xsize(2),k)*tmp_x_arr(i,1:xsize(2),k))/factAvg ! x
+            aqj(2,i,k) = aqj(2,i,k) + sum(ka(i,1:xsize(2),k)*tmp_y_arr(i,1:xsize(2),k))/factAvg ! y
+            aqj(3,i,k) = aqj(3,i,k) + sum(ka(i,1:xsize(2),k)*tmp_z_arr(i,1:xsize(2),k))/factAvg ! z
+            aCp(i,k) = aCp(i,k) + sum(Cp(i,1:xsize(2),k))/factAvg
+            Tauxz_time(count,i,1:xsize(2),k)=mu(i,1:xsize(2),k)*sxz(i,1:xsize(2),k)
+            qx_time(count,i,1:xsize(2),k)=ka(i,1:xsize(2),k)*tmp_x_arr(i,1:xsize(2),k)
+          elseif ((fft_flag==1) .OR. (rms_flag==1))  then 
             arho_time(count,i,1:xsize(2),k)=rho(i,1:xsize(2),k)
             au_time(count,i,1:xsize(2),k)=u(i,1:xsize(2),k)
             av_time(count,i,1:xsize(2),k)=v(i,1:xsize(2),k)
@@ -481,15 +488,15 @@ endif
             aCp_time(count,i,1:xsize(2),k)=Cp(i,1:xsize(2),k)
             arw_time(count,i,1:xsize(2),k)=rho(i,1:xsize(2),k)*w(i,1:xsize(2),k)
           endif
-          Tauxz_time(count,i,1:xsize(2),k)=mu(i,1:xsize(2),k)*sxz(i,1:xsize(2),k)
-          qx_time(count,i,1:xsize(2),k)=ka(i,1:xsize(2),k)*tmp_x_arr(i,1:xsize(2),k)
         enddo
       enddo
-      ! write planes for instantaneous wall stress and heat flux
-      tmpPlane(1,:,:) = Tauxz_time(count,1,:,:)
-      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/Tauxz_time.'//cha//'.bin','dummy')
-      tmpPlane(1,:,:) = qx_time(count,1,:,:)
-      call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/qx_time.'//cha//'.bin','dummy')
+      if (avg_flag==1)  then 
+        ! write planes for instantaneous wall stress and heat flux
+        tmpPlane(1,:,:) = Tauxz_time(count,1,:,:)
+        call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/Tauxz_time.'//cha//'.bin','dummy')
+        tmpPlane(1,:,:) = qx_time(count,1,:,:)
+        call decomp_2d_write_plane(1,tmpPlane,1,1,'.','output/planes/qx_time.'//cha//'.bin','dummy')
+      endif
     enddo
 
 
@@ -497,48 +504,50 @@ endif
 !                                         OUTPUT
 !===============================================================================================!
 ! Write out 2D-planes of spanwise averaged quantities (written in /postproc/results/Yavg)
-  tmpPlane(:,1,:) = arho;       call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_r.bin','dummy')
-  tmpPlane(:,1,:) = aT;         call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T.bin','dummy')
-  tmpPlane(:,1,:) = aP;         call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_p.bin','dummy')
-  tmpPlane(:,1,:) = amu;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_mu.bin','dummy')
-  tmpPlane(:,1,:) = aka;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ka.bin','dummy')
-  tmpPlane(:,1,:) = aCp;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_Cp.bin','dummy')
-  tmpPlane(:,1,:) = adwdx;      call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_dwdx.bin','dummy')
-  tmpPlane(:,1,:) = au(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_u.bin','dummy')
-  tmpPlane(:,1,:) = au(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_v.bin','dummy')
-  tmpPlane(:,1,:) = au(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_w.bin','dummy')
-  tmpPlane(:,1,:) = auu(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uu.bin','dummy')
-  tmpPlane(:,1,:) = auu(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uv.bin','dummy')
-  tmpPlane(:,1,:) = auu(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uw.bin','dummy')
-  tmpPlane(:,1,:) = auu(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_vv.bin','dummy')
-  tmpPlane(:,1,:) = auu(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_vw.bin','dummy')
-  tmpPlane(:,1,:) = auu(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ww.bin','dummy')
-  tmpPlane(:,1,:) = aruu(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruu.bin','dummy')
-  tmpPlane(:,1,:) = aruu(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruv.bin','dummy')
-  tmpPlane(:,1,:) = aruu(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruw.bin','dummy')
-  tmpPlane(:,1,:) = aruu(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rvv.bin','dummy')
-  tmpPlane(:,1,:) = aruu(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rvw.bin','dummy')
-  tmpPlane(:,1,:) = aruu(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rww.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T11.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T12.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T13.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T22.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T23.bin','dummy')
-  tmpPlane(:,1,:) = aTauij(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T33.bin','dummy')
-  tmpPlane(:,1,:) = aqj(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q1.bin','dummy')
-  tmpPlane(:,1,:) = aqj(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q2.bin','dummy')
-  tmpPlane(:,1,:) = aqj(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q3.bin','dummy')
-  ! 2-D
-  do k=1,xsize(3)
-    do j=1,xsize(2)
-      tTauxz_w(j,k) = sum(Tauxz_time(1:count,1,j,k))/(nfiles-1)
-      tqx_w(j,k) = sum(qx_time(1:count,1,j,k))/(nfiles-1)
+  if (avg_flag==1)  then 
+    tmpPlane(:,1,:) = arho;       call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_r.bin','dummy')
+    tmpPlane(:,1,:) = aT;         call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T.bin','dummy')
+    tmpPlane(:,1,:) = aP;         call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_p.bin','dummy')
+    tmpPlane(:,1,:) = amu;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_mu.bin','dummy')
+    tmpPlane(:,1,:) = aka;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ka.bin','dummy')
+    tmpPlane(:,1,:) = aCp;        call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_Cp.bin','dummy')
+    tmpPlane(:,1,:) = adwdx;      call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_dwdx.bin','dummy')
+    tmpPlane(:,1,:) = au(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_u.bin','dummy')
+    tmpPlane(:,1,:) = au(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_v.bin','dummy')
+    tmpPlane(:,1,:) = au(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_w.bin','dummy')
+    tmpPlane(:,1,:) = auu(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uu.bin','dummy')
+    tmpPlane(:,1,:) = auu(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uv.bin','dummy')
+    tmpPlane(:,1,:) = auu(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_uw.bin','dummy')
+    tmpPlane(:,1,:) = auu(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_vv.bin','dummy')
+    tmpPlane(:,1,:) = auu(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_vw.bin','dummy')
+    tmpPlane(:,1,:) = auu(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ww.bin','dummy')
+    tmpPlane(:,1,:) = aruu(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruu.bin','dummy')
+    tmpPlane(:,1,:) = aruu(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruv.bin','dummy')
+    tmpPlane(:,1,:) = aruu(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_ruw.bin','dummy')
+    tmpPlane(:,1,:) = aruu(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rvv.bin','dummy')
+    tmpPlane(:,1,:) = aruu(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rvw.bin','dummy')
+    tmpPlane(:,1,:) = aruu(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_rww.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T11.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T12.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T13.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(4,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T22.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(5,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T23.bin','dummy')
+    tmpPlane(:,1,:) = aTauij(6,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_T33.bin','dummy')
+    tmpPlane(:,1,:) = aqj(1,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q1.bin','dummy')
+    tmpPlane(:,1,:) = aqj(2,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q2.bin','dummy')
+    tmpPlane(:,1,:) = aqj(3,:,:);  call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/Yavg/Yave_q3.bin','dummy')
+    ! 2-D
+    do k=1,xsize(3)
+      do j=1,xsize(2)
+        tTauxz_w(j,k) = sum(Tauxz_time(1:count,1,j,k))/(nfiles-1)
+        tqx_w(j,k) = sum(qx_time(1:count,1,j,k))/(nfiles-1)
+      enddo
     enddo
-  enddo
-  tmpPlane(1,:,:) = tTauxz_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tTauxz_w.bin','dummy')
-  tmpPlane(1,:,:) = tqx_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tqx_w.bin','dummy')
-  deallocate(tmpPlane)
-  else if (avg_flag == 'stats') then
+    tmpPlane(1,:,:) = tTauxz_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tTauxz_w.bin','dummy')
+    tmpPlane(1,:,:) = tqx_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tqx_w.bin','dummy')
+    deallocate(tmpPlane)
+  endif
+  else if (post_flag == 'stats') then
     if (nrank==0) write(stdout,*) 'Average with planes files'
     !Check number of stats
     if (nrank==0) write(stdout,'(A, I10)') 'number of stats files:                ', size(stats_step)
@@ -603,7 +612,7 @@ endif
       aqj(3,:,:) = aqj(3,:,:) + tmpPlane(:,:,27) !q_z
     enddo
     deallocate(tmpPlane)
-  else if (avg_flag == 'planes_2D') then
+  else if (post_flag == 'planes_2D') then
     if (nrank==0) write(stdout,*) 'Average with planes_2D files'
     if (nrank==0) write(stdout,*) 
     nfiles = (iend_pp-istart_pp)/istep_pp+1
@@ -655,35 +664,37 @@ endif
   if (nrank==0) write(stdout,*)
   if (nrank==0) write(stdout,*) " averaging done!"
 ! 1-D and 2-D wall properties
-  tauw = aTauij(3,1,:) ! mu*dudy
-  qw = aqj(1,1,:) ! absolute value
-  rhow = arho(1,:)
-  Tw = aT(1,:)
-  muw = amu(1,:)*Re
-  kaw = aka(1,:)*Re*Pra*Ec
-  ! 2-D
-  do k=1,xsize(3)  
-    do i=1,xsize(1)
-        u_tau(i,k) = sqrt(aTauij(3,1,k)/arho(1,k)) ! viscous so only wall units
-        u_tau_sl(i,k) = sqrt(aTauij(3,1,k)/arho(i,k)) ! sl hold for semi-local viscous length scale
-        Re_tau(i,k) = u_tau(i,k) * arho(1,k)/amu(1,k)  ! to be multiplied by x(2) to obtain y+ 
-        Re_tau_sl(i,k) = u_tau_sl(i,k) * arho(i,k)/amu(i,k)  ! to be multiplied by x(2) to obtain y*
+  if (avg_flag==1)  then
+    tauw = aTauij(3,1,:) ! mu*dudy
+    qw = aqj(1,1,:) ! absolute value
+    rhow = arho(1,:)
+    Tw = aT(1,:)
+    muw = amu(1,:)*Re
+    kaw = aka(1,:)*Re*Pra*Ec
+    ! 2-D
+    do k=1,xsize(3)  
+      do i=1,xsize(1)
+          u_tau(i,k) = sqrt(aTauij(3,1,k)/arho(1,k)) ! viscous so only wall units
+          u_tau_sl(i,k) = sqrt(aTauij(3,1,k)/arho(i,k)) ! sl hold for semi-local viscous length scale
+          Re_tau(i,k) = u_tau(i,k) * arho(1,k)/amu(1,k)  ! to be multiplied by x(2) to obtain y+ 
+          Re_tau_sl(i,k) = u_tau_sl(i,k) * arho(i,k)/amu(i,k)  ! to be multiplied by x(2) to obtain y*
+      enddo
     enddo
-  enddo
-  Re_tauw=Re_tau(1,:)
-  ! Momentum thickness
-  do k=1,xsize(3)
-    call trapzint(xsize(1),x,arho(:,k)*au(3,:,k)*( 1.0_mytype-au(3,:,k) ),theta)
-    theta_vector(k)=theta
-  enddo
-  call assemble_globalz1D(Tw,Tw_global,kstart,kend)
-  call assemble_globalz1D(rhow,rhow_global,kstart,kend)
-  call assemble_globalz1D(muw,muw_global,kstart,kend)
-  call assemble_globalz1D(kaw,kaw_global,kstart,kend)
-  call assemble_globalz1D(tauw,tauw_global,kstart,kend)
-  call assemble_globalz1D(qw,qw_global,kstart,kend)
-  call assemble_globalz1D(Re_tauw,Re_tauw_global,kstart,kend)
-  call assemble_globalz1D(theta_vector,theta_global,kstart,kend)
+    Re_tauw=Re_tau(1,:)
+    ! Momentum thickness
+    do k=1,xsize(3)
+      call trapzint(xsize(1),x,arho(:,k)*au(3,:,k)*( 1.0_mytype-au(3,:,k) ),theta)
+      theta_vector(k)=theta
+    enddo
+    call assemble_globalz1D(Tw,Tw_global,kstart,kend)
+    call assemble_globalz1D(rhow,rhow_global,kstart,kend)
+    call assemble_globalz1D(muw,muw_global,kstart,kend)
+    call assemble_globalz1D(kaw,kaw_global,kstart,kend)
+    call assemble_globalz1D(tauw,tauw_global,kstart,kend)
+    call assemble_globalz1D(qw,qw_global,kstart,kend)
+    call assemble_globalz1D(Re_tauw,Re_tauw_global,kstart,kend)
+    call assemble_globalz1D(theta_vector,theta_global,kstart,kend)
+  endif
 ! Perturbation and RMS values
   if (rms_flag==1) then
     if (nrank==0) write(stdout,*) "o--------------------------------------------------o"
@@ -816,6 +827,7 @@ endif
 !===============================================================================================!
 !                                         OUTPUTS
 !===============================================================================================!
+if (avg_flag==1) then
 ! Store values in simple .txt file
   if (nrank==0) then
     open(18,file = 'postproc/wall_prop.txt')
@@ -867,6 +879,7 @@ endif
     enddo
     close(18)
   endif
+endif
 
 ! Quadrant analysis (wall-normal direction)
   if (rms_flag==1) then
@@ -895,7 +908,7 @@ endif
   endif
 
 ! 2-D vorticity
-  if (avg_flag == 'planes_2D') then 
+  if (post_flag == 'planes_2D') then 
     if (nrank == 0) then
       write(stdout,*) "o--------------------------------------------------o"
       write(stdout,*) '2-D vorticity fluctuation equation'
@@ -1023,10 +1036,10 @@ ii_index=1
       write(stdout,*) "o--------------------------------------------------o"
       write(stdout,*) 'FFT'
       write(stdout,*)
-      nfiles_fft = (iend_fft-istart_fft)/istep_fft+1
-      write(stdout,'(A, I10)') 'number of files for FFT:              ', nfiles_fft-1
     endif 
-    if (avg_flag == 'restart') then
+    if (post_flag == 'restart') then
+      nfiles_fft = (iend_pp-istart_pp)/istep_pp+1
+      if (nrank == 0) write(stdout,'(A, I10)') 'number of files for FFT:              ', nfiles_fft-1
       do ii_index=1,count
         do k=1,xsize(3)
           do i=1,xsize(1)
@@ -1073,7 +1086,9 @@ ii_index=1
           !                           '.','postproc/results/fft/fft_u_span'//cha2//'_'//cha//'.bin', 'dummy')     
         enddo  
       enddo 
-    else if (avg_flag == 'stats') then
+    else if (post_flag == 'stats') then
+      nfiles_fft = (iend_fft-istart_fft)/istep_fft+1
+      if (nrank == 0) write(stdout,'(A, I10)') 'number of files for FFT:              ', nfiles_fft-1
       allocate(tmpPlane (xsize(2),xsize(3),3))
       allocate(arho_fluc_stats(xsize(1),xsize(2),xsize(3)));  arho_fluc_stats = 0.0_mytype;
       allocate(aw_fluc_stats  (xsize(1),xsize(2),xsize(3)));  aw_fluc_stats = 0.0_mytype;
@@ -1156,7 +1171,7 @@ ii_index=1
     deallocate(tem)
     deallocate(mu)
     deallocate(ka)
-  if (avg_flag == 'restart') then
+  if (post_flag == 'restart') then
     deallocate(Cp)
     deallocate(qvort)
     deallocate(dilla2)
