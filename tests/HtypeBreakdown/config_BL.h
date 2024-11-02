@@ -122,7 +122,7 @@
 
     beta0 = 2.0*pi_const/len_y                      ! fundamental spanwise wavenumber
 
-    pert_ampl = (/7.5e-3,1.0e-4/)                   ! amplitude 2-D and 3-D wave
+    pert_ampl = (/7.5e-3,8.5e-5/)                   ! amplitude 2-D and 3-D wave
     pert_F    = (/124.000e-6,62.000e-6/)            ! frequency 2-D and 3-D wave
 
     ! Sayadi et al., JFM 724, 2013
