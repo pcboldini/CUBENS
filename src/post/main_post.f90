@@ -476,7 +476,8 @@ endif
             aCp(i,k) = aCp(i,k) + sum(Cp(i,1:xsize(2),k))/factAvg
             Tauxz_time(count,i,1:xsize(2),k)=mu(i,1:xsize(2),k)*sxz(i,1:xsize(2),k)
             qx_time(count,i,1:xsize(2),k)=ka(i,1:xsize(2),k)*tmp_x_arr(i,1:xsize(2),k)
-          elseif ((fft_flag==1) .OR. (rms_flag==1))  then 
+          endif
+          if ((fft_flag==1) .OR. (rms_flag==1))  then 
             arho_time(count,i,1:xsize(2),k)=rho(i,1:xsize(2),k)
             au_time(count,i,1:xsize(2),k)=u(i,1:xsize(2),k)
             av_time(count,i,1:xsize(2),k)=v(i,1:xsize(2),k)

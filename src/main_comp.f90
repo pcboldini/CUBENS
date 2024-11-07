@@ -374,7 +374,7 @@ program DNS
     endif
 
     ! I/O planes if condition is met 
-    if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
+    if ((mod(istep,intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
       ! set boundary conditions
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
@@ -411,14 +411,14 @@ program DNS
     endif
 
     ! I/O restart files if condition is met 
-    if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
+    if ((mod(istep,intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
     endif
 
     ! I/O statistics files if condition is met 
-    if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
+    if ((mod(istep,intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
       if (istep .eq. saveStatsAfter) then
         if (nrank==0) write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
       else if ((istep .ge. saveStatsAfter) .and. (istep .ne. (istart+nsteps))) then
