@@ -31,10 +31,10 @@ Any contributions and feedback that can improve CUBENS are appreciated. If you w
 ### Reference 
 For more information on CUBENS:
 
-P.C. Boldini, R. Hirai, P. Costa, J.W.R. Peeters, R. Pecnik, "CUBENS: a GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Submitted to Computer Physics Communications, 2024. [link_to_paper](http://example.com)
+P.C. Boldini, R. Hirai, P. Costa, J.W.R. Peeters, R. Pecnik, "CUBENS: a GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Comput. Phys. Commun. (2025) 109507. [link_to_paper](https://www.sciencedirect.com/science/article/pii/S0010465525000104)
 
 ## News
-# **[2024/../..]** CUBENS v1.0 is online!
+# **[2025/01/17]** CUBENS v1.0 is online!
 
 # Usage
 ## Compiling
