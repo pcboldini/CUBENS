@@ -1172,8 +1172,8 @@ ii_index=1
     deallocate(tem)
     deallocate(mu)
     deallocate(ka)
-  if (post_flag == 'restart') then
     deallocate(Cp)
+  if (post_flag == 'avg_flag') then
     deallocate(qvort)
     deallocate(dilla2)
     deallocate(sxx)

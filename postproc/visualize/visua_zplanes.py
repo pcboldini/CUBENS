@@ -3,8 +3,14 @@ import os
 import numpy as np
 from writexmf import writexmf
 
+# Remove all files inside the yplanes folder
+dst_path = os.path.join(os.getcwd(), "zplanes")
+for filename in os.listdir(dst_path):
+    file_path = os.path.join(dst_path, filename)
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+
 current_path=os.getcwd()
-dst_path=os.path.join(current_path,"visualize/zplanes")
 
 time_start=0
 time_end=0
@@ -17,6 +23,17 @@ var=["r","p","t","u","v","w"]
 x_scale=1
 y_scale=1
 z_scale=1
+
+precision = 'double'
+x = np.fromfile('../../output/planes/x.bin', dtype=precision)
+y = np.fromfile('../../output/planes/y.bin', dtype=precision)
+z = np.fromfile('../../output/planes/z.bin', dtype=precision)
+
+imax = np.size(x)
+jmax = np.size(y)
+kmax = np.size(z)
+
+print(imax,jmax,kmax)
 
 ## functions
 
@@ -39,22 +56,15 @@ def getfluc(name,jmax,imax,timestamp):
         data_fluc_reshape=np.reshape(data_fluc, (imax*jmax))
         data_fluc_reshape.tofile("{0}.fluc.{1:07d}.bin".format(name,t)) 
 
-precision = 'double'
-x = np.fromfile('../output/planes/x.bin', dtype=precision)
-y = np.fromfile('../output/planes/y.bin', dtype=precision)
-z = np.fromfile('../output/planes/z.bin', dtype=precision)
-
-imax = np.size(x)
-jmax = np.size(y)
-kmax = np.size(z)
-
-print(imax,jmax,kmax)
-
 timestamps = np.arange(time_start,time_end+1,time_step)
 print(timestamps)
 
+for i in range(0, len (timestamps)):
+    print('timestamp={0:07d}'.format(timestamps[i]))
+    timestamps_print='{0:07d}'.format(timestamps[i])
+
 for j in range(0,len(var)):
-    getfluc(('../output/planes/zpl.' + str(index_z) + '.'+ str(var[j])), jmax, imax, timestamps)
+    getfluc(('../../output/planes/zpl.' + str(index_z) + '.'+ str(var[j])), jmax, imax, timestamps)
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
@@ -63,35 +73,21 @@ for j in range(0,len(var)):
     datanames_var[j] =('zpl.'  + str(index_z) + '.' + str(var[j]))
     datanames_fluc[j] =('zpl.' + str(index_z) + '.' + str(var[j]) + '.fluc')
 
-writexmf("visualize/zplanes/zplanes.xmf", precision,  \
+writexmf("zplanes/zplanes.xmf", precision,  \
         x*x_scale, y*y_scale, [z[0]]*z_scale,\
         timestamp = timestamps, dt = 1.0,\
         dataNames = datanames_var)
 
-writexmf("visualize/zplanes/zplanes.fluc.xmf", precision,  \
+writexmf("zplanes/zplanes.fluc.xmf", precision,  \
         x*x_scale, y*y_scale, [z[0]]*z_scale,\
         timestamp = timestamps, dt = 1.0,\
         dataNames = datanames_fluc)
 
-#xa = 22
-#for i in range(0, 5):
-#    writexmf("visualize_fields/yplane2.{}.xmf".format(i), precision, \
-#             x-i*xa, [y[0]], z*1.0, \
-#             timestamp = timestamps, dt = 1.0, \
-#             dataNames = ['ypl.u.fluc',\
-#                          'ypl.v.fluc',\
-#                          'ypl.w.fluc',\
-#                          'ypl.r.fluc',\
-#                          'ypl.p.fluc'])
-
-for i in range(0, len (timestamps)):
-    print('timestamp={0:07d}'.format(timestamps[i]))
-    timestamps_print='{0:07d}'.format(timestamps[i])
-
-    for j in range(0,len(var)):
-        src_path=os.path.join(current_path,"../output/planes/zpl." + str(index_z) + "." + str(var[j]) + "." + str(timestamps_print) + ".bin")
-        shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + str(timestamps_print) + ".bin")
-        shutil.copy(src_path, dst_path)
+for j in range(0,len(var)):
+    for i in range(0, len (timestamps)):
+        src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i])+ ".bin")
+        shutil.move(src_path, dst_path)
+        src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
+        shutil.move(src_path, dst_path)
 
 print('Planes copied')

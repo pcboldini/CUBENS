@@ -3,8 +3,14 @@ import os
 import numpy as np
 from writexmf import writexmf
 
+# Remove all files inside the yplanes folder
+dst_path = os.path.join(os.getcwd(), "xplanes")
+for filename in os.listdir(dst_path):
+    file_path = os.path.join(dst_path, filename)
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+
 current_path=os.getcwd()
-dst_path=os.path.join(current_path,"xplanes")
 
 time_start=5
 time_end=10
@@ -142,13 +148,13 @@ for j in range(0,len(var)):
     for i in range(0, len (timestamps)):
         if slice_flag=='on':
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.copy(src_path, dst_path)
+            shutil.move(src_path, dst_path)
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.copy(src_path, dst_path)  
+            shutil.move(src_path, dst_path)  
         else:
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.copy(src_path, dst_path)
+            shutil.move(src_path, dst_path)
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + ".fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.copy(src_path, dst_path)     
+            shutil.move(src_path, dst_path)     
 
 print('Planes copied')
