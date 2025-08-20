@@ -12,7 +12,7 @@
 !   adiab_std,  isoth_std  : standard implementation of wall BC
 !   adiab_nrbc, isoth_nrbc : non-reflecting implementation of wall BC
 
-    BC_bot = "adiab_nrbc"                           ! see above
+    BC_bot = "isoth_nrbc"                           ! see above
  
 !   freestream BCs:
     BC_top = "free_nrbc"                            ! options: free_nrbc
@@ -159,7 +159,7 @@
     index_rms_xpl = (/1/)                           ! index x-plane for RMS calculation              
     index_rms_zpl = (/446/)                         ! index z-plane for RMS calculation  
 
-    fft_flag = 0                                    ! options: 1 on, 0 off 
+    fft_flag = 1                                    ! options: 1 on, 0 off 
     index_fft_span = (/0,1,2/)                      ! spanwise modes
 
     ! in use when avg_flag = 'stats'; else istart_pp,iend_pp,istep_pp are used

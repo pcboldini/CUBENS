@@ -8,7 +8,9 @@
 
 program DNS_POST
   use decomp_2d
+#ifdef FFT_ENABLED
   use decomp_2d_fft
+#endif
   use decomp_2d_io
   use decomp_2d_constants
   use factor
@@ -78,11 +80,13 @@ program DNS_POST
   real(mytype), allocatable, dimension(:,:,:) :: aQ4
   integer, allocatable, dimension(:,:,:) :: countQ4
   real(mytype) :: u_flu, w_flu
+#ifdef FFT_ENABLED
   ! FFT properties
   real(mytype), allocatable, dimension(:,:,:) :: arho_fluc_stats, aw_fluc_stats, au_fluc_stats
   real(mytype), allocatable, dimension(:,:,:,:) :: aw_fluc_FFT, aP_fluc_FFT, arw_fluc_FFT
   complex(mytype), allocatable, dimension(:,:,:) :: spec_rho, spec_w, spec_u, spec_rw, spec_p 
   complex(mytype), allocatable, dimension(:,:,:) :: tmp_complex
+#endif
   ! Wall properties
   real(mytype), allocatable, dimension(:) :: tauw, qw, rhow, muw, kaw, Tw, theta_vector, Re_tauw
   real(mytype), allocatable, dimension(:) :: Tw_global, rhow_global, muw_global, kaw_global, tauw_global, qw_global, &
@@ -127,8 +131,11 @@ end interface
 ! p_row_pp, p_col_pp needs to be equal in config.h and when launching ./post
   call decomp_2d_init(imax,jmax,kmax,p_row_pp,p_col_pp)
   call comm_init(nrank,p_row_pp,p_col_pp,DECOMP_2D_COMM_CART_X,xsize,imax,jmax,kmax)
+#ifdef FFT_ENABLED
+  ! FFT properties
   call decomp_2d_fft_init(PHYSICAL_IN_X)
   call decomp_2d_fft_get_size(fft_start,fft_end,fft_size)
+#endif
   call get_decomp_info(part1)
   call get_decomp_info(partinterp)
   call decomp_info_init(imax,jmax/2+1,kmax,partfy)
@@ -195,6 +202,9 @@ endif
       allocate(tTauxz_w(xsize(2),xsize(3)));     tTauxz_w=0.0_mytype;
       allocate(tqx_w(xsize(2),xsize(3)));        tqx_w=0.0_mytype;
       allocate(qvort(xsize(1),xsize(2),xsize(3))); qvort = 0.0_mytype;
+      allocate(vortx(xsize(1),xsize(2),xsize(3))); vortx = 0.0_mytype;
+      allocate(vorty(xsize(1),xsize(2),xsize(3))); vorty = 0.0_mytype;
+      allocate(vortz(xsize(1),xsize(2),xsize(3))); vortz = 0.0_mytype;
       allocate(dilla2(xsize(1),xsize(2),xsize(3)))
       allocate(sxx(xsize(1),xsize(2),xsize(3)))
       allocate(sxy(xsize(1),xsize(2),xsize(3)))
@@ -267,20 +277,22 @@ endif
     allocate(    aCp_time( nfiles,xsize(1),xsize(2),xsize(3)));        aCp_time = 0.0_mytype;
     allocate(    avorty_time( nfiles,xsize(1),xsize(2),xsize(3)));        avorty_time = 0.0_mytype;
     allocate(    arw_time( nfiles,xsize(1),xsize(2),xsize(3)));        arw_time = 0.0_mytype;
-    allocate(    aw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aw_fluc_FFT = 0.0_mytype;
-    allocate(    arw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));        arw_fluc_FFT = 0.0_mytype;
-    allocate(    aP_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aP_fluc_FFT = 0.0_mytype;
   endif
+#ifdef FFT_ENABLED
 ! for FFT properties
   if (fft_flag==1)  then 
     allocate( tmp_complex (xsize(1),xsize(2),xsize(3)))
     allocate( inputfft(1:partfy%xsz(1),1:partfy%xsz(2),1:partfy%xsz(3))   )
+    allocate(    aw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aw_fluc_FFT = 0.0_mytype;
+    allocate(    arw_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));        arw_fluc_FFT = 0.0_mytype;
+    allocate(    aP_fluc_FFT(nfiles,xsize(1),xsize(2),xsize(3)));         aP_fluc_FFT = 0.0_mytype;
     allocate( spec_rho(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
     allocate( spec_w(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
     allocate( spec_u(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
     allocate( spec_rw(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   )
     allocate( spec_p(1:partfy%ysz(1), 1:partfy%ysz(2), 1:partfy%ysz(3))   ) 
   endif
+#endif
 ! Print the initial simulation parameters
   call print_init_params()
 ! initialize EoS 
@@ -375,6 +387,7 @@ if (rms_flag==1) then
     write(stdout,'(A, I10)') 'index_rms_zpl:                        ', index_rms_zpl
   endif
 endif
+#ifdef FFT_ENABLED
 ! initialize FFT
   if (fft_flag==1)  then 
     if (nrank==0) then
@@ -389,6 +402,7 @@ endif
     index_fft_span=1
     size_spany=1
   endif
+#endif
   if (nrank==0) write(stdout, *) "o--------------------------------------------------o"
 
 
@@ -418,11 +432,10 @@ endif
       if (avg_flag==1)  then
         if (nrank==0) write(stdout,*) 'calculating Q-criterion'
         ! Q-criterion
-        call calcQ(qvort,u,v,w,part1) 
+        call calcQ(qvort,vortx,vorty,vortz,u,v,w,part1) 
         call decomp_2d_write_one(1,qvort, 'postproc/results/vort/qvort.'//cha//'.bin')
-        !if (nrank==0) write(*,*) 'calculating vorticity' 
-        !call calcVort(vortx,vorty,vortz,strxz,u,v,w) ! vorticity
-        !call decomp_2d_write_one(1,vortz,'postproc/results/vortz.'//cha//'.bin')
+        if (nrank==0) write(*,*) 'calculating vorticity' 
+        call decomp_2d_write_one(1,vorty,'postproc/results/vort/vorty.'//cha//'.bin')
         if (nrank==0) write(stdout,*) 'calculate wall-normal gradients' 
         ! normalised gradient
         if (yi_plane(1).gt.0)  then
@@ -540,8 +553,8 @@ endif
     ! 2-D
     do k=1,xsize(3)
       do j=1,xsize(2)
-        tTauxz_w(j,k) = sum(Tauxz_time(1:count,1,j,k))/(nfiles-1)
-        tqx_w(j,k) = sum(qx_time(1:count,1,j,k))/(nfiles-1)
+        tTauxz_w(j,k) = tTauxz_w(j,k) + sum(Tauxz_time(1:count,1,j,k))/(nfiles-1)
+        tqx_w(j,k) = tqx_w(j,k) + sum(qx_time(1:count,1,j,k))/(nfiles-1)
       enddo
     enddo
     tmpPlane(1,:,:) = tTauxz_w;  call decomp_2d_write_plane(1,tmpPlane,1,1,'.','postproc/results/tTauxz_w.bin','dummy')
@@ -915,122 +928,107 @@ endif
       write(stdout,*) '2-D vorticity fluctuation equation'
       write(stdout,*)
     endif
+
     allocate(tmpPlane (xsize(1),xsize(2),xsize(3))) 
-    do ii_index=1,count
-      do k=1,xsize(3)
-          do i=1,xsize(1)
-            !arho_fluc(ii_index,i,k)   = arho_time(ii_index,i,1,k)-arho(i,k)
-            !aka_fluc(ii_index,i,k)    = aka_time(ii_index,i,1,k) -aka(i,k)
-            !amu_fluc(ii_index,i,k)    = amu_time(ii_index,i,1,k) -amu(i,k)
-            au_fluc(ii_index,i,k)     = au_time(ii_index,i,1,k) -au(1,i,k)
-            !av_fluc(ii_index,i,k)     = av_time(ii_index,i,1,k) -au(2,i,k)
-            !aw_fluc(ii_index,i,k)     = aw_time(ii_index,i,1,k) -au(3,i,k)
-            !aT_fluc(ii_index,i,k)     = aT_time(ii_index,i,1,k) -aT(i,k)
-            aP_fluc(ii_index,i,k)     = aP_time(ii_index,i,1,k) -ap(i,k)    
-            avorty_fluc(ii_index,i,k) = avorty_time(ii_index,i,1,k)-avorty(i,k)
-          enddo
-      enddo
-    enddo
-    ! call haloUpdateMult_CPU((/.true.,.false.,.true./), xsize, arho_fluc(1,:,:,:)) 
-    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, aw_fluc(1,:,:,:)) 
-    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, au_fluc(1,:,:,:))
-    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, aP_fluc(1,:,:,:))  
-    ! call haloUpdateMult_CPU((/.false.,.false.,.true./), xsize, avorty_fluc(1,:,:,:))  
-    ! Write out 2D-planes of fluctuating quantities (written in /postproc/results/planes2d/)
-    ! tmpPlane(:,1,:) = arho_fluc(1,:,1,:);    call decomp_2d_write_plane(1,tmpPlane,2,1,'.',&
-    !                                                                  'postproc/results/planes2d/rho_fluc_2D.bin','dummy')
-    ! tmpPlane(:,1,:) = aw_fluc(1,:,1,:);      call decomp_2d_write_plane(1,tmpPlane,2,1,'.',&
-    !                                                                  'postproc/results/planes2d/w_fluc_2D.bin','dummy')
     ! Derivatives
-count_deriv = 8
+count_deriv = 11
 allocate(ddx_temp(nfiles,xsize(1),xsize(3),count_deriv))
 allocate(ddz_temp(nfiles,xsize(1),xsize(3),count_deriv))
 ddx_temp  = 0.0_mytype
 ddz_temp  = 0.0_mytype
 
+    !Calc gradient quantities===========================================================
 ii_index=1
-   do k=1+nStencilVisc,xsize(3)-nStencilVisc
-      do i=1+nStencilVisc,xsize(1)-nStencilVisc
-         do c = 1, nStencilVisc
-            ddx_temp(ii_index,i,k,1) = ddx_temp(ii_index,i,k,1) &
-                 + visc_ddx(c)*( arho(i+c,k)               -  arho(i-c,k)            )*xp(i)   !r_mean
-            ddx_temp(ii_index,i,k,2) = ddx_temp(ii_index,i,k,2) &
-                 + visc_ddx(c)*( au(3,i+c,k)               -  au(3,i-c,k)            )*xp(i)   !w_mean
-            !ddx_temp(ii_index,i,k,3) = ddx_temp(ii_index,i,k,3) &
-            !     + visc_ddx(c)*( aw_fluc(ii_index,i+c,k)   -  aw_fluc(ii_index,i-c,k))*xp(i)   !w_fluc
-            !ddx_temp(ii_index,i,k,4) = ddx_temp(ii_index,i,k,4) &
-            !     + visc_ddx(c)*( au_fluc(ii_index,i+c,k)   -  au_fluc(ii_index,i-c,k))*xp(i)   !u_fluc
-            !ddx_temp(ii_index,i,k,5) = ddx_temp(ii_index,i,k,5) &
-            !     + visc_ddx(c)*( arho_fluc(ii_index,i+c,k) -  arho_fluc(ii_index,i-c,k))*xp(i) !r_fluc
-            !ddx_temp(ii_index,i,k,6) = ddx_temp(ii_index,i,k,6) &
-            !     + visc_ddx(c)*( aP_fluc(ii_index,i+c,k)   -  aP_fluc(ii_index,i-c,k))*xp(i)   !p_fluc
-            !ddx_temp(ii_index,i,k,7) = ddx_temp(ii_index,i,k,7) &
-            !     + visc_ddx(c)*( avorty_fluc(ii_index,i+c,k) -  avorty_fluc(ii_index,i-c,k))*xp(i) !omy_fluc
-            !ddx_temp(ii_index,i,k,9) = ddx_temp(ii_index,i,k,9) &
-            !     + visc_ddx(c)*( au(1,i+c,k)               -  au(1,i-c,k)            )*xp(i)   !u_mean
-            !ddx_temp(ii_index,i,k,11)= ddx_temp(ii_index,i,k,11)&
-            !     + visc_ddx(c)*( ap(i+c,k)                 -  ap(i-c,k)              )*xp(i)   !p_mean
+  do k=1+nStencilVisc,xsize(3)-nStencilVisc
+    do i=1+nStencilVisc,xsize(1)-nStencilVisc
+      do c = 1, nStencilVisc
+        ddx_temp(ii_index,i,k,1) = ddx_temp(ii_index,i,k,1) &
+                                 + visc_ddx(c)*( arho(i+c,k)               -  arho(i-c,k)            )*xp(i)   !r_mean
+      enddo     
+    enddo
+  enddo
+tmpPlane(:,1,:) = ddx_temp(1,:,:,1) !ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
+call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_baroc.bin','dummy')
 
-            !ddz_temp(ii_index,i,k,1) = ddz_temp(ii_index,i,k,1) &
-            !     + visc_ddz(c)*( arho(i,k+c)               -  arho(i,k-c)            )*zp(k)   !r_mean
-            !ddz_temp(ii_index,i,k,2) = ddz_temp(ii_index,i,k,2) &
-            !     + visc_ddz(c)*( au(3,i,k+c)               -  au(3,i,k-c)            )*zp(k)   !w_mean
-            !ddz_temp(ii_index,i,k,3) = ddz_temp(ii_index,i,k,3) &
-            !     + visc_ddz(c)*( aw_fluc(ii_index,i,k+c)   -  aw_fluc(ii_index,i,k-c))*zp(k)   !w_fluc
-!            ddz_temp(ii_index,i,k,4) = ddz_temp(ii_index,i,k,4) &
-!                 + visc_ddz(c)*( au_fluc(ii_index,i,k+c)   -  au_fluc(ii_index,i,k-c))*zp(k)   !u_fluc
-!            ddz_temp(ii_index,i,k,5) = ddz_temp(ii_index,i,k,5) &
-!                 + visc_ddz(c)*( arho_fluc(ii_index,i,k+c) -  arho_fluc(ii_index,i,k-c))*zp(k) !r_fluc
-            ddz_temp(ii_index,i,k,6) = ddz_temp(ii_index,i,k,6) &
-                 + visc_ddz(c)*( aP_fluc(ii_index,i,k+c)   -  aP_fluc(ii_index,i,k-c))*zp(k)   !p_fluc
-!            ddz_temp(ii_index,i,k,7) = ddz_temp(ii_index,i,k,7) &
-!                 + visc_ddz(c)*( avorty_fluc(ii_index,i,k+c) -  avorty_fluc(ii_index,i,k-c))*zp(k) !omy_fluc
-!            ddz_temp(ii_index,i,k,9) = ddz_temp(ii_index,i,k,9) &
-!                 + visc_ddz(c)*( au(1,i,k+c)               -  au(1,i,k-c)            )*zp(k)   !u_mean
-!            ddz_temp(ii_index,i,k,11)= ddz_temp(ii_index,i,k,11)&
-!                 + visc_ddz(c)*( ap(i,k+c)                 -  ap(i,k-c)              )*zp(k)   !p_mean
 
-         enddo     
-      enddo
-   enddo
-    do k=1+nStencilVisc,xsize(3)-nStencilVisc
-        do i=1+nStencilVisc,xsize(1)-nStencilVisc
-           do c = 1, nStencilVisc
-              ddx_temp(ii_index,i,k,8) = ddx_temp(ii_index,i,k,8) &
-                   + visc_ddx(c)*( ddx_temp(ii_index,i+c,k,2) -  ddx_temp(ii_index,i-c,k,2))*xp(i) !w_mean_x
-              !ddx_temp(ii_index,i,k,10)= ddx_temp(ii_index,i,k,10)&
-              !     + visc_ddx(c)*( ddz_temp(ii_index,i+c,k,9) -  ddz_temp(ii_index,i-c,k,9))*xp(i) !u_mean_z
+!             ddx_temp(ii_index,i,k,1) = ddx_temp(ii_index,i,k,1) &
+!                  + visc_ddx(c)*( arho(i+c,k)               -  arho(i-c,k)            )*xp(i)   !r_mean
+! !            ddx_temp(ii_index,i,k,2) = ddx_temp(ii_index,i,k,2) &
+! !                 + visc_ddx(c)*( au(3,i+c,k)               -  au(3,i-c,k)            )*xp(i)   !w_mean
+!             !ddx_temp(ii_index,i,k,3) = ddx_temp(ii_index,i,k,3) &
+!             !     + visc_ddx(c)*( aw_fluc(ii_index,i+c,k)   -  aw_fluc(ii_index,i-c,k))*xp(i)   !w_fluc
+!             !ddx_temp(ii_index,i,k,4) = ddx_temp(ii_index,i,k,4) &
+!             !     + visc_ddx(c)*( au_fluc(ii_index,i+c,k)   -  au_fluc(ii_index,i-c,k))*xp(i)   !u_fluc
+!             !ddx_temp(ii_index,i,k,5) = ddx_temp(ii_index,i,k,5) &
+!             !     + visc_ddx(c)*( arho_fluc(ii_index,i+c,k) -  arho_fluc(ii_index,i-c,k))*xp(i) !r_fluc
+!             !ddx_temp(ii_index,i,k,6) = ddx_temp(ii_index,i,k,6) &
+!             !     + visc_ddx(c)*( aP_fluc(ii_index,i+c,k)   -  aP_fluc(ii_index,i-c,k))*xp(i)   !p_fluc
+!             !ddx_temp(ii_index,i,k,7) = ddx_temp(ii_index,i,k,7) &
+!             !     + visc_ddx(c)*( avorty_fluc(ii_index,i+c,k) -  avorty_fluc(ii_index,i-c,k))*xp(i) !omy_fluc
+!             !ddx_temp(ii_index,i,k,9) = ddx_temp(ii_index,i,k,9) &
+!             !     + visc_ddx(c)*( au(1,i+c,k)               -  au(1,i-c,k)            )*xp(i)   !u_mean
+!             ddx_temp(ii_index,i,k,11)= ddx_temp(ii_index,i,k,11)&
+!                  + visc_ddx(c)*( ap(i+c,k)                 -  ap(i-c,k)              )*xp(i)   !p_mean
 
-              !ddz_temp(ii_index,i,k,8) = ddz_temp(ii_index,i,k,8) &
-              !    + visc_ddz(c)*( ddx_temp(ii_index,i,k+c,2) -  ddx_temp(ii_index,i,k-c,2))*zp(k) !w_mean_x
-              !ddz_temp(ii_index,i,k,10)= ddz_temp(ii_index,i,k,10)&
-              !     + visc_ddz(c)*( ddz_temp(ii_index,i,k+c,9) -  ddz_temp(ii_index,i,k-c,9))*zp(k) !u_mean_z
-           enddo
-        enddo
-     enddo
-    ! Spanwise-vorticity perturbation balance
-    ! Instantaneous: write out 2D-planes of fluctuating derivative quantities (written in /postproc/results/planes2d/)
-    !ii_index = 1
-    ! LHS
-    tmpPlane(:,1,:) = avorty_fluc(ii_index,:,:)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
-    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_LHS.bin','dummy')
-    ! Shear
-    tmpPlane(:,1,:) = au_fluc(ii_index,:,:)*ddx_temp(ii_index,:,:,8)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
-    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
-    ! Shear
-    ! tmpPlane(:,1,:) = au_fluc_2D(ii_index,:,:)*ddx_temp(ii_index,:,:,8)
-    ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
-    ! ! Compressible stretching
-    ! tmpPlane(:,1,:) = ddx_temp(ii_index,:,:,2)*( ddz_temp(ii_index,:,:,3) + ddx_temp(ii_index,:,:,4) )
-    ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_stretch.bin','dummy')
-    ! ! Baroclinic
-    tmpPlane(:,1,:) = -ddx_temp(ii_index,:,:,1)*ddz_temp(ii_index,:,:,6)/arho(:,:)/arho(:,:)
-    call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_baroc.bin','dummy')
-    deallocate(tmpPlane)
+!             ddz_temp(ii_index,i,k,1) = ddz_temp(ii_index,i,k,1) &
+!                  + visc_ddz(c)*( arho(i,k+c)               -  arho(i,k-c)            )*zp(k)   !r_mean
+!             !ddz_temp(ii_index,i,k,2) = ddz_temp(ii_index,i,k,2) &
+!             !     + visc_ddz(c)*( au(3,i,k+c)               -  au(3,i,k-c)            )*zp(k)   !w_mean
+!             !ddz_temp(ii_index,i,k,3) = ddz_temp(ii_index,i,k,3) &
+!             !     + visc_ddz(c)*( aw_fluc(ii_index,i,k+c)   -  aw_fluc(ii_index,i,k-c))*zp(k)   !w_fluc
+! !            ddz_temp(ii_index,i,k,4) = ddz_temp(ii_index,i,k,4) &
+! !                 + visc_ddz(c)*( au_fluc(ii_index,i,k+c)   -  au_fluc(ii_index,i,k-c))*zp(k)   !u_fluc
+! !            ddz_temp(ii_index,i,k,5) = ddz_temp(ii_index,i,k,5) &
+! !                 + visc_ddz(c)*( arho_fluc(ii_index,i,k+c) -  arho_fluc(ii_index,i,k-c))*zp(k) !r_fluc
+! !            ddz_temp(ii_index,i,k,6) = ddz_temp(ii_index,i,k,6) &
+! !                 + visc_ddz(c)*( aP_fluc(ii_index,i,k+c)   -  aP_fluc(ii_index,i,k-c))*zp(k)   !p_fluc
+! !            ddz_temp(ii_index,i,k,7) = ddz_temp(ii_index,i,k,7) &
+! !                 + visc_ddz(c)*( avorty_fluc(ii_index,i,k+c) -  avorty_fluc(ii_index,i,k-c))*zp(k) !omy_fluc
+! !            ddz_temp(ii_index,i,k,9) = ddz_temp(ii_index,i,k,9) &
+! !                 + visc_ddz(c)*( au(1,i,k+c)               -  au(1,i,k-c)            )*zp(k)   !u_mean
+!             ddz_temp(ii_index,i,k,11)= ddz_temp(ii_index,i,k,11)&
+!                  + visc_ddz(c)*( ap(i,k+c)                 -  ap(i,k-c)              )*zp(k)   !p_mean
+
+
+!     do k=1+nStencilVisc,xsize(3)-nStencilVisc
+!         do i=1+nStencilVisc,xsize(1)-nStencilVisc
+!            do c = 1, nStencilVisc
+!               ddx_temp(ii_index,i,k,8) = ddx_temp(ii_index,i,k,8) &
+!                    + visc_ddx(c)*( ddx_temp(ii_index,i+c,k,2) -  ddx_temp(ii_index,i-c,k,2))*xp(i) !w_mean_x
+!               !ddx_temp(ii_index,i,k,10)= ddx_temp(ii_index,i,k,10)&
+!               !     + visc_ddx(c)*( ddz_temp(ii_index,i+c,k,9) -  ddz_temp(ii_index,i-c,k,9))*xp(i) !u_mean_z
+
+!               !ddz_temp(ii_index,i,k,8) = ddz_temp(ii_index,i,k,8) &
+!               !    + visc_ddz(c)*( ddx_temp(ii_index,i,k+c,2) -  ddx_temp(ii_index,i,k-c,2))*zp(k) !w_mean_x
+!               !ddz_temp(ii_index,i,k,10)= ddz_temp(ii_index,i,k,10)&
+!               !     + visc_ddz(c)*( ddz_temp(ii_index,i,k+c,9) -  ddz_temp(ii_index,i,k-c,9))*zp(k) !u_mean_z
+!            enddo
+!         enddo
+!      enddo
+!     ! Spanwise-vorticity perturbation balance
+!     ! Instantaneous: write out 2D-planes of fluctuating derivative quantities (written in /postproc/results/planes2d/)
+!     ii_index = 1
+!     ! LHS
+!     !tmpPlane(:,1,:) = avorty_fluc(ii_index,:,:)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
+!     !call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_LHS.bin','dummy')
+!     ! Shear
+!     !tmpPlane(:,1,:) = au_fluc(ii_index,:,:)*ddx_temp(ii_index,:,:,8)!ddx_temp(ii_index,:,:,12)+au(3,:,:)*ddz_temp(ii_index,:,:,7)
+!     !call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
+!     ! Shear
+!     ! tmpPlane(:,1,:) = au_fluc_2D(ii_index,:,:)*ddx_temp(ii_index,:,:,8)
+!     ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_shear.bin','dummy')
+!     ! ! Compressible stretching
+!     ! tmpPlane(:,1,:) = ddx_temp(ii_index,:,:,2)*( ddz_temp(ii_index,:,:,3) + ddx_temp(ii_index,:,:,4) )
+!     ! call decomp_2d_write_plane(1,tmpPlane,2,1,'.','postproc/results/planes2d/vort_stretch.bin','dummy')
+!     ! Baroclinic
+!      tmpPlane(:,1,:) = ( ddz_temp(ii_index,:,:,1)*ddx_temp(ii_index,:,:,11)/arho(:,:)/arho(:,:) - &
+!                        ddx_temp(ii_index,:,:,1)*ddz_temp(ii_index,:,:,11)/arho(:,:)/arho(:,:) )
+!     deallocate(tmpPlane)
     deallocate(ddx_temp)
-    deallocate(ddz_temp)
+!     deallocate(ddz_temp)
   endif
 
+#if defined(FFT_ENABLED)
 ! Spanwise and time FFT
   if (fft_flag==1)  then 
     if (nrank == 0) then
@@ -1085,7 +1083,7 @@ ii_index=1
           ! tmp_complex = spec_u(1:xsize(1),1:xsize(2),1:xsize(3))
           ! call decomp_2d_write_plane(1,tmp_complex,2,index_fft_span(j)+1, &
           !                           '.','postproc/results/fft/fft_u_span'//cha2//'_'//cha//'.bin', 'dummy')     
-        enddo  
+        enddo 
       enddo 
     else if (post_flag == 'stats') then
       nfiles_fft = (iend_fft-istart_fft)/istep_fft+1
@@ -1154,6 +1152,7 @@ ii_index=1
     if (nrank==0) write(stdout,*)
     if (nrank==0) write(stdout,*) 'FFT done!'
   endif
+#endif
   if (nrank == 0) write(stdout,*) "o--------------------------------------------------o"
   if (nrank == 0) write(stdout,*) 'POST done!'
 ! print total time
@@ -1194,7 +1193,9 @@ ii_index=1
     deallocate(mu_bl)
     deallocate(ka_bl)
   endif
+#ifdef FFT_ENABLED
   call decomp_2d_fft_finalize
+#endif
   call decomp_2d_finalize
   call mpi_finalize(ierr)
 end program

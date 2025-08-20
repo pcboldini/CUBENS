@@ -86,8 +86,8 @@ writexmf("zplanes/zplanes.fluc.xmf", precision,  \
 for j in range(0,len(var)):
     for i in range(0, len (timestamps)):
         src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i])+ ".bin")
-        shutil.move(src_path, dst_path)
+        shutil.copy(src_path, dst_path)
         src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
-        shutil.move(src_path, dst_path)
+        shutil.copy(src_path, dst_path)
 
 print('Planes copied')

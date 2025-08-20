@@ -42,9 +42,9 @@ program DNS
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
 #if defined(BL) || defined(TGV)
   ! for boundary layer and TGV
-  real(mytype), allocatable, dimension(:,:,:) :: qave
+  real(mytype), allocatable, dimension(:,:,:) :: qave,qtime
 #elif defined(CHA)
-  real(mytype), allocatable, dimension(:,:) :: qave
+  real(mytype), allocatable, dimension(:,:) :: qave,qtime
 #endif
   TYPE (DECOMP_INFO) :: part
   CHARACTER(100) :: commLinePar1
@@ -198,12 +198,14 @@ program DNS
   allocate(vorty(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(vortz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(strxz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-  ! save 34 statistics
+  ! save 51 statistics
 #if defined(BL) || defined(TGV)
   ! for boundary layer and TGV
-  allocate(qave(xsize(1), xsize(3), 34))
+  allocate(qave(xsize(1), xsize(3), 51))
+  allocate(qtime(xsize(2), xsize(3), 1))
 #elif defined(CHA)
-  allocate(qave(xsize(1), 34))
+  allocate(qave(xsize(1), 51))
+  allocate(qtime(1, 1))
 #endif
   rho      = 1.0e30_mytype
   u        = 1.0e30_mytype
@@ -219,10 +221,11 @@ program DNS
   vortz    = 1.0e30_mytype
   strxz    = 1.0e30_mytype 
   qave     = 0.0_mytype
+  qtime    = 0.0_mytype
   factAvg  = 0.0_mytype
   countAvg = 0
 ! copy common arrays to device
-!$acc enter data copyin(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz,qave)
+!$acc enter data copyin(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz,qave,qtime)
 
 ! calculate sponge
 #if defined(BL)
@@ -374,7 +377,7 @@ program DNS
     endif
 
     ! I/O planes if condition is met 
-    if ((mod((istep-istart),intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
+    if ((mod(istep-istart,intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
       ! set boundary conditions
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
@@ -411,14 +414,14 @@ program DNS
     endif
 
     ! I/O restart files if condition is met 
-    if ((mod((istep-istart),intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
+    if ((mod(istep-istart,intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
     endif
 
     ! I/O statistics files if condition is met 
-    if ((mod((istep-istart),intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
+    if ((mod(istep-istart,intvSaveStats) .eq. 0).and.(istep .ge. saveStatsAfter).and.(saveStatsAfter .ge. 0)) then
       if (istep .eq. saveStatsAfter) then
         if (nrank==0) write(stdout,'(A, I10)') 'Begin of averaging at initial step:   ', istep
       else if ((istep .ge. saveStatsAfter) .and. (istep .ne. (istart+nsteps))) then
@@ -427,10 +430,10 @@ program DNS
         if (nrank==0) write(stdout,'(A, I10)') 'final averaging at step:              ', istep
       endif
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
-      call calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
+      call calcStats(qave,qtime,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
       if (istep .eq. (istart+nsteps)) then
-        !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,qave)
-        call saveStats(part,istep,dt,qave,factAvg,countAvg)
+        !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,qave,qtime)
+        call saveStats(part,istep,dt,qave,qtime,factAvg,countAvg)
       endif
     endif
 
@@ -471,6 +474,7 @@ program DNS
   deallocate(vortz)
   deallocate(strxz)
   deallocate(qave)
+  deallocate(qtime)
   if (perBC(3) .eqv. .false.) then
     deallocate(rho_bl)
     deallocate(u_bl)

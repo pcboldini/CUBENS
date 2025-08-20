@@ -122,24 +122,24 @@ ly = y[-1]+y[1]-y[0]
 if interpol==1:
     for i in range(1, 5):
         writexmf("xplanes/xplanes_aI.{}.xmf".format(i), precision,  \
-                [x[25]]*x_scale, (y+(i-1)*ly)*y_scale, z*z_scale,\
+                [x[index_x]]*x_scale, (y+(i-1)*ly)*y_scale, z*z_scale,\
                 timestamp = timestamps, dt = 1.0,\
                 dataNames = datanames_var)
 else:
     for i in range(1, 5):
         writexmf("xplanes/xplanes.{}.xmf".format(i), precision,  \
-                [x[25]]*x_scale, (y+(i-1)*ly)*y_scale, z*z_scale,\
+                [x[index_x]]*x_scale, (y+(i-1)*ly)*y_scale, z*z_scale,\
                 timestamp = timestamps, dt = 1.0,\
                 dataNames = datanames_var)
 
 if interpol==1:
     writexmf("xplanes/xplanes_aI.fluc.xmf", precision,  \
-            [x[25]]*x_scale, y*y_scale, z*z_scale,\
+            [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
 else:
     writexmf("xplanes/xplanes.fluc.xmf", precision,  \
-            [x[25]]*x_scale, y*y_scale, z*z_scale,\
+            [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
 

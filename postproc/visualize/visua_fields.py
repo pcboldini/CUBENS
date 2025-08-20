@@ -16,9 +16,9 @@ time_start=5
 time_end=10
 time_step=1
 
-var1_flag="off"
-var1=["w"] # r,u,v,w,e
-var2="qvort"
+var1_flag="on"
+var1=["rw"] # r,u,v,w,e,rw
+var2="vorty"
 
 
 x_scale=1
@@ -42,6 +42,11 @@ inew2=200
 knew1=0
 knew2=500
 
+if slice_flag == 'on':
+    x_slice = x[inew1:inew2]
+    y_slice = y
+    z_slice = z[knew1:knew2]
+
 # Functions
 
 def getfields(name,var,index_var,imax,jmax,kmax,timestamp):
@@ -55,8 +60,10 @@ def getfields(name,var,index_var,imax,jmax,kmax,timestamp):
         data_v=data[2*ntot:3*ntot]
         data_w=data[3*ntot:4*ntot]
         data_e=data[4*ntot:5*ntot]
+        data_rw=data_r*data_w
+        data_combined = np.hstack([data_r, data_u, data_v, data_w, data_e, data_rw]) 
         for tt in range(0,len(index_var)):
-            reshape=np.reshape(data[index_var[tt]*ntot:(index_var[tt]+1)*ntot], (kmax, jmax, imax))
+            reshape=np.reshape(data_combined[index_var[tt]*ntot:(index_var[tt]+1)*ntot], (kmax, jmax, imax))
             if slice_flag=='on':
                 data_slice= reshape[knew1:knew2, :, inew1:inew2]
                 data_slice_reshape = np.reshape(data_slice, (kmaxnew*jmax*imaxnew))
@@ -79,22 +86,22 @@ for i in range(0, len (timestamps)):
     timestamps_print='{0:07d}'.format(timestamps[i])
 
 if var1_flag=='on':
-    array_var=["r","u","v","w","e"]
+    array_var=["r","u","v","w","e","rw"]
     index_var1 = np.zeros(len(var1),'int')
     for i in range(0,len(array_var)):
         for j in range(0,len(var1)):
     	    if array_var[i] == var1[j]:
-                index_var1[j]=i
+                index_var1[j]=i       
 
     getfields(('../../output/restart/' + 'ruvwe' ), var1, index_var1, imax, jmax, kmax, timestamps)
 
 if slice_flag=='on':
     for i in range(0, len (timestamps)):
-        data=np.fromfile(os.path.join(current_path,"../results/vort/qvort." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+        data=np.fromfile(os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i]) + ".bin"))
         data_reshape=np.reshape(data, (kmax, jmax, imax))
         data_slice= data_reshape[knew1:knew2, :, inew1:inew2]
         data_slice_reshape = np.reshape(data_slice, (kmaxnew*jmax*imaxnew))
-        data_slice_reshape.tofile(os.path.join(current_path,"../results/vort/qvort.slice." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+        data_slice_reshape.tofile(os.path.join(current_path, f"../results/vort/{var2}.slice." + '{0:07d}'.format(timestamps[i]) + ".bin"))
 
 if var1_flag=='on':
     datanames_var= ["" for j in range(len(var1))]
@@ -122,7 +129,7 @@ if slice_flag=='on':
     x=x[inew1:inew2]
     z=z[knew1:knew2]
 
-ly = y[-1]+y[1]-y[0]
+ly = y[-1]-y[0]+y[1]
 
 for i in range(1, 5):
     writexmf("fields/3dvars.{}.xmf".format(i), precision,  \
@@ -142,16 +149,25 @@ if var1_flag=='on':
                 shutil.move(src_path, dst_path)
             os.remove(src_path_2) 
         if slice_flag=='on':
-            src_path=os.path.join(current_path,"../results/vort/qvort.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            src_path=os.path.join(current_path, f"../results/vort/{var2}.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.move(src_path, dst_path)
         else:
-            src_path=os.path.join(current_path,"../results/vort/qvort." + '{0:07d}'.format(timestamps[i])+ ".bin")   
-        shutil.move(src_path, dst_path)
+            src_path=os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i])+ ".bin")   
+            shutil.copy(src_path, dst_path)
+        
 else:
     for i in range(0, len (timestamps)):
         if slice_flag=='on':
-            src_path=os.path.join(current_path,"../results/vort/qvort.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            src_path=os.path.join(current_path, f"../results/vort/{var2}.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.move(src_path, dst_path)
         else:
-            src_path=os.path.join(current_path,"../results/vort/qvort." + '{0:07d}'.format(timestamps[i])+ ".bin")   
-        shutil.move(src_path, dst_path)
+            src_path=os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)
+
+if slice_flag == 'on':
+    x_slice.tofile(os.path.join(dst_path, "x_slice.bin"))
+    y_slice.tofile(os.path.join(dst_path, "y_slice.bin"))
+    z_slice.tofile(os.path.join(dst_path, "z_slice.bin"))   
+        
 
 print('Fields copied')

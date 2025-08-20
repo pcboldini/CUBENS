@@ -18,7 +18,7 @@ contains
 
 
 ! calculate Q-criterion
-  subroutine calcQ(lambda,u,v,w,part)
+  subroutine calcQ(lambda,vortx,vorty,vortz,u,v,w,part)
     use mpi
     use decomp_2d
     use decomp_2d_io
@@ -27,9 +27,9 @@ contains
     character*7 cha
     integer(kind=MPI_OFFSET_KIND) :: filesize, disp
     TYPE(DECOMP_INFO), intent(IN) :: part
-    real(mytype), dimension(:,:,:) :: lambda
+    real(mytype), dimension(:,:,:) :: lambda,vortx,vorty,vortz
     real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:) :: u,v,w
-    real(mytype) :: dux, duy, duz, dvx, dvy, dvz, dwx, dwy, dwz
+    real(mytype) :: dux, duy, duz, dvx, dvy, dvz, dwx, dwy, dwz, xa, za
     real(mytype) :: sxx, sxy, sxz, syy, syz, szz
     real(mytype) ::      oxx, oxy, oxz, oyy, oyz, ozz
 
@@ -45,16 +45,18 @@ contains
           dwx   = 0.0_mytype
           dwy   = 0.0_mytype
           dwz   = 0.0_mytype
+          xa = xp(i)
+          za = zp(k)
           do c = 1, nStencilVisc
-            dux   = dux   + visc_ddx(c)*( u(i+c,j,k) -  u(i-c,j,k))*xp(i)
+            dux   = dux   + visc_ddx(c)*( u(i+c,j,k) -  u(i-c,j,k))*xa
             duy   = duy   + visc_ddy(c)*( u(i,j+c,k) -  u(i,j-c,k))
-            duz   = duz   + visc_ddz(c)*( u(i,j,k+c) -  u(i,j,k-c))*zp(k)
-            dvx   = dvx   + visc_ddx(c)*( v(i+c,j,k) -  v(i-c,j,k))*xp(i)
+            duz   = duz   + visc_ddz(c)*( u(i,j,k+c) -  u(i,j,k-c))*za
+            dvx   = dvx   + visc_ddx(c)*( v(i+c,j,k) -  v(i-c,j,k))*xa
             dvy   = dvy   + visc_ddy(c)*( v(i,j+c,k) -  v(i,j-c,k))
-            dvz   = dvz   + visc_ddz(c)*( v(i,j,k+c) -  v(i,j,k-c))*zp(k)
-            dwx   = dwx   + visc_ddx(c)*( w(i+c,j,k) -  w(i-c,j,k))*xp(i)
+            dvz   = dvz   + visc_ddz(c)*( v(i,j,k+c) -  v(i,j,k-c))*za
+            dwx   = dwx   + visc_ddx(c)*( w(i+c,j,k) -  w(i-c,j,k))*xa
             dwy   = dwy   + visc_ddy(c)*( w(i,j+c,k) -  w(i,j-c,k))
-            dwz   = dwz   + visc_ddz(c)*( w(i,j,k+c) -  w(i,j,k-c))*zp(k)
+            dwz   = dwz   + visc_ddz(c)*( w(i,j,k+c) -  w(i,j,k-c))*za
           enddo
           sxx =  dux
           sxy = (duy + dvx)/2.0_mytype
@@ -68,6 +70,9 @@ contains
           oyy =  0.0_mytype
           oyz = (dvz - dwy)/2.0_mytype
           ozz =  0.0_mytype
+          vortx(i,j,k) = abs(dwy - dvz) ! du/dz - dw/dx -> vorticity wall-normal
+          vorty(i,j,k) = abs(duz - dwx) ! dv/dx - du/dy -> vorticity spanwise
+          vortz(i,j,k) = abs(dvx - duy) ! dw/dy - dv/dz -> vorticity streamwise
           lambda(i,j,k)= 0.5_mytype*(  oxx**2 + oxy**2 + oxz**2 &
                               + oxy**2 + oyy**2 + oyz**2 &
                               + oxz**2 + oyz**2 + ozz**2 & 
@@ -287,48 +292,50 @@ contains
   end subroutine
 #endif
 
+#ifdef FFT_ENABLED
+  ! FFT in spanwise direction
+    subroutine spectray(pen,speca,nfiles,part1,partf,a,b)
+    use decomp_2d
+    use decomp_2d_fft
+    use decomp_2d_io
+    use decomp_2d_constants
+    use mod_param
+    implicit none
+    integer :: nfiles,i,j,k,pen
+    complex(mytype), dimension(:,:,:) :: speca
+    real(mytype), dimension(:,:,:), optional :: a,b 
+    TYPE(DECOMP_INFO), intent(IN) :: part1,partf
+    real(mytype), allocatable, dimension(:,:,:)    :: ayt,byt 
+    complex(mytype), allocatable, dimension(:,:,:) :: aspec, bspec,specrxt,specryt,specrzt
+    allocate(  ayt(1:part1%ysz(1), 1:part1%ysz(2), 1:part1%ysz(3))   )
+    allocate(  byt(1:part1%ysz(1), 1:part1%ysz(2), 1:part1%ysz(3))   )
+    allocate(specrxt(1:partf%xsz(1), 1:partf%xsz(2), 1:partf%xsz(3))   )
+    allocate(specryt(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
+    allocate(specrzt(1:partf%zsz(1), 1:partf%zsz(2), 1:partf%zsz(3))   )
+    allocate( aspec(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
+    allocate( bspec(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
 
-! FFT in spanwsie direction
-  subroutine spectray(pen,speca,nfiles,part1,partf,a,b)
-  use decomp_2d
-  use decomp_2d_fft
-  use decomp_2d_io
-  use decomp_2d_constants
-  use mod_param
-  implicit none
-  integer :: nfiles,i,j,k,pen
-  complex(mytype), dimension(:,:,:) :: speca
-  real(mytype), dimension(:,:,:), optional :: a,b 
-  TYPE(DECOMP_INFO), intent(IN) :: part1,partf
-  real(mytype), allocatable, dimension(:,:,:)    :: ayt,byt 
-  complex(mytype), allocatable, dimension(:,:,:) :: aspec, bspec,specrxt,specryt,specrzt
-  allocate(  ayt(1:part1%ysz(1), 1:part1%ysz(2), 1:part1%ysz(3))   )
-  allocate(  byt(1:part1%ysz(1), 1:part1%ysz(2), 1:part1%ysz(3))   )
-  allocate(specrxt(1:partf%xsz(1), 1:partf%xsz(2), 1:partf%xsz(3))   )
-  allocate(specryt(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
-  allocate(specrzt(1:partf%zsz(1), 1:partf%zsz(2), 1:partf%zsz(3))   )
-  allocate( aspec(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
-  allocate( bspec(1:partf%ysz(1), 1:partf%ysz(2), 1:partf%ysz(3))   )
+    call transpose_x_to_y(a, ayt) 
+    call decomp_2d_fft_1d(ayt,aspec,2)
+     if(present(b)) then 
+         call transpose_x_to_y(b, byt) 
+         call decomp_2d_fft_1d(byt,bspec,2)
+         bspec = conjg(bspec) ! compute complex conjugate of bspec
+         specryt = aspec*bspec
+     else
+         specryt = aspec
+     endif
+    call transpose_y_to_z(specryt,specrzt,partf)
+    call transpose_y_to_x(specryt,specrxt,partf)   !output in the form of z pencil
+    speca = specryt/(nfiles-1)
+    deallocate(ayt)
+    deallocate(byt)
+    deallocate(specrxt)
+    deallocate(specryt)
+    deallocate(specrzt)
+    deallocate( aspec)
+    deallocate( bspec)
+    end subroutine
+#endif
 
-  call transpose_x_to_y(a, ayt) 
-  call decomp_2d_fft_1d(ayt,aspec,2)
-   if(present(b)) then 
-       call transpose_x_to_y(b, byt) 
-       call decomp_2d_fft_1d(byt,bspec,2)
-       bspec = conjg(bspec) ! compute complex conjugate of bspec
-       specryt = aspec*bspec
-   else
-       specryt = aspec
-   endif
-  call transpose_y_to_z(specryt,specrzt,partf)
-  call transpose_y_to_x(specryt,specrxt,partf)   !output in the form of z pencil
-  speca = specryt/(nfiles-1)
-  deallocate(ayt)
-  deallocate(byt)
-  deallocate(specrxt)
-  deallocate(specryt)
-  deallocate(specrzt)
-  deallocate( aspec)
-  deallocate( bspec)
-  end subroutine
 end module

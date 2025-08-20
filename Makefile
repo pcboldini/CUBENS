@@ -7,17 +7,17 @@
 # Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
 ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
-CASE = -DTGV # DBL # DCHA # DTGV
+CASE = -DBL # DBL # DCHA # DTGV
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
 EOS_LAW = -DIG     # DIG # DVdW # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DPowerLaw  # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DSutherland  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers
 DECOMP_OPTIONS= -DDOUBLE_PREC
-# Select FFT type
-FFT = fftw3_f03
+# Select FFT: if defined, FFT enabled
+FFT =  # DFFT_ENABLED
 
 
 ifeq ($(ARCH),gnu)
@@ -55,19 +55,13 @@ else ifdef BENCH
 endif
 
 # Paths to FFTW 3
-ifeq ($(FFT),fftw3_f03)
-  FFTW3_PATH = /opt/homebrew/Cellar/fftw/3.3.10_1   # macOS
- # INC=-I$(FFTW3_PATH)/include
-  INC=-I/opt/homebrew/Cellar/fftw/3.3.10_1/include
- # LIBFFT=-L$(FFTW3_PATH)/lib -lfftw3 -lfftw3f
-  LIBFFT = -L/opt/homebrew/Cellar/fftw/3.3.10_1/lib -lfftw3 -lfftw3f
-else ifeq ($(FFT),generic)
-  INC=
-  LIBFFT=
-else ifeq ($(FFT),none)
-  INC=
-  LIBFFT= 
-endif
+FFTW3_PATH = /opt/homebrew/Cellar/fftw/3.3.10_2   # macOS
+# INC=-I$(FFTW3_PATH)/include
+INC=-I/opt/homebrew/Cellar/fftw/3.3.10_2/include
+# LIBFFT=-L$(FFTW3_PATH)/lib -lfftw3 -lfftw3f
+LIBFFT = -L/opt/homebrew/Cellar/fftw/3.3.10_2/lib -lfftw3 -lfftw3f
+
+FFT_LIBS = fftw3_f03
 
 ####################################### SIMULATE #######################################
 
@@ -145,22 +139,35 @@ echo_message:
 
 ####################################### POSTPROCESSING #######################################
 
-OBJS_post = $(OBJ)factor.o $(OBJ)decomp_2d_constants.o $(OBJ)decomp_2d.o $(OBJ)decomp_2d_fft.o $(OBJ)log.o $(OBJ)fft_log.o $(OBJ)glassman.o $(OBJ)io.o $(OBJ)io_std_units.o \
+FFT_SRC  =
+ifeq ($(strip $(FFT)),-DFFT_ENABLED)
+  FFT_SRC = $(OBJ)decomp_2d_fft.o $(OBJ)fft_log.o
+endif
+
+OBJS_post = $(OBJ)factor.o $(OBJ)decomp_2d_constants.o $(OBJ)decomp_2d.o $(FFT_SRC) $(OBJ)log.o $(OBJ)glassman.o $(OBJ)io.o $(OBJ)io_std_units.o \
 $(OBJ)nvtx.o $(OBJ)timer.o $(OBJ)math.o $(OBJ)param.o $(OBJ)eos_var.o $(OBJ)eos_visc.o $(OBJ)eos.o $(OBJ)comm.o  \
 $(OBJ)grid.o $(OBJ)finitediff.o $(OBJ)auxl.o $(OBJ)init.o $(OBJ)perturbation.o \
 $(OBJ)boundary.o $(OBJ)rhs.o $(OBJ)rk3.o $(OBJ)auxlpro.o $(OBJ)main_post.o
 
 post: $(OBJS_post)
+ifeq ($(strip $(FFT)),-DFFT_ENABLED)
 	$(COMP) $(FLAGS) $(OBJS_post) $(LIB) $(LIBFFT) -o post
+else
+	$(COMP) $(FLAGS) $(OBJS_post) $(LIB) -o post
+endif
 
 $(OBJ)auxlpro.o: $(SRC)post/auxlpro.f90
-	$(COMP) $(EOS_LAW) $(FLAGSC) $(SRC)post/auxlpro.f90 -o $(OBJ)auxlpro.o
+	$(COMP) $(EOS_LAW) $(FFT) $(FLAGSC) $(SRC)post/auxlpro.f90 -o $(OBJ)auxlpro.o
+ifeq ($(strip $(FFT)),-DFFT_ENABLED)
 $(OBJ)fft_log.o: $(SRC)decomp_2d/fft_log.f90
 	$(COMP) $(FLAGSC) $(DECOMP_OPTIONS) $(INC) $(SRC)decomp_2d/fft_log.f90 -o $(OBJ)fft_log.o
-$(OBJ)decomp_2d_fft.o: $(SRC)decomp_2d/fft_$(FFT).f90
-	$(COMP) $(FLAGSC) $(DECOMP_OPTIONS) $(INC) $(SRC)decomp_2d/fft_$(FFT).f90 -o $(OBJ)decomp_2d_fft.o
+$(OBJ)decomp_2d_fft.o: $(SRC)decomp_2d/fft_$(FFT_LIBS).f90
+	$(COMP) $(FLAGSC) $(DECOMP_OPTIONS) $(INC) $(SRC)decomp_2d/fft_$(FFT_LIBS).f90 -o $(OBJ)decomp_2d_fft.o
+endif
 $(OBJ)main_post.o: $(SRC)post/main_post.f90 $(SRC)param.f90
-	$(COMP) $(CASE) $(FLAGSC) $(SRC)post/main_post.f90 -o $(OBJ)main_post.o
+	$(COMP) $(CASE) $(FFT) $(FLAGSC) $(SRC)post/main_post.f90 -o $(OBJ)main_post.o
+
+
 
 ####################################### INTERPOLATION #######################################
 
@@ -183,7 +190,7 @@ clean:
 cleanfull:
 	$(RM) *.i *.txt output/*.txt output/planes/*.* output/stats/*.* output/restart/*.* *.out postproc/results/*.* postproc/results/vort/*.* \
 		postproc/results/fft/*.* postproc/results/Yavg/*.* postproc/results/rms/*.* postproc/*.txt \
-		postproc/visualize/xplanes/*.* postproc/visualize/yplanes/*.* postproc/visualize/zplanes/*.*
+		postproc/visualize/fields/*.* postproc/visualize/xplanes/*.* postproc/visualize/yplanes/*.* postproc/visualize/zplanes/*.*
 
 cleanout:
 	$(RM) output/*.txt output/planes/*.* output/stats/*.* output/restart/*.* 

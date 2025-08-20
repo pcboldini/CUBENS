@@ -123,6 +123,16 @@ module mod_eos_var
     sos = sqrt(t_ig%gam*(t_ig%gam-1.0_mytype)*ien) 
   end subroutine
 
+! Calculate isobaric specific heat and enthalpy from density and internal energy
+  subroutine calcCpH_re(rho,ien,cp,ent)
+    !$acc routine seq
+    implicit none
+    real(mytype), intent(IN)  :: rho,ien
+    real(mytype), intent(OUT) :: cp,ent
+    cp = t_ig%cp
+    ent = t_ig%cp*t_ig%cvInv*ien
+  end subroutine
+
 ! Calculate c_p/alpha_v from density and internal energy
   subroutine calcFac_re(rho,ien,fac,tref,rhoref)
     !$acc routine seq
@@ -281,6 +291,28 @@ module mod_eos_var
     sos_r = (1.0_mytype+1.0_mytype/cvOverR)/cvOverR*(ien_r+3.0_mytype*rho_r)*(3.0_mytype/(3.0_mytype-rho_r))**2 - 6.0_mytype*rho_r
     ! Non-dimensional quantities
     sos   = sqrt(sosfac_r*sos_r)
+  end subroutine
+
+! Calculate isobaric specific heat and enthalpy from density and internal energy
+  subroutine calcCpH_re(rho_r,ien,cp,ent)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien
+    real(mytype), intent(OUT) :: cp,ent
+    real(mytype) :: ien_r,tem_r,pre_r,cp_r,ent_r
+    real(mytype) :: vdw_a, cvOverR
+    ! Reduced quantities
+    vdw_a   = t_vdw%a
+    cvOverR = t_vdw%cvOverR
+    ien_r   = ien/t_vdw%Efac_r
+    tem_r   = t_vdw%Zc/cvOverR*(ien_r + vdw_a*rho_r)
+    pre_r   = 8.0_mytype*tem_r/(3.0_mytype/rho_r-1.0_mytype) - vdw_a*rho_r**2
+    cp_r    = cvOverR+1.0_mytype/(1.0_mytype-((3.0_mytype/rho_r-1.0_mytype)**2/(4.0_mytype*tem_r*(1.0_mytype/rho_r)**3)))
+    ent_r   = ien_r + pre_r/rho_r
+    ! Non-dimensional quantities
+    cp      = cp_r*t_vdw%Cpfac_r
+    ent     = ent_r*t_vdw%Efac_r
   end subroutine
 
 ! Calculate c_p/alpha_v from density and internal energy
@@ -501,6 +533,49 @@ module mod_eos_var
     sos_r = dPdrho_T_r+t_pr%Zc*tem_r/(rho_r**2*cv_r)*dPdT_rho_r**2
     ! Non-dimensional quantities
     sos = sqrt(sosfac_r*sos_r)
+  end subroutine
+
+! Calculate isobaric specific heat and enthalpy from density and internal energy
+  subroutine calcCpH_re(rho_r,ien,cp,ent)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien
+    real(mytype), intent(OUT) :: cp,ent
+    real(mytype) :: T1, F1, F2, F3, tem_r, cv_r, dPdrho_T_r, dPdT_rho_r, alpha
+    real(mytype) :: ien_r,sos_r,pre_r,cp_r,ent_r
+    real(mytype) :: sosfac_r, cvOverR, t_pr_a, t_pr_b, t_pr_Zc1, t_pr_Zc2, t_pr_K, sqrt2
+    ! Reduced quantities
+    sosfac_r = t_pr%Efac_r  ! sosfac_r is equal to Efac_r
+    ien_r = ien/t_pr%Efac_r
+    cvOverR = t_pr%cvOverR
+    t_pr_a = t_pr%a
+    t_pr_b = t_pr%b
+    t_pr_Zc1 = t_pr%Zc1
+    t_pr_Zc2 = t_pr%Zc2
+    t_pr_K = t_pr%K
+    sqrt2=2**(0.5_mytype)
+    T1 = log( (1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0_mytype-sqrt2))/(1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0_mytype+sqrt2)) ) 
+    F1 = ( t_pr_a*t_pr_Zc1*(t_pr_K+1.0_mytype)**2*T1/(2.0_mytype*sqrt2*t_pr_b) - ien_r )
+    F2 = ( t_pr_a*t_pr_Zc1*t_pr_K*(t_pr_K+1.0_mytype)*T1/(2.0_mytype*sqrt2*t_pr_b) )
+    F3 = ( cvOverR*t_pr_Zc1 )
+    tem_r = ( (F2 + sqrt( F2**2-4.0_mytype*F1*F3 ))/2/F3 )**2
+    pre_r = tem_r*t_pr_Zc1/( 1.0_mytype/rho_r-t_pr_b*t_pr_Zc1 )- &
+            alpha*t_pr_a*t_pr_Zc2/(1.0_mytype/rho_r*(1.0_mytype/rho_r+2*t_pr_b*t_pr_Zc1)-t_pr_b**2*t_pr_Zc2 )
+    alpha = ( 1.0_mytype + t_pr_K*(1.0_mytype-sqrt(tem_r)) )**2
+    cv_r = ( cvOverR-(t_pr_a*t_pr_K*(t_pr_K+1.0_mytype))/(4.0_mytype*t_pr_b*sqrt(2.0_mytype*tem_r)) &
+      *log( (1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0-sqrt2))/(1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0_mytype+sqrt2)) ) )
+    dPdrho_T_r = ( t_pr_Zc1*tem_r/(t_pr_Zc1*t_pr_b*rho_r-1.0_mytype)**2 &
+               - t_pr_a*t_pr_Zc2*alpha*(2.0_mytype*rho_r+2.0_mytype*t_pr_b*t_pr_Zc1*rho_r**2) &
+               /(1.0_mytype+2.0_mytype*t_pr_b*t_pr_Zc1*rho_r-rho_r**2*t_pr_b**2*t_pr_Zc2)**2 )
+    dPdT_rho_r = ( t_pr_K*sqrt(alpha/tem_r)*(rho_r**2*t_pr_a*t_pr_Zc2) & 
+               /(1.0_mytype+2.0_mytype*t_pr_b*t_pr_Zc1*rho_r-t_pr_b**2*t_pr_Zc2*rho_r**2) & 
+               - (rho_r*t_pr_Zc1)/(rho_r*t_pr_b*t_pr_Zc1-1.0_mytype) )
+    cp_r  = cv_r + t_pr%Zc*tem_r/(rho_r**2)*dPdT_rho_r**2/(dPdrho_T_r)
+    ent_r   = ien_r + pre_r/rho_r
+    ! Non-dimensional quantities
+    cp      = cp_r*t_pr%Cpfac_r
+    ent     = ent_r*t_pr%Efac_r
   end subroutine
 
 ! Calculate c_p/alpha_v from density and internal energy

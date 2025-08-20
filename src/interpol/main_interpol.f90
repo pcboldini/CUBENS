@@ -185,6 +185,7 @@ program interpolate
     write(stdout,'(A, A10)') 'Streamwise mesh:                           ',zmesh_type_new
     write(stdout,* ) 
   endif
+
 ! initialize solution on the new partition (mesh)
   call initSolution(part2,xnew,znew,rbn,ubn,vbn,wbn,ebn)
   if (nrank.eq.0) then

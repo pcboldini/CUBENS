@@ -14,6 +14,7 @@ module mod_rhs
   use mod_timer
   implicit none
   ! define allocation RHS tensors, dilatation, and sponge parameters
+  integer :: index_spTopLen,index_spInLen,index_spOutLen
   real(mytype), allocatable, dimension(:,:,:)   :: dil
   real(mytype), allocatable, dimension(:,:,:)   :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
   real(mytype), allocatable, dimension(:,:)     :: r_ref, ru_ref, rv_ref, rw_ref, ret_ref, p_ref
@@ -54,6 +55,8 @@ contains
       do i=1, xsize(1)
         if ((spTopLen .gt. 0.0_mytype) .and. (x(i) .ge. (len_x-spTopLen))) then 
           spSigX(i) = spTopStr*((x(i) - (len_x-spTopLen))/spTopLen)**spTopExp
+        else
+          index_spTopLen=i+1
         endif
       enddo
       ! set sponge damping coefficient in Z direction
@@ -63,9 +66,13 @@ contains
       do k=1, xsize(3)
         if ((spInlLen .gt. 0.0) .and. (z(k) .le. spInlLen)) then
           spSigZ(k) = spInlStr*((spInlLen - z(k))/spInlLen)**spInlExp
+        else
+          index_spInLen=k+1
         endif
         if ((spOutLen .gt. 0.0) .and. (z(k) .ge. (len_z-spOutLen))) then
           spSigZ(k) = spOutStr*((z(k) - (len_z-spOutLen))/spOutLen)**spOutExp
+        else
+          index_spOutLen=k+1
         endif
       enddo
     endif
@@ -644,7 +651,8 @@ contains
       if (spInlLen>0.0) then
         write(stdout,* ) 'Inlet:                             '
         write(stdout,"(A26,F10.4)") 'spInlLen from 0 to ',spInlLen
-        write(stdout,"(A24,F10.4,A3,F10.4)") 'or Re_delta from ',Redelta_start,' to ', spInLen_Reend  
+        write(stdout,"(A24,F10.4,A3,F10.4)") 'or Re_delta from ',Redelta_start,' to ', spInLen_Reend 
+        write(stdout,"(A24,I10,A3,I10)"), 'or z(index) from ', 0, ' to ', index_spInLen    
         write(stdout,"(A32,F10.4)") 'Max. damping coefficient=',spInlStr
         write(stdout,* )  
       else
@@ -652,7 +660,8 @@ contains
       if (spOutLen>0.0) then
         write(stdout,* ) 'Outlet:                             '
         write(stdout,"(A22,F10.4,A3,F10.4)") 'spOutLen from ',(len_z-spOutLen),' to ', len_z
-        write(stdout,"(A25,F10.4,A3,F10.4)") 'or Re_delta from ',spOutLen_Resta,' to ', ReBlasiusEnd          
+        write(stdout,"(A25,F10.4,A3,F10.4)") 'or Re_delta from ',spOutLen_Resta,' to ', ReBlasiusEnd    
+        write(stdout,"(A25,I10,A3,I10)"), 'or z(index) from ', index_spOutLen, ' to ', kmax    
         write(stdout,"(A33,F10.4)") 'Max. damping coefficient=',spOutStr   
         write(stdout,* ) 
       else
@@ -660,6 +669,7 @@ contains
       if (spTopLen>0.0) then 
         write(stdout,* ) 'Free stream:                         '
         write(stdout,"(A22,F10.4,A3,F10.4)") 'spTopLen from ',(len_x-spTopLen),' to ', len_x
+        write(stdout,"(A25,I10,A3,I10)"), 'or x(index) from ', index_spTopLen, ' to ', imax  
         write(stdout,"(A33,F10.4)") 'Max. damping coefficient=',spTopStr 
         write(stdout,'(A)') 'o--------------------------------------------------o'
         write(stdout,* )

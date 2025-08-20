@@ -11,6 +11,9 @@ module mod_auxl
   use mod_param
   use mod_grid
   use mod_finitediff
+  use mod_eos
+  use mod_eos_var
+  use mod_eos_visc
   implicit none
   contains
 
@@ -222,7 +225,7 @@ module mod_auxl
 
 
 ! calculate statistics
-  subroutine calcStats(qave,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
+  subroutine calcStats(qave,qtime,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
     use decomp_2d
     use mod_param
     implicit none
@@ -231,89 +234,129 @@ module mod_auxl
     real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
     real(mytype) :: dux, duy, duz, dvx, dvy, dvz, dwx, dwy, dwz, xa, za
     real(mytype) :: dilla2, dtx, dty, dtz
-#if defined(BL) || defined(TGV)
-    real(mytype), dimension(:,:,:), intent(inout) :: qave
-    real(mytype) :: rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d
-    real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d
-    real(mytype) :: rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d               
+    real(mytype) :: cp_local, ent_local, sos_local, Pr_local
+#if defined(BL) ||  defined(TGV) 
+    real(mytype), dimension(:,:,:), intent(inout) :: qave,qtime
+    real(mytype) :: rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d,cp_2d,ent_2d,sos_2d,Pr_2d
+    real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,rhoent_2d
+    real(mytype) :: uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d,rhorho_2d,temtem_2d,mumu_2d,kaka_2d,PrPr_2d,cpcp_2d
+    real(mytype) :: rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d,rhouT_2d              
     real(mytype) :: tauxx_2d,tauxy_2d,tauxz_2d,tauyy_2d,tauyz_2d,tauzz_2d,qx_2d,qy_2d,qz_2d
+    real(mytype) :: mudwdx_2d,mududz_2d,dwdx_2d,dudz_2d,dtdx_2d
+    real(mytype), allocatable, dimension(:,:) :: tauxz_wall
 #elif defined(CHA) 
-    real(mytype), dimension(:,:), intent(inout) :: qave
-    real(mytype) :: rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d
-    real(mytype) :: rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d
-    real(mytype) :: rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d               
+    real(mytype), dimension(:,:), intent(inout) :: qave,qtime
+    real(mytype) :: rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d,cp_1d,ent_1d,sos_1d,Pr_1d
+    real(mytype) :: rhou_1d,rhov_1d,rhow_1d,rhot_1d,rhoent_1d
+    real(mytype) :: uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d,rhorho_1d,temtem_1d,mumu_1d,kaka_1d,PrPr_1d,cpcp_1d
+    real(mytype) :: rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d,rhouT_1d             
     real(mytype) :: tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d
+    real(mytype) :: mudwdx_1d,mududz_1d,dwdx_1d,dudz_1d,dtdx_1d
 #endif
 #if defined(BL)
     ! for boundary layer 
     !$acc parallel loop gang collapse(2) default(present)
     do k=1,xsize(3)
       do i=1,xsize(1)
-        rho_2d = 0.0_mytype
-        u_2d = 0.0_mytype
-        v_2d = 0.0_mytype
-        w_2d = 0.0_mytype
-        pre_2d = 0.0_mytype
-        tem_2d = 0.0_mytype
-        ien_2d = 0.0_mytype
-        mu_2d = 0.0_mytype
-        ka_2d = 0.0_mytype
-        rhou_2d = 0.0_mytype
-        rhov_2d = 0.0_mytype
-        rhow_2d = 0.0_mytype
-        rhot_2d = 0.0_mytype
-        uu_2d = 0.0_mytype
-        uv_2d = 0.0_mytype
-        uw_2d = 0.0_mytype
-        vv_2d = 0.0_mytype
-        vw_2d = 0.0_mytype
-        ww_2d = 0.0_mytype
-        rhouu_2d = 0.0_mytype
-        rhouv_2d = 0.0_mytype
-        rhouw_2d = 0.0_mytype
-        rhovv_2d = 0.0_mytype
-        rhovw_2d = 0.0_mytype
-        rhoww_2d = 0.0_mytype
-        tauxx_2d = 0.0_mytype
-        tauxy_2d = 0.0_mytype
-        tauxz_2d = 0.0_mytype
-        tauyy_2d = 0.0_mytype
-        tauyz_2d = 0.0_mytype
-        tauzz_2d = 0.0_mytype
-        qx_2d = 0.0_mytype
-        qy_2d = 0.0_mytype
-        qz_2d = 0.0_mytype
-        !$acc loop reduction(+:rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d) &
-        !$acc reduction(+:rhou_2d,rhov_2d,rhow_2d,rhot_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d) &
-        !$acc reduction(+:rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d) &
+        rho_2d    = 0.0_mytype
+        u_2d      = 0.0_mytype
+        v_2d      = 0.0_mytype
+        w_2d      = 0.0_mytype
+        pre_2d    = 0.0_mytype
+        tem_2d    = 0.0_mytype
+        ien_2d    = 0.0_mytype
+        mu_2d     = 0.0_mytype
+        ka_2d     = 0.0_mytype
+        cp_2d     = 0.0_mytype
+        ent_2d    = 0.0_mytype
+        sos_2d    = 0.0_mytype
+        Pr_2d     = 0.0_mytype
+        rhou_2d   = 0.0_mytype
+        rhov_2d   = 0.0_mytype
+        rhow_2d   = 0.0_mytype
+        rhot_2d   = 0.0_mytype
+        rhoent_2d = 0.0_mytype
+        uu_2d     = 0.0_mytype
+        uv_2d     = 0.0_mytype
+        uw_2d     = 0.0_mytype
+        vv_2d     = 0.0_mytype
+        vw_2d     = 0.0_mytype
+        ww_2d     = 0.0_mytype
+        rhorho_2d = 0.0_mytype
+        temtem_2d = 0.0_mytype
+        mumu_2d   = 0.0_mytype
+        kaka_2d   = 0.0_mytype
+        PrPr_2d   = 0.0_mytype
+        cpcp_2d   = 0.0_mytype
+        rhouu_2d  = 0.0_mytype
+        rhouv_2d  = 0.0_mytype
+        rhouw_2d  = 0.0_mytype
+        rhovv_2d  = 0.0_mytype
+        rhovw_2d  = 0.0_mytype
+        rhoww_2d  = 0.0_mytype
+        rhouT_2d  = 0.0_mytype
+        tauxx_2d  = 0.0_mytype
+        tauxy_2d  = 0.0_mytype
+        tauxz_2d  = 0.0_mytype
+        tauyy_2d  = 0.0_mytype
+        tauyz_2d  = 0.0_mytype
+        tauzz_2d  = 0.0_mytype
+        qx_2d     = 0.0_mytype
+        qy_2d     = 0.0_mytype
+        qz_2d     = 0.0_mytype
+        mudwdx_2d = 0.0_mytype
+        mududz_2d = 0.0_mytype
+        dwdx_2d   = 0.0_mytype
+        dudz_2d   = 0.0_mytype
+        dtdx_2d   = 0.0_mytype
+        !$acc loop reduction(+:rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d,cp_2d,ent_2d,sos_2d,Pr_2d) &
+        !$acc reduction(+:rhou_2d,rhov_2d,rhow_2d,rhot_2d,rhoent_2d,uu_2d,uv_2d,uw_2d,vv_2d,vw_2d,ww_2d) &
+        !$acc reduction(+:rhouu_2d,rhouv_2d,rhouw_2d,rhovv_2d,rhovw_2d,rhoww_2d,rhouT_2d) &
+        !$acc reduction(+:rhorho_2d,temtem_2d,mumu_2d,kaka_2d,PrPr_2d,cpcp_2d) &
         !$acc reduction(+:tauxx_2d,tauxy_2d,tauxz_2d,tauyy_2d,tauyz_2d,tauzz_2d,qx_2d,qy_2d,qz_2d) &
-        !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz) 
+        !$acc reduction(+:dwdx_2d,dudz_2d,dtdx_2d,mudwdx_2d,mududz_2d) &
+        !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz,cp_local,ent_local,sos_local,Pr_local) 
         do j=1,xsize(2)
-          rho_2d = rho_2d + rho(i,j,k)
-          u_2d = u_2d + u(i,j,k)
-          v_2d = v_2d + v(i,j,k)
-          w_2d = w_2d + w(i,j,k)
-          pre_2d = pre_2d + pre(i,j,k)
-          tem_2d = tem_2d + tem(i,j,k)
-          ien_2d = ien_2d + ien(i,j,k)
-          mu_2d = mu_2d + mu(i,j,k)
-          ka_2d = ka_2d + ka(i,j,k)
-          rhou_2d = rhou_2d + rho(i,j,k)*u(i,j,k)
-          rhov_2d = rhov_2d + rho(i,j,k)*v(i,j,k)
-          rhow_2d = rhow_2d + rho(i,j,k)*w(i,j,k)
-          rhot_2d = rhot_2d + rho(i,j,k)*tem(i,j,k)
-          uu_2d = uu_2d + u(i,j,k)*u(i,j,k)
-          uv_2d = uv_2d + u(i,j,k)*v(i,j,k)
-          uw_2d = uw_2d + u(i,j,k)*w(i,j,k)
-          vv_2d = vv_2d + v(i,j,k)*v(i,j,k)
-          vw_2d = vw_2d + v(i,j,k)*w(i,j,k)
-          ww_2d = ww_2d + w(i,j,k)*w(i,j,k)
-          rhouu_2d = rhouu_2d + rho(i,j,k)*u(i,j,k)*u(i,j,k)
-          rhouv_2d = rhouv_2d + rho(i,j,k)*u(i,j,k)*v(i,j,k)
-          rhouw_2d = rhouw_2d + rho(i,j,k)*u(i,j,k)*w(i,j,k)
-          rhovv_2d = rhovv_2d + rho(i,j,k)*v(i,j,k)*v(i,j,k)
-          rhovw_2d = rhovw_2d + rho(i,j,k)*v(i,j,k)*w(i,j,k)
-          rhoww_2d = rhoww_2d + rho(i,j,k)*w(i,j,k)*w(i,j,k)
+          call calcCpH(rho(i,j,k),ien(i,j,k),cp_local,ent_local)
+          call calcSOS(rho(i,j,k),ien(i,j,k),sos_local)
+          rho_2d    = rho_2d + rho(i,j,k)
+          u_2d      = u_2d + u(i,j,k)
+          v_2d      = v_2d + v(i,j,k)
+          w_2d      = w_2d + w(i,j,k)
+          pre_2d    = pre_2d + pre(i,j,k)
+          tem_2d    = tem_2d + tem(i,j,k)
+          ien_2d    = ien_2d + ien(i,j,k)
+          mu_2d     = mu_2d + mu(i,j,k)
+          ka_2d     = ka_2d + ka(i,j,k)
+          cp_2d     = cp_2d + cp_local
+          Pr_local  = cp_local*mu(i,j,k)/ka(i,j,k)
+          Pr_2d     = Pr_2d  + Pr_local
+          ent_2d    = ent_2d + ent_local
+          sos_2d    = sos_2d + sos_local
+          rhou_2d   = rhou_2d + rho(i,j,k)*u(i,j,k)
+          rhov_2d   = rhov_2d + rho(i,j,k)*v(i,j,k)
+          rhow_2d   = rhow_2d + rho(i,j,k)*w(i,j,k)
+          rhot_2d   = rhot_2d + rho(i,j,k)*tem(i,j,k)
+          rhoent_2d = rhoent_2d + rho(i,j,k)*ent_local
+          uu_2d     = uu_2d + u(i,j,k)*u(i,j,k)
+          uv_2d     = uv_2d + u(i,j,k)*v(i,j,k)
+          uw_2d     = uw_2d + u(i,j,k)*w(i,j,k)
+          vv_2d     = vv_2d + v(i,j,k)*v(i,j,k)
+          vw_2d     = vw_2d + v(i,j,k)*w(i,j,k)
+          ww_2d     = ww_2d + w(i,j,k)*w(i,j,k)
+          rhorho_2d = rhorho_2d + rho(i,j,k)*rho(i,j,k)
+          temtem_2d = temtem_2d + tem(i,j,k)*tem(i,j,k)
+          mumu_2d   = mumu_2d + mu(i,j,k)*mu(i,j,k)
+          kaka_2d   = kaka_2d + ka(i,j,k)*ka(i,j,k)
+          PrPr_2d   = PrPr_2d + Pr_local*Pr_local
+          cpcp_2d   = cpcp_2d + cp_local*cp_local
+          rhouu_2d  = rhouu_2d + rho(i,j,k)*u(i,j,k)*u(i,j,k)
+          rhouv_2d  = rhouv_2d + rho(i,j,k)*u(i,j,k)*v(i,j,k)
+          rhouw_2d  = rhouw_2d + rho(i,j,k)*u(i,j,k)*w(i,j,k)
+          rhovv_2d  = rhovv_2d + rho(i,j,k)*v(i,j,k)*v(i,j,k)
+          rhovw_2d  = rhovw_2d + rho(i,j,k)*v(i,j,k)*w(i,j,k)
+          rhoww_2d  = rhoww_2d + rho(i,j,k)*w(i,j,k)*w(i,j,k)
+          rhouT_2d  = rhouT_2d + rho(i,j,k)*u(i,j,k)*tem(i,j,k)
           dux   = 0.0_mytype
           duy   = 0.0_mytype
           duz   = 0.0_mytype
@@ -343,129 +386,203 @@ module mod_auxl
             dty = dty + visc_ddy(c)*(tem(i,j+c,k) - tem(i,j-c,k))
             dtz = dtz + visc_ddz(c)*(tem(i,j,k+c) - tem(i,j,k-c))*za
           enddo
-          dilla2   = dux + dvy + dwz
-          tauxx_2d = tauxx_2d + mu(i,j,k)*(2.0_mytype*dux - 2.0_mytype/3.0_mytype*dilla2) 
-          tauxy_2d = tauxy_2d + mu(i,j,k)*(duy + dvx)
-          tauxz_2d = tauxz_2d + mu(i,j,k)*(duz + dwx)
-          tauyy_2d = tauyy_2d + mu(i,j,k)*(2.0_mytype*dvy - 2.0_mytype/3.0_mytype*dilla2)
-          tauyz_2d = tauyz_2d + mu(i,j,k)*(dvz + dwy)
-          tauzz_2d = tauzz_2d + mu(i,j,k)*(2.0_mytype*dwz - 2.0_mytype/3.0_mytype*dilla2)
-          qx_2d    = qx_2d    + ka(i,j,k)*dtx
-          qy_2d    = qy_2d    + ka(i,j,k)*dty
-          qz_2d    = qz_2d    + ka(i,j,k)*dtz
+          dilla2     = dux + dvy + dwz
+          tauxx_2d   = tauxx_2d + mu(i,j,k)*(2.0_mytype*dux - 2.0_mytype/3.0_mytype*dilla2) 
+          tauxy_2d   = tauxy_2d + mu(i,j,k)*(duy + dvx)
+          tauxz_2d   = tauxz_2d + mu(i,j,k)*(duz + dwx)
+          tauyy_2d   = tauyy_2d + mu(i,j,k)*(2.0_mytype*dvy - 2.0_mytype/3.0_mytype*dilla2)
+          tauyz_2d   = tauyz_2d + mu(i,j,k)*(dvz + dwy)
+          tauzz_2d   = tauzz_2d + mu(i,j,k)*(2.0_mytype*dwz - 2.0_mytype/3.0_mytype*dilla2)
+          qx_2d      = qx_2d    + ka(i,j,k)*dtx
+          qy_2d      = qy_2d    + ka(i,j,k)*dty
+          qz_2d      = qz_2d    + ka(i,j,k)*dtz
+          mudwdx_2d  = mudwdx_2d  + mu(i,j,k)*dwx
+          mududz_2d  = mududz_2d  + mu(i,j,k)*duz
+          dwdx_2d    = dwdx_2d  + dwx
+          dudz_2d    = dudz_2d  + duz   
+          dtdx_2d    = dtdx_2d  + dtx 
         enddo
       ! primary variables
-      qave(i,k,1) = qave(i,k,1) + rho_2d  
-      qave(i,k,2) = qave(i,k,2) + u_2d  
-      qave(i,k,3) = qave(i,k,3) + v_2d 
-      qave(i,k,4) = qave(i,k,4) + w_2d
-      qave(i,k,5) = qave(i,k,5) + pre_2d
-      qave(i,k,6) = qave(i,k,6) + tem_2d
-      qave(i,k,7) = qave(i,k,7) + ien_2d
-      qave(i,k,8) = qave(i,k,8) + mu_2d
-      qave(i,k,9) = qave(i,k,9) + ka_2d
+      qave(i,k,1)  = qave(i,k,1) + rho_2d  
+      qave(i,k,2)  = qave(i,k,2) + u_2d  
+      qave(i,k,3)  = qave(i,k,3) + v_2d 
+      qave(i,k,4)  = qave(i,k,4) + w_2d
+      qave(i,k,5)  = qave(i,k,5) + pre_2d
+      qave(i,k,6)  = qave(i,k,6) + tem_2d
+      qave(i,k,7)  = qave(i,k,7) + ien_2d
+      qave(i,k,8)  = qave(i,k,8) + mu_2d
+      qave(i,k,9)  = qave(i,k,9) + ka_2d
+      qave(i,k,10) = qave(i,k,10) + cp_2d
+      qave(i,k,11) = qave(i,k,11) + ent_2d
+      qave(i,k,12) = qave(i,k,12) + sos_2d
+      qave(i,k,13) = qave(i,k,13) + Pr_2d
+      ! Favre products
+      qave(i,k,14) = qave(i,k,14) + rhou_2d
+      qave(i,k,15) = qave(i,k,15) + rhov_2d
+      qave(i,k,16) = qave(i,k,16) + rhow_2d
+      qave(i,k,17) = qave(i,k,17) + rhot_2d
+      qave(i,k,18) = qave(i,k,18) + rhoent_2d
       ! double products
-      qave(i,k,10) = qave(i,k,10) + rhou_2d
-      qave(i,k,11) = qave(i,k,11) + rhov_2d
-      qave(i,k,12) = qave(i,k,12) + rhow_2d
-      qave(i,k,13) = qave(i,k,13) + rhot_2d
-      qave(i,k,14) = qave(i,k,14) + uu_2d
-      qave(i,k,15) = qave(i,k,15) + uv_2d
-      qave(i,k,16) = qave(i,k,16) + uw_2d
-      qave(i,k,17) = qave(i,k,17) + vv_2d
-      qave(i,k,18) = qave(i,k,18) + vw_2d
-      qave(i,k,19) = qave(i,k,19) + ww_2d
-      ! triple products
-      qave(i,k,20) = qave(i,k,20) + rhouu_2d 
-      qave(i,k,21) = qave(i,k,21) + rhouv_2d 
-      qave(i,k,22) = qave(i,k,22) + rhouw_2d 
-      qave(i,k,23) = qave(i,k,23) + rhovv_2d 
-      qave(i,k,24) = qave(i,k,24) + rhovw_2d 
-      qave(i,k,25) = qave(i,k,25) + rhoww_2d 
+      qave(i,k,19) = qave(i,k,19) + uu_2d
+      qave(i,k,20) = qave(i,k,20) + uv_2d
+      qave(i,k,21) = qave(i,k,21) + uw_2d
+      qave(i,k,22) = qave(i,k,22) + vv_2d
+      qave(i,k,23) = qave(i,k,23) + vw_2d
+      qave(i,k,24) = qave(i,k,24) + ww_2d
+      qave(i,k,25) = qave(i,k,25) + rhorho_2d
+      qave(i,k,26) = qave(i,k,26) + temtem_2d
+      qave(i,k,27) = qave(i,k,27) + mumu_2d
+      qave(i,k,28) = qave(i,k,28) + kaka_2d
+      qave(i,k,29) = qave(i,k,29) + PrPr_2d
+      qave(i,k,30) = qave(i,k,30) + cpcp_2d
+      ! Favre double products
+      qave(i,k,31) = qave(i,k,31) + rhouu_2d 
+      qave(i,k,32) = qave(i,k,32) + rhouv_2d 
+      qave(i,k,33) = qave(i,k,33) + rhouw_2d 
+      qave(i,k,34) = qave(i,k,34) + rhovv_2d 
+      qave(i,k,35) = qave(i,k,35) + rhovw_2d 
+      qave(i,k,36) = qave(i,k,36) + rhoww_2d 
+      qave(i,k,37) = qave(i,k,37) + rhouT_2d
       ! stress tensor
-      qave(i,k,26) = qave(i,k,26) + tauxx_2d
-      qave(i,k,27) = qave(i,k,27) + tauxy_2d 
-      qave(i,k,28) = qave(i,k,28) + tauxz_2d 
-      qave(i,k,29) = qave(i,k,29) + tauyy_2d 
-      qave(i,k,30) = qave(i,k,30) + tauyz_2d 
-      qave(i,k,31) = qave(i,k,31) + tauzz_2d
+      qave(i,k,38) = qave(i,k,38) + tauxx_2d
+      qave(i,k,39) = qave(i,k,39) + tauxy_2d 
+      qave(i,k,40) = qave(i,k,40) + tauxz_2d 
+      qave(i,k,41) = qave(i,k,41) + tauyy_2d 
+      qave(i,k,42) = qave(i,k,42) + tauyz_2d 
+      qave(i,k,43) = qave(i,k,43) + tauzz_2d
       ! heat flux 
-      qave(i,k,32) = qave(i,k,32) + qx_2d
-      qave(i,k,33) = qave(i,k,33) + qy_2d
-      qave(i,k,34) = qave(i,k,34) + qz_2d
+      qave(i,k,44) = qave(i,k,44) + qx_2d
+      qave(i,k,45) = qave(i,k,45) + qy_2d
+      qave(i,k,46) = qave(i,k,46) + qz_2d
+      ! extras
+      qave(i,k,47) = qave(i,k,47) + dwdx_2d
+      qave(i,k,48) = qave(i,k,48) + dudz_2d
+      qave(i,k,49) = qave(i,k,49) + dtdx_2d
+      qave(i,k,50) = qave(i,k,50) + mudwdx_2d
+      qave(i,k,51) = qave(i,k,51) + mududz_2d
     enddo
+    enddo
+
+    ! for boundary layer
+    !$acc parallel loop gang collapse(2) private(duz,dwx) 
+    do k=1,xsize(3)
+      do j=1,xsize(2)
+        duz = 0.0_mytype
+        dwx = 0.0_mytype
+        xa = xp(1)
+        za = zp(k)
+        !$acc loop seq
+        do c = 1, nStencilVisc
+          duz = duz + visc_ddz(c)*(u(1,j,k+c) - u(1,j,k-c))*za
+          dwx = dwx + visc_ddx(c)*(w(1+c,j,k) - w(1-c,j,k))*xa
+        enddo
+        qtime(j,k,1)  = qtime(j,k,1) + mu(1,j,k)*(duz + dwx)
+      enddo
     enddo
     factAvg = factAvg + 1.0_mytype*xsize(2)
+
 #elif defined(CHA)
     ! for channel
     !$acc parallel loop gang default(present)
     do i=1,xsize(1)
-      rho_1d = 0.0_mytype
-      u_1d = 0.0_mytype
-      v_1d = 0.0_mytype
-      w_1d = 0.0_mytype
-      pre_1d = 0.0_mytype
-      tem_1d = 0.0_mytype
-      ien_1d = 0.0_mytype
-      mu_1d = 0.0_mytype
-      ka_1d = 0.0_mytype
-      rhou_1d = 0.0_mytype
-      rhov_1d = 0.0_mytype
-      rhow_1d = 0.0_mytype
-      rhot_1d = 0.0_mytype
-      uu_1d = 0.0_mytype
-      uv_1d = 0.0_mytype
-      uw_1d = 0.0_mytype
-      vv_1d = 0.0_mytype
-      vw_1d = 0.0_mytype
-      ww_1d = 0.0_mytype
-      rhouu_1d = 0.0_mytype
-      rhouv_1d = 0.0_mytype
-      rhouw_1d = 0.0_mytype
-      rhovv_1d = 0.0_mytype
-      rhovw_1d = 0.0_mytype
-      rhoww_1d = 0.0_mytype
-      tauxx_1d = 0.0_mytype
-      tauxy_1d = 0.0_mytype
-      tauxz_1d = 0.0_mytype
-      tauyy_1d = 0.0_mytype
-      tauyz_1d = 0.0_mytype
-      tauzz_1d = 0.0_mytype
-      qx_1d = 0.0_mytype
-      qy_1d = 0.0_mytype
-      qz_1d = 0.0_mytype
-      !$acc loop collapse(2) reduction(+:rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d) &
-      !$acc reduction(+:rhou_1d,rhov_1d,rhow_1d,rhot_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d) &
-      !$acc reduction(+:rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d) &
+      rho_1d    = 0.0_mytype
+      u_1d      = 0.0_mytype
+      v_1d      = 0.0_mytype
+      w_1d      = 0.0_mytype
+      pre_1d    = 0.0_mytype
+      tem_1d    = 0.0_mytype
+      ien_1d    = 0.0_mytype
+      mu_1d     = 0.0_mytype
+      ka_1d     = 0.0_mytype
+      cp_1d     = 0.0_mytype
+      ent_1d    = 0.0_mytype
+      sos_1d    = 0.0_mytype
+      Pr_1d     = 0.0_mytype
+      rhou_1d   = 0.0_mytype
+      rhov_1d   = 0.0_mytype
+      rhow_1d   = 0.0_mytype
+      rhot_1d   = 0.0_mytype
+      rhoent_1d = 0.0_mytype
+      uu_1d     = 0.0_mytype
+      uv_1d     = 0.0_mytype
+      uw_1d     = 0.0_mytype
+      vv_1d     = 0.0_mytype
+      vw_1d     = 0.0_mytype
+      ww_1d     = 0.0_mytype
+      rhorho_1d = 0.0_mytype
+      temtem_1d = 0.0_mytype
+      mumu_1d   = 0.0_mytype
+      kaka_1d   = 0.0_mytype
+      PrPr_1d   = 0.0_mytype
+      cpcp_1d   = 0.0_mytype
+      rhouu_1d  = 0.0_mytype
+      rhouv_1d  = 0.0_mytype
+      rhouw_1d  = 0.0_mytype
+      rhovv_1d  = 0.0_mytype
+      rhovw_1d  = 0.0_mytype
+      rhoww_1d  = 0.0_mytype
+      rhouT_1d  = 0.0_mytype
+      tauxx_1d  = 0.0_mytype
+      tauxy_1d  = 0.0_mytype
+      tauxz_1d  = 0.0_mytype
+      tauyy_1d  = 0.0_mytype
+      tauyz_1d  = 0.0_mytype
+      tauzz_1d  = 0.0_mytype
+      qx_1d     = 0.0_mytype
+      qy_1d     = 0.0_mytype
+      qz_1d     = 0.0_mytype
+      mudwdx_1d = 0.0_mytype
+      mududz_1d = 0.0_mytype
+      dwdx_1d   = 0.0_mytype
+      dudz_1d   = 0.0_mytype
+      dtdx_1d   = 0.0_mytype
+      !$acc loop collapse(2) reduction(+:rho_1d,u_1d,v_1d,w_1d,pre_1d,tem_1d,ien_1d,mu_1d,ka_1d,cp_1d,ent_1d,sos_1d,Pr_1d) &
+      !$acc reduction(+:rhou_1d,rhov_1d,rhow_1d,rhot_1d,rhoent_1d,uu_1d,uv_1d,uw_1d,vv_1d,vw_1d,ww_1d) &
+      !$acc reduction(+:rhorho_1d,temtem_1d,mumu_1d,kaka_1d,PrPr_1d,cpcp_1d) &
+      !$acc reduction(+:rhouu_1d,rhouv_1d,rhouw_1d,rhovv_1d,rhovw_1d,rhoww_1d,rhouT_1d) &
       !$acc reduction(+:tauxx_1d,tauxy_1d,tauxz_1d,tauyy_1d,tauyz_1d,tauzz_1d,qx_1d,qy_1d,qz_1d) &
-      !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz) 
+      !$acc reduction(+:dwdx_1d,dudz_1d,dtdx_1d,mudwdx_1d,mududz_1d) &
+      !$acc private(dux,duy,duz,dvx,dvy,dvz,dwx,dwy,dwz,dtx,dty,dtz,cp_local,ent_local,sos_local,Pr_local) 
       do k=1,xsize(3)
         do j=1,xsize(2)
-          rho_1d = rho_1d + rho(i,j,k)
-          u_1d = u_1d + u(i,j,k)
-          v_1d = v_1d + v(i,j,k)
-          w_1d = w_1d + w(i,j,k)
-          pre_1d = pre_1d + pre(i,j,k)
-          tem_1d = tem_1d + tem(i,j,k)
-          ien_1d = ien_1d + ien(i,j,k)
-          mu_1d = mu_1d + mu(i,j,k)
-          ka_1d = ka_1d + ka(i,j,k)
-          rhou_1d = rhou_1d + rho(i,j,k)*u(i,j,k)
-          rhov_1d = rhov_1d + rho(i,j,k)*v(i,j,k)
-          rhow_1d = rhow_1d + rho(i,j,k)*w(i,j,k)
-          rhot_1d = rhot_1d + rho(i,j,k)*tem(i,j,k)
-          uu_1d = uu_1d + u(i,j,k)*u(i,j,k)
-          uv_1d = uv_1d + u(i,j,k)*v(i,j,k)
-          uw_1d = uw_1d + u(i,j,k)*w(i,j,k)
-          vv_1d = vv_1d + v(i,j,k)*v(i,j,k)
-          vw_1d = vw_1d + v(i,j,k)*w(i,j,k)
-          ww_1d = ww_1d + w(i,j,k)*w(i,j,k)
+          call calcCpH(rho(i,j,k),ien(i,j,k),cp_local,ent_local)
+          call calcSOS(rho(i,j,k),ien(i,j,k),sos_local)
+          rho_1d   = rho_1d + rho(i,j,k)
+          u_1d     = u_1d + u(i,j,k)
+          v_1d     = v_1d + v(i,j,k)
+          w_1d     = w_1d + w(i,j,k)
+          pre_1d   = pre_1d + pre(i,j,k)
+          tem_1d   = tem_1d + tem(i,j,k)
+          ien_1d   = ien_1d + ien(i,j,k)
+          mu_1d    = mu_1d + mu(i,j,k)
+          ka_1d    = ka_1d + ka(i,j,k)
+          cp_1d    = cp_1d + cp_local
+          Pr_local = cp_local*mu(i,j,k)/ka(i,j,k)
+          Pr_1d    = Pr_1d  + Pr_local
+          ent_1d   = ent_1d + ent_local
+          rhou_1d  = rhou_1d + rho(i,j,k)*u(i,j,k)
+          rhov_1d  = rhov_1d + rho(i,j,k)*v(i,j,k)
+          rhow_1d  = rhow_1d + rho(i,j,k)*w(i,j,k)
+          rhot_1d  = rhot_1d + rho(i,j,k)*tem(i,j,k)
+          uu_1d    = uu_1d + u(i,j,k)*u(i,j,k)
+          uv_1d    = uv_1d + u(i,j,k)*v(i,j,k)
+          uw_1d    = uw_1d + u(i,j,k)*w(i,j,k)
+          vv_1d    = vv_1d + v(i,j,k)*v(i,j,k)
+          vw_1d    = vw_1d + v(i,j,k)*w(i,j,k)
+          ww_1d    = ww_1d + w(i,j,k)*w(i,j,k)
+          rhorho_1d = rhorho_1d + rho(i,j,k)*rho(i,j,k)
+          temtem_1d = temtem_1d + tem(i,j,k)*tem(i,j,k)
+          mumu_1d   = mumu_1d + mu(i,j,k)*mu(i,j,k)
+          kaka_1d   = kaka_1d + ka(i,j,k)*ka(i,j,k)
+          PrPr_1d   = temtem_1d + Pr_local*Pr_local
+          cpcp_1d   = temtem_1d + cp_local*cp_local
           rhouu_1d = rhouu_1d + rho(i,j,k)*u(i,j,k)*u(i,j,k)
           rhouv_1d = rhouv_1d + rho(i,j,k)*u(i,j,k)*v(i,j,k)
           rhouw_1d = rhouw_1d + rho(i,j,k)*u(i,j,k)*w(i,j,k)
           rhovv_1d = rhovv_1d + rho(i,j,k)*v(i,j,k)*v(i,j,k)
           rhovw_1d = rhovw_1d + rho(i,j,k)*v(i,j,k)*w(i,j,k)
           rhoww_1d = rhoww_1d + rho(i,j,k)*w(i,j,k)*w(i,j,k)
+          rhouT_1d = rhouT_1d + rho(i,j,k)*u(i,j,k)*tem(i,j,k)
           dux   = 0.0_mytype
           duy   = 0.0_mytype
           duz   = 0.0_mytype
@@ -495,57 +612,81 @@ module mod_auxl
             dty = dty + visc_ddy(c)*(tem(i,j+c,k) - tem(i,j-c,k))
             dtz = dtz + visc_ddz(c)*(tem(i,j,k+c) - tem(i,j,k-c))*za
           enddo
-          dilla2   = dux + dvy + dwz
-          tauxx_1d = tauxx_1d + mu(i,j,k)*(2.0_mytype*dux - 2.0_mytype/3.0_mytype*dilla2) 
-          tauxy_1d = tauxy_1d + mu(i,j,k)*(duy + dvx)
-          tauxz_1d = tauxz_1d + mu(i,j,k)*(duz + dwx)
-          tauyy_1d = tauyy_1d + mu(i,j,k)*(2.0_mytype*dvy - 2.0_mytype/3.0_mytype*dilla2)
-          tauyz_1d = tauyz_1d + mu(i,j,k)*(dvz + dwy)
-          tauzz_1d = tauzz_1d + mu(i,j,k)*(2.0_mytype*dwz - 2.0_mytype/3.0_mytype*dilla2)
-          qx_1d    = qx_1d    + ka(i,j,k)*dtx
-          qy_1d    = qy_1d    + ka(i,j,k)*dty
-          qz_1d    = qz_1d    + ka(i,j,k)*dtz
+          dilla2     = dux + dvy + dwz
+          tauxx_1d   = tauxx_1d + mu(i,j,k)*(2.0_mytype*dux - 2.0_mytype/3.0_mytype*dilla2) 
+          tauxy_1d   = tauxy_1d + mu(i,j,k)*(duy + dvx)
+          tauxz_1d   = tauxz_1d + mu(i,j,k)*(duz + dwx)
+          tauyy_1d   = tauyy_1d + mu(i,j,k)*(2.0_mytype*dvy - 2.0_mytype/3.0_mytype*dilla2)
+          tauyz_1d   = tauyz_1d + mu(i,j,k)*(dvz + dwy)
+          tauzz_1d   = tauzz_1d + mu(i,j,k)*(2.0_mytype*dwz - 2.0_mytype/3.0_mytype*dilla2)
+          qx_1d      = qx_1d    + ka(i,j,k)*dtx
+          qy_1d      = qy_1d    + ka(i,j,k)*dty
+          qz_1d      = qz_1d    + ka(i,j,k)*dtz
+          mudwdx_1d  = mudwdx_1d  + mu(i,j,k)*dwx
+          mududz_1d  = mududz_1d  + mu(i,j,k)*duz
+          dwdx_1d    = dwdx_1d  + dwx  
+          dudz_1d    = dudz_1d  + duz 
+          dtdx_1d    = dtdx_1d  + dtx 
         enddo
       enddo
       ! primary variables
-      qave(i,1) = qave(i,1) + rho_1d  
-      qave(i,2) = qave(i,2) + u_1d  
-      qave(i,3) = qave(i,3) + v_1d 
-      qave(i,4) = qave(i,4) + w_1d
-      qave(i,5) = qave(i,5) + pre_1d
-      qave(i,6) = qave(i,6) + tem_1d
-      qave(i,7) = qave(i,7) + ien_1d
-      qave(i,8) = qave(i,8) + mu_1d
-      qave(i,9) = qave(i,9) + ka_1d
+      qave(i,1)  = qave(i,1) + rho_1d  
+      qave(i,2)  = qave(i,2) + u_1d  
+      qave(i,3)  = qave(i,3) + v_1d 
+      qave(i,4)  = qave(i,4) + w_1d
+      qave(i,5)  = qave(i,5) + pre_1d
+      qave(i,6)  = qave(i,6) + tem_1d
+      qave(i,7)  = qave(i,7) + ien_1d
+      qave(i,8)  = qave(i,8) + mu_1d
+      qave(i,9)  = qave(i,9) + ka_1d
+      qave(i,10) = qave(i,10) + cp_1d
+      qave(i,11) = qave(i,11) + ent_1d
+      qave(i,12) = qave(i,12) + sos_1d
+      qave(i,13) = qave(i,13) + Pr_1d
+      ! favre products
+      qave(i,14) = qave(i,14) + rhou_1d
+      qave(i,15) = qave(i,15) + rhov_1d
+      qave(i,16) = qave(i,16) + rhow_1d
+      qave(i,17) = qave(i,17) + rhot_1d
+      qave(i,18) = qave(i,18) + rhoent_1d
       ! double products
-      qave(i,10) = qave(i,10) + rhou_1d
-      qave(i,11) = qave(i,11) + rhov_1d
-      qave(i,12) = qave(i,12) + rhow_1d
-      qave(i,13) = qave(i,13) + rhot_1d
-      qave(i,14) = qave(i,14) + uu_1d
-      qave(i,15) = qave(i,15) + uv_1d
-      qave(i,16) = qave(i,16) + uw_1d
-      qave(i,17) = qave(i,17) + vv_1d
-      qave(i,18) = qave(i,18) + vw_1d
-      qave(i,19) = qave(i,19) + ww_1d
-      ! triple products
-      qave(i,20) = qave(i,20) + rhouu_1d
-      qave(i,21) = qave(i,21) + rhouv_1d
-      qave(i,22) = qave(i,22) + rhouw_1d
-      qave(i,23) = qave(i,23) + rhovv_1d
-      qave(i,24) = qave(i,24) + rhovw_1d
-      qave(i,25) = qave(i,25) + rhoww_1d
+      qave(i,19) = qave(i,19) + uu_1d
+      qave(i,20) = qave(i,20) + uv_1d
+      qave(i,21) = qave(i,21) + uw_1d
+      qave(i,22) = qave(i,22) + vv_1d
+      qave(i,23) = qave(i,23) + vw_1d
+      qave(i,24) = qave(i,24) + ww_1d
+      qave(i,25) = qave(i,25) + rhorho_1d
+      qave(i,26) = qave(i,26) + temtem_1d
+      qave(i,27) = qave(i,27) + mumu_1d
+      qave(i,28) = qave(i,28) + kaka_1d
+      qave(i,29) = qave(i,29) + PrPr_1d
+      qave(i,30) = qave(i,30) + cpcp_1d
+      ! favre double products
+      qave(i,31) = qave(i,31) + rhouu_1d
+      qave(i,32) = qave(i,32) + rhouv_1d
+      qave(i,33) = qave(i,33) + rhouw_1d
+      qave(i,34) = qave(i,34) + rhovv_1d
+      qave(i,35) = qave(i,35) + rhovw_1d
+      qave(i,36) = qave(i,36) + rhoww_1d
+      qave(i,37) = qave(i,37) + rhouT_1d
       ! stress tensor
-      qave(i,26) = qave(i,26) + tauxx_1d
-      qave(i,27) = qave(i,27) + tauxy_1d 
-      qave(i,28) = qave(i,28) + tauxz_1d 
-      qave(i,29) = qave(i,29) + tauyy_1d 
-      qave(i,30) = qave(i,30) + tauyz_1d 
-      qave(i,31) = qave(i,31) + tauzz_1d
+      qave(i,38) = qave(i,38) + tauxx_1d
+      qave(i,39) = qave(i,39) + tauxy_1d 
+      qave(i,40) = qave(i,40) + tauxz_1d 
+      qave(i,41) = qave(i,41) + tauyy_1d 
+      qave(i,42) = qave(i,42) + tauyz_1d 
+      qave(i,43) = qave(i,43) + tauzz_1d
       ! heat flux 
-      qave(i,32) = qave(i,32) + qx_1d
-      qave(i,33) = qave(i,33) + qy_1d
-      qave(i,34) = qave(i,34) + qz_1d
+      qave(i,44) = qave(i,44) + qx_1d
+      qave(i,45) = qave(i,45) + qy_1d
+      qave(i,46) = qave(i,46) + qz_1d
+      ! extras
+      qave(i,47) = qave(i,47) + dwdx_1d
+      qave(i,48) = qave(i,48) + dudz_1d
+      qave(i,49) = qave(i,49) + dtdx_1d
+      qave(i,50) = qave(i,50) + mudwdx_1d
+      qave(i,51) = qave(i,51) + mududz_1d
     enddo
     factAvg = factAvg + 1.0_mytype*xsize(2)*xsize(3)
 #endif  
@@ -808,28 +949,31 @@ module mod_auxl
 
 
   ! I/O save statistics
-  subroutine saveStats(part,istep,dt,qave,factAvg,countAvg)
+  subroutine saveStats(part,istep,dt,qave,qtime,factAvg,countAvg)
     use decomp_2d
     use decomp_2d_io
     use mod_param
     implicit none
     integer :: istep,countAvg
     character*7 cha
-    real(mytype) :: dt, factAvg, factAvg_inv
+    real(mytype) :: dt, factAvg, factAvg_inv, countAvg_inv
     TYPE (DECOMP_INFO) :: part
     logical :: exist
 #if defined(BL) || defined(TGV)
     ! for boundary layer
     real(mytype), allocatable, dimension(:,:,:) :: tmpPlane
     real(mytype), dimension(:,:,:), intent(in) :: qave
+    real(mytype), dimension(:,:,:), intent(in) :: qtime
     allocate(tmpPlane(part%xsz(1),part%xsz(2),part%xsz(3)))
     tmpPlane = 0.0_mytype
 #elif defined(CHA)
     real(mytype), allocatable, dimension(:,:) :: tmpCut 
     real(mytype), dimension(:,:), intent(in) :: qave
+    real(mytype), dimension(:), intent(in) :: qtime
 #endif
     write(cha,'(I0.7)') istep
     factAvg_inv = 1.0_mytype/factAvg
+    countAvg_inv = 1.0_mytype/countAvg
     ! write stats planes in /output/stats/ 
     ! for boundary layer
 #if defined(BL)
@@ -851,69 +995,149 @@ module mod_auxl
     ! temperature (6)   
     tmpPlane(:,1,:) = qave(:,:,6)*factAvg_inv; &
     call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/t_avg.'//cha//'.bin','dummy')
+    ! internal energy (7)   
+    tmpPlane(:,1,:) = qave(:,:,7)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ien_avg.'//cha//'.bin','dummy')
     ! viscosity (8)
     tmpPlane(:,1,:) = qave(:,:,8)*factAvg_inv; &
     call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mu_avg.'//cha//'.bin','dummy') 
     ! conductivity (9)
     tmpPlane(:,1,:) = qave(:,:,9)*factAvg_inv; &
     call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ka_avg.'//cha//'.bin','dummy') 
-    ! ru (10)
+    ! isobaric specific heat (10)
     tmpPlane(:,1,:) = qave(:,:,10)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ru_avg.'//cha//'.bin','dummy') 
-    ! rv (11) 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/cp_avg.'//cha//'.bin','dummy') 
+    ! enthalpy (11)
     tmpPlane(:,1,:) = qave(:,:,11)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rv_avg.'//cha//'.bin','dummy') 
-    ! rw (12)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ent_avg.'//cha//'.bin','dummy') 
+    ! speed of sound (12)
     tmpPlane(:,1,:) = qave(:,:,12)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rw_avg.'//cha//'.bin','dummy') 
-    ! rt (13)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/sos_avg.'//cha//'.bin','dummy') 
+    ! Prandtl number (13)
     tmpPlane(:,1,:) = qave(:,:,13)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rt_avg.'//cha//'.bin','dummy')   
-    ! ruu (20)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/Pr_avg.'//cha//'.bin','dummy') 
+
+    ! Favre: ru (14)
+    tmpPlane(:,1,:) = qave(:,:,14)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ru_avg.'//cha//'.bin','dummy') 
+    ! Favre: rv (15) 
+    tmpPlane(:,1,:) = qave(:,:,15)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rv_avg.'//cha//'.bin','dummy') 
+    ! Favre: rw (16)
+    tmpPlane(:,1,:) = qave(:,:,16)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rw_avg.'//cha//'.bin','dummy') 
+    ! Favre: rt (17)
+    tmpPlane(:,1,:) = qave(:,:,17)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rt_avg.'//cha//'.bin','dummy')  
+    ! Favre: rent (18)
+    tmpPlane(:,1,:) = qave(:,:,18)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rent_avg.'//cha//'.bin','dummy')  
+
+    ! Double product: uu (19)
+    tmpPlane(:,1,:) = qave(:,:,19)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uu_avg.'//cha//'.bin','dummy') 
+    ! Double product: uv (20) 
     tmpPlane(:,1,:) = qave(:,:,20)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruu_avg.'//cha//'.bin','dummy')   
-    ! ruv (21)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uv_avg.'//cha//'.bin','dummy') 
+    ! Double product: uw (21)
     tmpPlane(:,1,:) = qave(:,:,21)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruv_avg.'//cha//'.bin','dummy')   
-    ! ruw (22)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uw_avg.'//cha//'.bin','dummy') 
+    ! Double product: vv (22)
     tmpPlane(:,1,:) = qave(:,:,22)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruw_avg.'//cha//'.bin','dummy')   
-    ! rvv (23)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/vv_avg.'//cha//'.bin','dummy')  
+    ! Double product: vw (23)
     tmpPlane(:,1,:) = qave(:,:,23)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvv_avg.'//cha//'.bin','dummy')    
-    ! rvw (24)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/vw_avg.'//cha//'.bin','dummy')  
+    ! Double product: ww (24)
     tmpPlane(:,1,:) = qave(:,:,24)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvw_avg.'//cha//'.bin','dummy')    
-    ! rww (25)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ww_avg.'//cha//'.bin','dummy') 
+    ! Double product: rhorho (25)
     tmpPlane(:,1,:) = qave(:,:,25)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rww_avg.'//cha//'.bin','dummy')    
-    ! tau_xx (26)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rhorho_avg.'//cha//'.bin','dummy')
+    ! Double product: temtem (26)
     tmpPlane(:,1,:) = qave(:,:,26)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxx_avg.'//cha//'.bin','dummy')    
-    ! tau_xy (27)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/temtem_avg.'//cha//'.bin','dummy')
+    ! Double product: mumu (27)
     tmpPlane(:,1,:) = qave(:,:,27)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxy_avg.'//cha//'.bin','dummy')    
-    ! tau_xz (28) 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mumu_avg.'//cha//'.bin','dummy')
+    ! Double product: kaka (28)
     tmpPlane(:,1,:) = qave(:,:,28)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxz_avg.'//cha//'.bin','dummy')    
-    ! tau_yy (29)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/kaka_avg.'//cha//'.bin','dummy')
+    ! Double product: PrPr (29)
     tmpPlane(:,1,:) = qave(:,:,29)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyy_avg.'//cha//'.bin','dummy')    
-    ! tau_yz (30)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/PrPr_avg.'//cha//'.bin','dummy')
+    ! Double product: cpcp (30)
     tmpPlane(:,1,:) = qave(:,:,30)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyz_avg.'//cha//'.bin','dummy')    
-    ! tau_zz (31) 
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/cpcp_avg.'//cha//'.bin','dummy')  
+
+    ! Favre: ruu (31)
     tmpPlane(:,1,:) = qave(:,:,31)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauzz_avg.'//cha//'.bin','dummy')
-    ! q_x (32)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruu_avg.'//cha//'.bin','dummy')   
+    ! Favre: ruv (32)
     tmpPlane(:,1,:) = qave(:,:,32)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qx_avg.'//cha//'.bin','dummy')
-    ! q_y (33)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruv_avg.'//cha//'.bin','dummy')   
+    ! Favre: ruw (33)
     tmpPlane(:,1,:) = qave(:,:,33)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qy_avg.'//cha//'.bin','dummy')
-    ! q_z (34)
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruw_avg.'//cha//'.bin','dummy')   
+    ! Favre: rvv (34)
     tmpPlane(:,1,:) = qave(:,:,34)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvv_avg.'//cha//'.bin','dummy')    
+    ! Favre: rvw (35)
+    tmpPlane(:,1,:) = qave(:,:,35)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvw_avg.'//cha//'.bin','dummy')    
+    ! Favre: rww (36)
+    tmpPlane(:,1,:) = qave(:,:,36)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rww_avg.'//cha//'.bin','dummy')   
+    ! Favre: rutem (37)
+    tmpPlane(:,1,:) = qave(:,:,37)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rutem_avg.'//cha//'.bin','dummy')  
+
+    ! tau_xx (38)
+    tmpPlane(:,1,:) = qave(:,:,38)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxx_avg.'//cha//'.bin','dummy')    
+    ! tau_xy (39)
+    tmpPlane(:,1,:) = qave(:,:,39)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxy_avg.'//cha//'.bin','dummy')    
+    ! tau_xz (40) 
+    tmpPlane(:,1,:) = qave(:,:,40)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxz_avg.'//cha//'.bin','dummy')    
+    ! tau_yy (41)
+    tmpPlane(:,1,:) = qave(:,:,41)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyy_avg.'//cha//'.bin','dummy')    
+    ! tau_yz (42)
+    tmpPlane(:,1,:) = qave(:,:,42)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyz_avg.'//cha//'.bin','dummy')    
+    ! tau_zz (43) 
+    tmpPlane(:,1,:) = qave(:,:,43)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauzz_avg.'//cha//'.bin','dummy')
+    ! q_x (44)
+    tmpPlane(:,1,:) = qave(:,:,44)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qx_avg.'//cha//'.bin','dummy')
+    ! q_y (45)
+    tmpPlane(:,1,:) = qave(:,:,45)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qy_avg.'//cha//'.bin','dummy')
+    ! q_z (46)
+    tmpPlane(:,1,:) = qave(:,:,46)*factAvg_inv; &
     call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qz_avg.'//cha//'.bin','dummy')
+
+    ! dwdx (47)
+    tmpPlane(:,1,:) = qave(:,:,47)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dwdx_avg.'//cha//'.bin','dummy')
+    ! dudz (48)
+    tmpPlane(:,1,:) = qave(:,:,48)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dudz_avg.'//cha//'.bin','dummy')
+    ! dtdx (49)
+    tmpPlane(:,1,:) = qave(:,:,49)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dtdx_avg.'//cha//'.bin','dummy')
+    ! mudwdx (50)
+    tmpPlane(:,1,:) = qave(:,:,50)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mudwdx_avg.'//cha//'.bin','dummy')
+    ! mududz (51)
+    tmpPlane(:,1,:) = qave(:,:,51)*factAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mududz_avg.'//cha//'.bin','dummy')
+    ! tau_xz_wall (1-time)
+    tmpPlane(1,:,:) = qtime(:,:,1)*countAvg_inv; &
+    call decomp_2d_write_plane(1,tmpPlane,1,1, '.','output/stats/tauxz_wall_time.'//cha//'.bin','dummy')
     ! for channel
 #elif defined(CHA) 
     ! call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)

@@ -122,7 +122,7 @@ module mod_eos
     enddo 
   end subroutine
 
-  
+
 ! Call speed of sound from density and internal energy
   subroutine calcSOS(rho,ien,sos) 
     !$acc routine seq
@@ -132,6 +132,17 @@ module mod_eos
     real(mytype), intent(IN)  :: rho,ien
     real(mytype), intent(OUT) :: sos
     call calcSOS_re(rho*t_param%Rhoref, ien, sos)
+  end subroutine
+
+! Call isobaric specific heat and enthalpy from density and internal energy
+  subroutine calcCpH(rho,ien,cp,ent) 
+    !$acc routine seq
+    use mod_param, only: nHalo
+    use mod_eos_var
+    implicit none
+    real(mytype), intent(IN)  :: rho,ien
+    real(mytype), intent(OUT) :: cp,ent
+    call calcCpH_re(rho*t_param%Rhoref, ien, cp, ent)
   end subroutine
 
 ! Call c_p/alpha_v from density and internal energy (for boundary conditions)

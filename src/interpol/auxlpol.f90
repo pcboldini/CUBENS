@@ -132,7 +132,11 @@ module mod_interpolate
         enddo
         call spline(xold,tmpInt1,imax,tmpInt2)
         do i=1,inew
-          call splint(xold,tmpInt1,tmpInt2,imax,xnew(i),tmpArray1(i,j,k))
+          if (xnew(i) < xold(imax)) then
+            call splint(xold,tmpInt1,tmpInt2,imax,xnew(i),tmpArray1(i,j,k))
+          else
+            tmpArray1(i,j,k) = input(imax,j,k)
+          endif
         enddo
       enddo
     enddo

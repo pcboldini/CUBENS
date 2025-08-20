@@ -2,6 +2,7 @@ import shutil
 import os
 import numpy as np
 from writexmf import writexmf
+from writexmf_one import writexmf_one
 
 # Remove all files inside the yplanes folder
 dst_path = os.path.join(os.getcwd(), "yplanes")
@@ -24,6 +25,12 @@ x_scale=1
 y_scale=1
 z_scale=1
 
+slice_flag='off'
+inew1=0
+inew2=100
+knew1=1
+knew2=500
+
 precision = 'double'
 
 if interpol==1:
@@ -44,12 +51,6 @@ jmax = np.size(y)
 kmax = np.size(z)
 print(imax,jmax,kmax)
 
-slice_flag='on'
-inew1=0
-inew2=100
-knew1=1
-knew2=500
-
 ## functions
 
 def getfluc(name,imax,kmax,timestamp):
@@ -57,6 +58,7 @@ def getfluc(name,imax,kmax,timestamp):
     data_time = np.zeros((imax,kmax),precision)
     data_total = np.zeros((len(timestamp),imax,kmax),precision)
     data_mean = np.zeros((imax,kmax),precision)
+    data_rms = np.zeros((imax,kmax), precision)
     time_index=0
     for t in timestamp:
         data=np.fromfile("{0}.{1:07d}.bin".format(name,t), dtype=precision)
@@ -68,8 +70,11 @@ def getfluc(name,imax,kmax,timestamp):
         data=np.fromfile("{0}.{1:07d}.bin".format(name,t), dtype=precision)
         data_time=np.reshape(data, (imax, kmax))
         data_fluc=data_time-data_mean
+        data_rms += data_fluc**2
         data_fluc_reshape=np.reshape(data_fluc, (imax*kmax))
         data_fluc_reshape.tofile("{0}.fluc.{1:07d}.bin".format(name,t)) 
+    data_rms = np.sqrt(data_rms / len(timestamp))
+    data_rms.reshape(imax * kmax).tofile(f"{name}.rms.bin")
 
 
 ## code
@@ -102,6 +107,7 @@ else:
 
 datanames_var= ["" for j in range(len(var))]
 datanames_fluc= ["" for j in range(len(var))]
+datanames_rms= ["" for j in range(len(var))]
 
 for j in range(0,len(var)):
     if slice_flag=='on':
@@ -112,6 +118,10 @@ for j in range(0,len(var)):
         datanames_fluc[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.slice.fluc')
     else:
         datanames_fluc[j] =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.fluc')
+    if slice_flag=='on':
+        datanames_rms[j]  =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.slice.rms')
+    else:
+        datanames_rms[j]  =(str(char_y) + '.' + str(index_y) + '.' + str(var[j]) + '.rms')
 
 xa = 20
 
@@ -141,6 +151,17 @@ else:
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_fluc)
 
+if interpol==1:
+    writexmf_one("yplanes/yplanes_aI.rms.xmf", precision,  \
+            x*x_scale, [y[0]]*y_scale, z*z_scale,\
+            timestamp = [0], dt = 0.0,\
+            dataNames = datanames_rms)
+else:
+    writexmf_one("yplanes/yplanes.rms.xmf", precision,  \
+            x*x_scale, [y[0]]*y_scale, z*z_scale,\
+            timestamp = [0], dt = 0.0,\
+            dataNames = datanames_rms)
+
 
 for j in range(0,len(var)):
     for i in range(0, len (timestamps)):
@@ -148,12 +169,19 @@ for j in range(0,len(var)):
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i])+ ".bin")
             shutil.move(src_path, dst_path)
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.move(src_path, dst_path)  
+            shutil.move(src_path, dst_path)    
         else:
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  "." + '{0:07d}'.format(timestamps[i])+ ".bin")
-            shutil.move(src_path, dst_path)
+            shutil.copy(src_path, dst_path)
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
-            shutil.move(src_path, dst_path)       
+            shutil.move(src_path, dst_path) 
+    if slice_flag=='on':
+        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.rms.bin")
+        shutil.move(src_path, dst_path)
+    else:
+        src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".rms.bin")      
+        shutil.move(src_path, dst_path)
+
 
 
 print('Planes copied')
