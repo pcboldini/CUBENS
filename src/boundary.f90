@@ -865,6 +865,8 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
       prefac_r = t_ig%prefac_r 
 #elif defined(VdW)
       prefac_r = t_vdw%prefac_r 
+#elif defined(RK)
+      prefac_r = t_rk%prefac_r
 #elif defined(PR)
       prefac_r = t_pr%prefac_r 
 #endif
@@ -1273,7 +1275,7 @@ subroutine setBC_Inl_rescale(rho,u,v,w,ien,pre,tem,mu,ka)
             p_rcy_inner_ave(i,j,k) = Pref       
             t_rcy_inner_ave(i,j,k) = 1.0_mytype
           endif    
-          ! interpolating the outler layer
+          ! interpolating the outer layer
           ! fluctuations
           call splint(x,u1d_flu(1:xsize(1),j,k),u1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),u_rcy_outer_flu(i,j,k))
           call splint(x,v1d_flu(1:xsize(1),j,k),v1d_rcy_flu(1:xsize(1),j,k),xsize(1),x_rcy_outer(i),v_rcy_outer_flu(i,j,k))
@@ -1457,7 +1459,9 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
 #if defined(IG)
     prefac_r = t_ig%prefac_r 
 #elif defined(VdW)
-    prefac_r = t_vdw%prefac_r 
+    prefac_r = t_vdw%prefac_r
+#elif defined(RK)
+    prefac_r = t_rk%prefac_r 
 #elif defined(PR)
     prefac_r = t_pr%prefac_r 
 #endif

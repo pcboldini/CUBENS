@@ -63,6 +63,8 @@ subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   pre = Pref*t_ig%prefac_r  
 #elif defined(VdW)
   pre = Pref*t_vdw%prefac_r 
+#elif defined(RK)
+  pre = Pref*t_rk%prefac_r 
 #elif defined(PR)
   pre = Pref*t_pr%prefac_r 
 #endif
@@ -120,6 +122,8 @@ subroutine initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
   pre = Pref*t_ig%prefac_r  
 #elif defined(VdW)
   pre = Pref*t_vdw%prefac_r 
+#elif defined(RK)
+  pre = Pref*t_rk%prefac_r 
 #elif defined(PR)
   pre = Pref*t_pr%prefac_r 
 #endif

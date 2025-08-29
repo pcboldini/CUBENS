@@ -228,6 +228,8 @@ module mod_eos_visc
     t_jst%ka_factor  = 0.307*(eos_dof/2.0_mytype) + 0.539_mytype
 #if defined(VdW)
     t_jst%ZcPow5=vdw_Zc**5
+#elif defined(RK)
+    t_jst%ZcPow5=rk_Zc**5
 #elif defined(VdW)
     t_jst%ZcPow5=pr_Zc**5
 #endif
@@ -310,6 +312,8 @@ module mod_eos_visc
     t_chu%rp_Zc = rp_Zc
 #if defined(VdW)
       t_chu%Zc = vdw_Zc
+#elif defined(RK)
+      t_chu%Zc = rk_Zc      
 #elif defined(PR)
       t_chu%Zc = pr_Zc
 #endif

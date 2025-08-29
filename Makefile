@@ -8,10 +8,10 @@
 ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, 1D test wave
 CASE = -DBL # DBL # DCHA # DTGV
-# Equation of state: Ideal Gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
-EOS_LAW = -DIG     # DIG # DVdW # DPR
+# Equation of state: Ideal Gas (IG), Van der Waals (VdW), Redlich-Kwong (RK), Peng-Robinson (PR)
+EOS_LAW = -DRK     # DIG # DVdW # DRK # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DSutherland  # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DJST  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers

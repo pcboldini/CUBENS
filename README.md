@@ -36,6 +36,7 @@ P.C. Boldini, R. Hirai, P. Costa, J.W.R. Peeters, R. Pecnik, "CUBENS: a GPU-acce
 P.C. Boldini, "CUBENS: A GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Computer Physics Communications Seminar Series, [link_to_seminar](https://doi.org/10.52843/cassyni.gwmx6m)
 
 ## News
+# **[2025/08/29]** Redlich-Kwong EoS is implemented.
 # **[2025/01/17]** CUBENS v1.0 is finally online!
 # **[2025/01/17]** The paper has been published (see link)!
 # **[2025/01/14]** The paper has been accepted!

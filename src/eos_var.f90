@@ -25,6 +25,14 @@ module mod_eos_var
   !$acc declare create(t_vdw)
   !$acc declare create(t_vdw%Efac_r,t_vdw%cvOverR, & 
   !$acc                t_vdw%prefac_r,t_vdw%Cpfac_r,t_vdw%Zc,t_vdw%Rref,t_vdw%a)
+! Variables container for Redlich-Kwong EoS   
+  type t_EOS_RK
+    real(mytype) :: Efac_r, cvOverR, prefac_r, Cpfac_r, Zc, Zc1, Zc2, Rref, a, b
+  end type 
+  type(t_EOS_RK) :: t_rk
+  !$acc declare create(t_rk)
+  !$acc declare create(t_rk%Rref,t_rk%Efac_r,t_rk%cvOverR,t_rk%prefac_r, & 
+  !$acc                t_rk%Cpfac_r,t_rk%Zc,t_rk%Zc1,t_rk%Zc2,t_rk%a,t_rk%b)
 ! Variables container for Peng-Robinson EoS  
   type t_EOS_PR
     real(mytype) :: Rref, Efac_r, cvOverR, prefac_r, Cpfac_r, K, Zc, Zc1, Zc2, a, b
@@ -186,6 +194,7 @@ module mod_eos_var
 ! Calculate EoS from density and internal energy
   subroutine calcEOS_re(rho_r,ien,pre,tem_r)
     !$acc routine seq
+    use decomp_2d, only: mytype
     implicit none
     real(mytype), intent(IN)  :: rho_r,ien
     real(mytype), intent(OUT) :: pre,tem_r
@@ -337,6 +346,273 @@ module mod_eos_var
     cp      = cp_r*t_vdw%Cpfac_r
     dPdT_rho = dPdT_rho_r*t_vdw%prefac_r*tref
     dPdrho_T = dPdrho_T_r*t_vdw%prefac_r*rhoref
+    alpha_v = 1.0_mytype*rhoref/rho_r*dPdT_rho/dPdrho_T
+    fac     = cp/alpha_v
+  end subroutine
+#endif
+
+
+! Include Redlich-Kwong EoS 
+#ifdef RK
+
+! Initialize 
+  subroutine init_EOSModel()
+    use mod_param
+    implicit none 
+    real(mytype) :: rk_cvR, prefac_r, Cpfac_r
+    integer      :: ierr                         ! ierr
+#if defined(BL) || defined(CHA)
+    if (nrank==0) then
+      if (USE_EOS=='RK') then
+        write(stdout,* ) 'Correct initialisation of USE_EOS'   
+        write(stdout,* )
+      else
+        write(stdout,* ) 'Mismatch USE_EOS between initBL and Makefile, check both again!'
+        write(stdout,* )
+        call decomp_2d_finalize
+        call mpi_finalize(ierr) 
+        stop
+      endif
+    endif
+#endif
+        ! Calculate variables
+    rk_cvR=eos_dof/2
+    prefac_r = vdw_Zc/Rhoref/Tref/Ec/Cpref
+    Cpfac_r = Tref/Ma**2/SOSref**2/rk_Zc
+    ! Declare variables
+    t_rk%Rref= Rref
+    t_rk%a = rk_a
+    t_rk%b = rk_b
+    t_rk%Zc1 = rk_Zc**(-1)
+    t_rk%Zc2 = rk_Zc**(-2)
+    t_rk%prefac_r = prefac_r 
+    t_rk%Efac_r = rk_Zc/Tref/Ec/Cpref
+    t_rk%Zc = rk_Zc
+    t_rk%cvOverR = rk_cvR
+    t_rk%Cpfac_r = Cpfac_r
+    !$acc update device(t_rk) 
+    !$acc update device(t_rk%Rref,t_rk%a,t_rk%prefac_r,t_rk%Efac_r,t_rk%Zc,t_rk%cvOverR,t_rk%Cpfac_r)
+  end subroutine
+
+! Calculate EoS from density and internal energy
+  subroutine calcEOS_re(rho_r,ien,pre,tem_r)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien
+    real(mytype), intent(OUT) :: pre,tem_r
+    real(mytype) :: ien_r, pre_r, A,B,C,D
+    real(mytype) :: Efac_r, prefac_r, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2, Rref, cvOverR
+    ! Reduced quantities
+    Efac_r = t_rk%Efac_r
+    prefac_r = t_rk%prefac_r
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    Rref=t_rk%Rref
+    cvOverR=t_rk%cvOverR
+    ien_r = ien/Efac_r
+    A =  t_rk_Zc1*cvOverR
+    B = 0.0_mytype
+    C = -ien_r
+    D = -3.0_mytype*rk_a*t_rk_Zc1/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    call cubic_root(A,B,C,D,tem_r)
+    tem_r = tem_r**2
+    pre_r = t_rk_Zc1*tem_r/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) - rk_a*t_rk_Zc2/(sqrt(tem_r)*(1.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))
+    ! Non-dimensional quantities
+    pre = pre_r*prefac_r
+  end subroutine
+
+! Calculate EoS from density and pressure
+  subroutine calcEOS_rP(rho_r,pre,ien,tem_r)
+    !$acc routine seq  
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,pre
+    real(mytype), intent(OUT) :: ien,tem_r
+    real(mytype) :: pre_r, ien_r, A,B,C,D
+    real(mytype) :: Efac_r, prefac_r, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2, Rref, cvOverR
+    ! Reduced quantities
+    Efac_r = t_rk%Efac_r
+    prefac_r = t_rk%prefac_r
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    Rref=t_rk%Rref
+    cvOverR=t_rk%cvOverR
+    pre_r = pre/prefac_r
+    A =  t_rk_Zc1/(1.0_mytype/rho_r-rk_b*t_rk_Zc1)
+    B = 0.0_mytype
+    C = -pre_r
+    D = - ( rk_a*t_rk_Zc2/((1.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1)) )
+    call cubic_root(A,B,C,D,tem_r)
+    tem_r = tem_r**2
+    ien_r = t_rk_Zc1*cvOverR*tem_r - 3.0_mytype*rk_a*t_rk_Zc1*tem_r**(-1.0_mytype/2.0_mytype)/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    ! Non-dimensional quantities
+    ien = Efac_r*ien_r
+  end subroutine
+
+! Calculate EoS from density and temperature
+  subroutine calcEOS_rT(rho_r,tem_r,ien,pre)
+    !$acc routine seq  
+    use decomp_2d, only: mytype
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,tem_r
+    real(mytype), intent(OUT) :: ien,pre
+    real(mytype) :: pre_r, ien_r
+    real(mytype) :: Efac_r, prefac_r, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2, Rref, cvOverR
+    ! Reduced quantities
+    Efac_r = t_rk%Efac_r
+    prefac_r = t_rk%prefac_r
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    Rref=t_rk%Rref
+    cvOverR=t_rk%cvOverR
+    ien_r = t_rk_Zc1*cvOverR*tem_r - 3.0_mytype*rk_a*t_rk_Zc1*tem_r**(-1.0_mytype/2.0_mytype)/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    pre_r = t_rk_Zc1*tem_r/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) - rk_a*t_rk_Zc2/(sqrt(tem_r)*(1.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))
+    ! Non-dimensional quantities
+    pre = pre_r*prefac_r
+    ien = Efac_r*ien_r
+  end subroutine
+
+! Calculate EoS from pressure and temperature
+  subroutine calcEOS_PT(pre,tem_r,rho_r,ien)
+    !$acc routine seq  
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: pre,tem_r
+    real(mytype), intent(OUT) :: rho_r,ien
+    real(mytype) :: pre_r,v_r,ien_r,A,B,C,D
+    real(mytype) :: Efac_r, prefac_r, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2, Rref, cvOverR
+    ! Reduced quantities
+    Efac_r = t_rk%Efac_r
+    prefac_r = t_rk%prefac_r
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    Rref=t_rk%Rref
+    cvOverR=t_rk%cvOverR
+    pre_r = pre/prefac_r
+    A = pre_r
+    B = - t_rk_Zc1*tem_r
+    C =  t_rk_Zc1**2*(rk_a/sqrt(tem_r)-pre_r*rk_b**2-rk_b*tem_r)
+    D = -rk_a*rk_b*t_rk_Zc1**3/sqrt(tem_r)
+    call cubic_root(A,B,C,D,v_r)
+    rho_r = 1/v_r
+    ien_r = t_rk_Zc1*cvOverR*tem_r - 3.0_mytype*rk_a*t_rk_Zc1*tem_r**(-1.0_mytype/2.0_mytype)/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r)
+    ! Non-dimensional quantities
+    ien = Efac_r*ien_r
+  end subroutine
+
+! Calculate speed of sound from density and internal energy
+  subroutine calcSOS_re(rho_r,ien,sos)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien
+    real(mytype), intent(OUT) :: sos
+    real(mytype) :: T1, F1, F2, F3, tem_r, cv_r, dPdrho_T_r, dPdT_rho_r
+    real(mytype) :: ien_r,sos_r, A,B,C,D
+    real(mytype) :: sosfac_r, cvOverR, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2
+    ! Reduced quantities
+    sosfac_r = t_rk%Efac_r  ! sosfac_r is equal to Efac_r
+    ien_r = ien/t_rk%Efac_r
+    cvOverR = t_rk%cvOverR
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    A =  t_rk_Zc1*cvOverR
+    B = 0.0_mytype
+    C = -ien_r
+    D = -3.0_mytype*rk_a*t_rk_Zc1/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    call cubic_root(A,B,C,D,tem_r) 
+    tem_r = tem_r**2
+    cv_r = ( cvOverR + 3.0_mytype*rk_a*tem_r**(-3.0_mytype/2.0_mytype)/(4.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) )
+    dPdT_rho_r = ( t_rk_Zc1/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) +  tem_r**(-3.0_mytype/2.0_mytype)*rk_a*t_rk_Zc2/((2.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))  )
+    dPdrho_T_r = ( t_rk_Zc1*tem_r/(rho_r**2*(1.0_mytype/rho_r-rk_b*t_rk_Zc1)**2) - rk_a*t_rk_Zc2/sqrt(tem_r)*(2.0_mytype/rho_r+rk_b*t_rk_Zc1)/(1.0_mytype/rho_r+rk_b*t_rk_Zc1)**2 )
+    sos_r = dPdrho_T_r+t_rk%Zc*tem_r/(rho_r**2*cv_r)*dPdT_rho_r**2
+    ! Non-dimensional quantities
+    sos = sqrt(sosfac_r*sos_r)  
+  end subroutine
+
+! Calculate isobaric specific heat and enthalpy from density and internal energy
+  subroutine calcCpH_re(rho_r,ien,cp,ent)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien
+    real(mytype), intent(OUT) :: cp,ent
+    real(mytype) :: cv_r, dPdrho_T_r, dPdT_rho_r
+    real(mytype) :: ien_r,tem_r,pre_r,cp_r,ent_r, A,B,C,D
+    real(mytype) :: Efac_r, prefac_r, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2, Rref, cvOverR
+    ! Reduced quantities
+    cvOverR = t_rk%cvOverR
+    ien_r   = ien/t_rk%Efac_r
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    A =  t_rk_Zc1*cvOverR
+    B = 0.0_mytype
+    C = -ien_r
+    D = -3.0_mytype*rk_a*t_rk_Zc1/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    call cubic_root(A,B,C,D,tem_r) 
+    tem_r = tem_r**2 
+    pre_r = t_rk_Zc1*tem_r/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) - rk_a*t_rk_Zc2/(sqrt(tem_r)*(1.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))
+    cv_r = ( cvOverR + 3.0_mytype*rk_a*tem_r**(-3.0_mytype/2.0_mytype)/(4.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) )  
+    dPdT_rho_r = ( t_rk_Zc1/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) +  tem_r**(-3.0_mytype/2.0_mytype)*rk_a*t_rk_Zc2/((2.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))  )
+    dPdrho_T_r = ( t_rk_Zc1*tem_r/(rho_r**2*(1.0_mytype/rho_r-rk_b*t_rk_Zc1)**2) - rk_a*t_rk_Zc2/sqrt(tem_r)*(2.0_mytype/rho_r+rk_b*t_rk_Zc1)/(1.0_mytype/rho_r+rk_b*t_rk_Zc1)**2 ) 
+    cp_r  = cv_r + t_rk%Zc*tem_r/(rho_r**2)*dPdT_rho_r**2/(dPdrho_T_r)
+    ent_r   = ien_r + pre_r/rho_r
+    ! Non-dimensional quantities
+    cp      = cp_r*t_rk%Cpfac_r
+    ent     = ent_r*t_rk%Efac_r
+  end subroutine
+
+! Calculate c_p/alpha_v from density and internal energy
+  subroutine calcFac_re(rho_r,ien,fac,tref,rhoref)
+    !$acc routine seq
+    use decomp_2d, only: mytype
+    use mod_math
+    implicit none
+    real(mytype), intent(IN)  :: rho_r,ien,tref,rhoref
+    real(mytype), intent(OUT) :: fac
+    real(mytype) :: ien_r,tem_r,cp_r,dPdT_rho_r,dPdrho_T_r
+    real(mytype) :: alpha_v, cv_r, A,B,C,D
+    real(mytype) :: cp,dPdT_rho,dPdrho_T
+    real(mytype) :: cvOverR, rk_a, rk_b, t_rk_Zc1, t_rk_Zc2
+    ! Reduced quantities
+    cvOverR = t_rk%cvOverR
+    rk_a = t_rk%a
+    rk_b = t_rk%b
+    t_rk_Zc1 = t_rk%Zc1
+    t_rk_Zc2 = t_rk%Zc2
+    ien_r = ien/t_rk%Efac_r
+    A =  t_rk_Zc1*cvOverR
+    B = 0.0_mytype
+    C = -ien_r
+    D = -3.0_mytype*rk_a*t_rk_Zc1/(2.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) 
+    call cubic_root(A,B,C,D,tem_r) 
+    tem_r = tem_r**2
+    cv_r = ( cvOverR + 3.0_mytype*rk_a*tem_r**(-3.0_mytype/2.0_mytype)/(4.0_mytype*rk_b)*log(1.0_mytype+rk_b*t_rk_Zc1*rho_r) )  
+    dPdT_rho_r = ( t_rk_Zc1/(1.0_mytype/rho_r-rk_b*t_rk_Zc1) +  tem_r**(-3.0_mytype/2.0_mytype)*rk_a*t_rk_Zc2/((2.0_mytype/rho_r)*(1.0_mytype/rho_r+rk_b*t_rk_Zc1))  )
+    dPdrho_T_r = ( t_rk_Zc1*tem_r/(rho_r**2*(1.0_mytype/rho_r-rk_b*t_rk_Zc1)**2) - rk_a*t_rk_Zc2/sqrt(tem_r)*(2.0_mytype/rho_r+rk_b*t_rk_Zc1)/(1.0_mytype/rho_r+rk_b*t_rk_Zc1)**2 ) 
+    cp_r  = cv_r + t_rk%Zc*tem_r/(rho_r**2)*dPdT_rho_r**2/(dPdrho_T_r)
+    ! Non-dimensional quantities
+    cp   = cp_r*t_rk%Cpfac_r
+    dPdT_rho = dPdT_rho_r*t_rk%prefac_r*tref
+    dPdrho_T = dPdrho_T_r*t_rk%prefac_r*rhoref
     alpha_v = 1.0_mytype*rhoref/rho_r*dPdT_rho/dPdrho_T
     fac     = cp/alpha_v
   end subroutine

@@ -55,7 +55,11 @@ implicit none
   ! Van der Waals 
   real(mytype) :: vdw_a   = 3.0_mytype
   real(mytype) :: vdw_b   = 1.0_mytype/3.0_mytype  
-  real(mytype) :: vdw_Zc  = 3.0_mytype/8.0_mytype  
+  real(mytype) :: vdw_Zc  = 3.0_mytype/8.0_mytype 
+  ! Redlich-Kwong
+  real(mytype) :: rk_a   = 0.42748_mytype
+  real(mytype) :: rk_b   = 0.08664_mytype  
+  real(mytype) :: rk_Zc  = 1.0_mytype/3.0_mytype   
   ! Peng-Robinson
   real(mytype) :: pr_a   = 0.45724_mytype  
   real(mytype) :: pr_b   = 0.07780_mytype  
@@ -362,7 +366,15 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Parameter a in VdW:                   ',vdw_a
       write(stdout,'(A, F10.4)') 'Parameter b in VdW:                   ',vdw_b
       write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',vdw_Zc 
-
+#elif defined(RK)
+      write(stdout,* ) 'EoS: Redlich-Kwong'
+      write(stdout,* ) 
+      write(stdout,* ) 'EoS parameters:'
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+      write(stdout,'(A, F10.4)') 'DOF:                                  ',eos_dof
+      write(stdout,'(A, F10.4)') 'Parameter a in RK:                    ',rk_a
+      write(stdout,'(A, F10.4)') 'Parameter b in RK:                    ',rk_b
+      write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',rk_Zc 
 #elif defined(PR)
       write(stdout,* ) 'EoS: Peng-Robinson'
       write(stdout,* ) 
@@ -373,7 +385,7 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Parameter b in PR:                    ',pr_b
       write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',pr_Zc 
 #endif
-#if defined(VdW) || defined(PR)
+#if defined(VdW) || defined(RK) || defined(PR) 
       write(stdout,'(A, F10.4)') 'Acentric factor:                      ',eos_ac   
       write(stdout,'(A, F10.4)') 'Rgas [J/kg/K]:                        ',eos_Rgas 
       write(stdout,'(A, F10.4)') 'Tcrit [K]:                            ',Tcrit 
