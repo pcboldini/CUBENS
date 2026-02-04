@@ -626,12 +626,17 @@ subroutine setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre)
         enddo
       enddo
     endif
-  ! without boundary condition
-  else 
-    if (nrank.eq.0) write (stdout,*) "unknown BC_bottom"
-    call decomp_2d_finalize
-    call mpi_finalize(ierr)
-    stop
+  else
+    !$acc parallel loop collapse(2) default(present) async(1) 
+    do k=1,km
+      do j=1,jm
+        rhs_r(iBC,j,k) = 0.0_mytype
+        rhs_u(iBC,j,k) = 0.0_mytype
+        rhs_v(iBC,j,k) = 0.0_mytype
+        rhs_w(iBC,j,k) = 0.0_mytype
+        rhs_e(iBC,j,k) = 0.0_mytype
+      enddo
+    enddo
   endif
 end subroutine
 
@@ -980,12 +985,17 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         rhs_e(iBC,j,k) = 0.0_mytype
       enddo
     enddo 
-  ! without boundary condition
-  else 
-    if (nrank.eq.0) write (stdout,*) "unknown BC_top", BC_top
-    call decomp_2d_finalize
-    call mpi_finalize(ierr)
-    stop
+  else
+    !$acc parallel loop collapse(2) default(present) async(1) 
+    do k=1,km
+      do j=1,jm
+        rhs_r(iBC,j,k) = 0.0_mytype
+        rhs_u(iBC,j,k) = 0.0_mytype
+        rhs_v(iBC,j,k) = 0.0_mytype
+        rhs_w(iBC,j,k) = 0.0_mytype
+        rhs_e(iBC,j,k) = 0.0_mytype
+      enddo
+    enddo
   endif
 end subroutine
 

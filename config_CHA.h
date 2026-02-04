@@ -17,10 +17,10 @@
 !   adiab_std,  isoth_std  : standard implementation of wall BC
 !   adiab_nrbc, isoth_nrbc : non-reflecting implementation of wall BC
 
-    BC_bot = "isoth_nrbc"                           ! see above
+    BC_bot = "isoth_std"                           ! see above
 
 !   freestream BCs:
-    BC_top = "isoth_nrbc"                           ! see above
+    BC_top = "isoth_std"                           ! see above
 
     perBC  = (/.false.,.true.,.true./)              ! if .true., periodic BC
 !

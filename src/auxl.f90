@@ -969,7 +969,7 @@ module mod_auxl
 #elif defined(CHA)
     real(mytype), allocatable, dimension(:,:) :: tmpCut 
     real(mytype), dimension(:,:), intent(in) :: qave
-    real(mytype), dimension(:), intent(in) :: qtime
+    real(mytype), dimension(:,:), intent(in) :: qtime
 #endif
     write(cha,'(I0.7)') istep
     factAvg_inv = 1.0_mytype/factAvg
