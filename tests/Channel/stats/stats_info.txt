@@ -1,0 +1,12 @@
+step: 700000
+number of averaged files: 1000
+average factor: 30720000
+time from begin averaging:      0.104769E+03
+step: 900000
+number of averaged files: 1000
+average factor: 30720000
+time from begin averaging:      0.134702E+03
+step: 1200000
+number of averaged files: 1500
+average factor: 46080000
+time from begin averaging:      0.179603E+03

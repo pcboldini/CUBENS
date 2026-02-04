@@ -1,0 +1,4 @@
+step: 1200000
+number of averaged files: 1500
+average factor: 46080000
+time from begin averaging:      0.179603E+03
