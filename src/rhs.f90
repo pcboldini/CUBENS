@@ -156,9 +156,9 @@ contains
     ! only in the internal cells
     if ((im > 2*nHalo) .and. (jm > 2*nHalo) .and. (km > 2*nHalo)) then
       !$acc parallel loop collapse(3) default(present) private(rhoa,ua,va,wa,pa,rhoea,za,xa) async(1)
-      do k=1+nHalo,km-nHalo 
-        do j=1+nHalo,jm-nHalo
-          do i=1+nHalo,im-nHalo
+      do k=1+nHalo+1,km-nHalo-1 
+        do j=1+nHalo+1,jm-nHalo-1
+          do i=1+nHalo+1,im-nHalo-1
             ! routine for fluxes calculation 
             if ( keep_flag == "classic" ) then 
 #include "eulerFlux.f90"
@@ -210,12 +210,12 @@ contains
     if ((perBC(3) .eqv. .false.) .and. (neigh%outlet)) then
       k2 = km-1
     endif
-    imaxHalo=min(nHalo,i2)
-    iminHalo=max(im-nHalo+1,nHalo+1)
-    jmaxHalo=min(nHalo,jm)
-    jminHalo=max(jm-nHalo+1,nHalo+1)
-    kmaxHalo=min(nHalo,k2)
-    kminHalo=max(km-nHalo+1,nHalo+1)
+    imaxHalo=min(1+nHalo,i2)
+    iminHalo=max(im-nHalo,nHalo+1)
+    jmaxHalo=min(1+nHalo,jm)
+    jminHalo=max(jm-nHalo,nHalo+1)
+    kmaxHalo=min(1+nHalo,k2)
+    kminHalo=max(km-nHalo,nHalo+1)
     if ( keep_flag == "pep" ) then
       ! calculation of rho*e, needed for internal energy flux
       ! k face min

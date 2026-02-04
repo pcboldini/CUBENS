@@ -12,11 +12,14 @@ for filename in os.listdir(dst_path):
 
 current_path=os.getcwd()
 
-time_start=0
-time_end=1
+time_start=2000
+time_end=2000
 time_step=1
 
+var1_flag="on"
 var1=["w"] # r,u,v,w,e,rw
+var2="vorty"
+
 
 x_scale=1
 y_scale=1
@@ -82,23 +85,43 @@ for i in range(0, len (timestamps)):
     print('timestamp={0:07d}'.format(timestamps[i]))
     timestamps_print='{0:07d}'.format(timestamps[i])
 
-array_var=["r","u","v","w","e","rw"]
-index_var1 = np.zeros(len(var1),'int')
-for i in range(0,len(array_var)):
+if var1_flag=='on':
+    array_var=["r","u","v","w","e","rw"]
+    index_var1 = np.zeros(len(var1),'int')
+    for i in range(0,len(array_var)):
+        for j in range(0,len(var1)):
+    	    if array_var[i] == var1[j]:
+                index_var1[j]=i       
+
+    getfields(('../../output/restart/' + 'ruvwe' ), var1, index_var1, imax, jmax, kmax, timestamps)
+
+if slice_flag=='on':
+    for i in range(0, len (timestamps)):
+        data=np.fromfile(os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+        data_reshape=np.reshape(data, (kmax, jmax, imax))
+        data_slice= data_reshape[knew1:knew2, :, inew1:inew2]
+        data_slice_reshape = np.reshape(data_slice, (kmaxnew*jmax*imaxnew))
+        data_slice_reshape.tofile(os.path.join(current_path, f"../results/vort/{var2}.slice." + '{0:07d}'.format(timestamps[i]) + ".bin"))
+
+if var1_flag=='on':
+    datanames_var= ["" for j in range(len(var1))]
+
     for j in range(0,len(var1)):
-    	if array_var[i] == var1[j]:
-            index_var1[j]=i       
+        if slice_flag=='on':
+            datanames_var[j] =('ruvwe' + '.' + str(var1[j]) + '.slice')
+        else:
+            datanames_var[j] =('ruvwe' + '.' + str(var1[j]))
 
-getfields(('../../output/restart/' + 'ruvwe' ), var1, index_var1, imax, jmax, kmax, timestamps)
-
-datanames_var= ["" for j in range(len(var1))]
-
-for j in range(0,len(var1)):
     if slice_flag=='on':
-        datanames_var[j] =('ruvwe' + '.' + str(var1[j]) + '.slice')
+        datanames_var.append(var2+'.slice')
     else:
-        datanames_var[j] =('ruvwe' + '.' + str(var1[j]))
-
+        datanames_var.append(var2)
+else:
+    datanames_var= []
+    if slice_flag=='on':
+        datanames_var.append(var2+'.slice')
+    else:
+        datanames_var.append(var2)
 
 print(datanames_var)
 
@@ -114,6 +137,7 @@ for i in range(1, 5):
                 timestamp = timestamps, dt = 1.0,\
                 dataNames = datanames_var)
 
+if var1_flag=='on':
     for i in range(0, len (timestamps)):
         for j in range(0,len(var1)):
             if slice_flag=='on':
@@ -123,13 +147,22 @@ for i in range(1, 5):
                 os.remove(src_path_2)
             else:
                 src_path=os.path.join(current_path,"../../output/restart/ruvwe." + str(var1[j]) +  "." + '{0:07d}'.format(timestamps[i])+ ".bin")
-                dst_file = os.path.join(dst_path, os.path.basename(src_path))
-                os.makedirs(dst_path, exist_ok=True)
-
-                if os.path.exists(dst_file):
-                    print(f"Skipping (already exists): {dst_file}")
-                else:
-                    shutil.copy2(src_path, dst_file)
+                shutil.move(src_path, dst_path)
+        if slice_flag=='on':
+            src_path=os.path.join(current_path, f"../results/vort/{var2}.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.move(src_path, dst_path)
+        else:
+            src_path=os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i])+ ".bin")   
+            shutil.copy(src_path, dst_path)
+        
+else:
+    for i in range(0, len (timestamps)):
+        if slice_flag=='on':
+            src_path=os.path.join(current_path, f"../results/vort/{var2}.slice."+ '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.move(src_path, dst_path)
+        else:
+            src_path=os.path.join(current_path, f"../results/vort/{var2}." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)
 
 if slice_flag == 'on':
     x_slice.tofile(os.path.join(dst_path, "x_slice.bin"))

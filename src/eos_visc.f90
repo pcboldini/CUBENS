@@ -103,8 +103,8 @@ module mod_eos_visc
     implicit none
     real(mytype), intent(IN)  :: tem, rho
     real(mytype), intent(OUT) :: mu, ka
-    mu = t_const%mu_0*tem
-    ka = t_const%ka_0*tem
+    mu = t_const%mu_0
+    ka = t_const%ka_0
   end subroutine
 #endif
 

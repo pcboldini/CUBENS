@@ -325,9 +325,10 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
       enddo
     enddo
     !$acc wait(1)    
-    !$acc parallel loop collapse(3) default(present) async(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
     do k=1,km
       do j=1,jm
+        !$acc loop seq
         do c = 1,2
           pre(iBC,j,k) = pre(iBC,j,k) - c1_FD2(c)*pre(iBC+c,j,k)/c1_FD2(0)
           tem(iBC,j,k) = tem(iBC,j,k) - c1_FD2(c)*tem(iBC+c,j,k)/c1_FD2(0)
@@ -382,9 +383,10 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time)
       enddo
     enddo
     !$acc wait(1)    
-    !$acc parallel loop collapse(3) default(present) async(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
     do k=1,km
       do j=1,jm
+        !$acc loop seq
         do c = 1,2
           pre(iBC,j,k) = pre(iBC,j,k) - c1_FD2(c)*pre(iBC+c,j,k)/c1_FD2(0)
         enddo
@@ -694,9 +696,10 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
       enddo
     enddo
     !$acc wait(1)    
-    !$acc parallel loop collapse(3) default(present) async(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
     do k=1,km
       do j=1,jm
+        !$acc loop seq
         do c = -2,-1
           pre(iBC,j,k) = pre(iBC,j,k) - c1_BD2(c)*pre(iBC+c,j,k)/c1_BD2(0)
           tem(iBC,j,k) = tem(iBC,j,k) - c1_BD2(c)*tem(iBC+c,j,k)/c1_BD2(0)
@@ -769,9 +772,10 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka)
       enddo
     enddo
     !$acc wait(1)    
-    !$acc parallel loop collapse(3) default(present) async(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
     do k=1,km
       do j=1,jm
+        !$acc loop seq
         do c = -2,-1
           pre(iBC,j,k) = pre(iBC,j,k) - c1_BD2(c)*pre(iBC+c,j,k)/c1_BD2(0)
         enddo
@@ -855,13 +859,14 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   real(mytype), dimension(:,:,:) :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre
   real(mytype), dimension(5) :: d,L
-  real(mytype) :: xa, rhoa, ua, va, wa, iena
+  real(mytype) :: xa, za, rhoa, ua, va, wa, iena
   real(mytype) :: Kfact, sigm, sos, fac, dp, drho, du, dv, dw, ht, prefac_r
-  integer :: iBC,j,k,jm,km,ierr,c
+  integer :: iBC,j,k,k1,jm,km,ierr,c
   ! at the last mesh cell in x-direction
   iBC = xsize(1)
   jm = xsize(2)
   km = xsize(3)
+  k1 = 1
   ! calculate characteristics for freestream boundary condition
   if (BC_top == "free_nrbc") then 
     ! constant for the pressure prescription
@@ -905,7 +910,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         d(3) =  L(3)
         d(4) =  L(4)
         d(5) = fac*L(2)/sos**2
-        ht = iena + pre(iBC,j,k)/rhoa + 0.5*(ua**2 + va**2 + wa**2)
+        ht = iena + pre(iBC,j,k)/rhoa + 0.5_mytype*(ua**2 + va**2 + wa**2)
         ! correct the right hand side
         rhs_r(iBC,j,k) = rhs_r(iBC,j,k) - d(1)
         rhs_u(iBC,j,k) = rhs_u(iBC,j,k) - d(1)*  ua - d(2)*rhoa
@@ -932,7 +937,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         call calc_conv_BD_ddx(dp,pre,iBC,j,k,nHalo,xa,dx)
         call calc_conv_BD_ddx(du,u,iBC,j,k,nHalo,xa,dx)
         ! amplitudes of characteristic waves
-        L(1) = (ua - sos)*(dp - rhoa*sos*du)
+        L(1) = (ua + sos)*(dp + rhoa*sos*du)
         L(2) = 0.0_mytype
         L(3) = 0.0_mytype
         L(4) = 0.0_mytype
@@ -959,6 +964,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
     do k = 1,km
       do j = 1,jm
         xa = xp(iBC)
+        ua = u(iBC,j,k)
         rhoa = rho(iBC,j,k)
         iena = ien(iBC,j,k)
         call calcSOS(rhoa,iena,sos)
@@ -966,7 +972,7 @@ subroutine setBC_RHS_Top(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
         call calc_conv_BD_ddx(dp,pre,iBC,j,k,nHalo,xa,dx)
         call calc_conv_BD_ddx(du,u,iBC,j,k,nHalo,xa,dx)
         ! amplitudes of characteristic waves
-        L(1) = (u(iBC,j,k) - sos)*(dp - rhoa*sos*du)
+        L(1) = (ua + sos)*(dp + rhoa*sos*du)
         L(2) = 0.0_mytype
         L(3) = 0.0_mytype
         L(4) = 0.0_mytype
@@ -1358,9 +1364,9 @@ subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   integer :: kBC, i,j,c, ierr, im,jm
   real(mytype), dimension(:,:,:) :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre
-  real(mytype) :: d,L
+  real(mytype), dimension(5) :: d,L
   real(mytype) :: sos, fac, dp, dw, ht
-  real(mytype) :: za, rhoa
+  real(mytype) :: za, rhoa, wa, iena
   ! at the first mesh cell in z-direction
   kBC = 1
   im  = xsize(1)
@@ -1368,25 +1374,26 @@ subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   ! non-reflecting boundary condition
   if (BC_inl == "inlet_nrbc") then 
     !$acc parallel loop collapse(2) default(present) private(sos,dp,dw,d,L,ht) async(1)
-    do j = 1,xsize(2)
+    do j = 1,jm
       ! i=1 is taken by the bottom boundary condition
-      do i = 2,xsize(1)  
-        za = zp(kBC)
+      do i = 2,im  
+        za   = zp(kBC)
         rhoa = rho(i,j,kBC)
+        wa   = w(i,j,kBC)
         call calcSOS(rhoa,ien(i,j,kBC),sos)
         call calc_conv_FD_ddz(dp,pre,i,j,kBC,nHalo,za,dz)
         call calc_conv_FD_ddz(dw,w,i,j,kBC,nHalo,za,dz)
         ! amplitude of characteristic waves
-        L = (w(i,j,kBC) - sos)*(dp - rhoa*sos*dw)
+        L(1) = (wa - sos)*(dp - rhoa*sos*dw)
         ! time variation of the wave amplitude
-        d = L/sos**2
+        d(1) = L(1)/sos**2
         ht = ien(i,j,kBC) + pre(i,j,kBC)/rhoa + 0.5_mytype*(u(i,j,kBC)**2 + v(i,j,kBC)**2 + w(i,j,kBC)**2)
         ! correct the right hand side
         rhs_r(i,j,kBC) = 0.0_mytype
         rhs_u(i,j,kBC) = 0.0_mytype
         rhs_v(i,j,kBC) = 0.0_mytype
         rhs_w(i,j,kBC) = 0.0_mytype 
-        rhs_e(i,j,kBC) = rhs_e(i,j,kBC) - d*ht
+        rhs_e(i,j,kBC) = rhs_e(i,j,kBC) - d(1)*ht
       enddo
     enddo
   ! standard boundary condition
@@ -1519,12 +1526,6 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
                                         - d(5)
       enddo
     enddo
-  ! without boundary condition
-  else 
-    if (nrank.eq.0) write(stdout,*) "unknown BC_top", BC_top
-    call decomp_2d_finalize
-    call mpi_finalize(ierr)
-    stop
   endif
 end subroutine
 

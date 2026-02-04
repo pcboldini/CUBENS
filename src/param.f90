@@ -340,7 +340,7 @@ end subroutine
       write(stdout, '(A, F10.4)') 'Inlet friction Reynolds number:       ', ReTau
 #endif
 #if defined(CHA)
-      write(stdout, '(A, F10.4)') 'Initial streamwise pressure gradient: ', dpdz
+      write(stdout, '(A, F10.4)') 'Streamwise pressure gradient: 	 ', dpdz
 #endif
 #if defined(BL)
       write(stdout, '(A, F10.4)') 'Reynolds number end (delta):          ', Redelta_end

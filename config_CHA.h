@@ -8,7 +8,7 @@
 !
 ! ------------------------------ FLOW INPUT  ------------------------------
 !
-    Re   = 1600                                     ! Bulk Reynolds number
+    Re   = 2800                                     ! Bulk Reynolds number
     dpdz = 2.0                                      ! Initial pressure gradient (adjusted during calculation to ensure u_bulk=1)
 !
 ! --------------------------- BOUNDARY CONDITIONS  ------------------------
@@ -28,7 +28,7 @@
 !  
     CFL              = 0.8                          ! CFL number, keep < 1
     dtMax            = -3.385e-4                    ! maximum timestep, if <0 ignored
-    nsteps           = 2                            ! simulations steps
+    nsteps           = 10                            ! simulations steps
     intvCalcCFL      = 1                            ! interval CFL calculation
 !
 ! ---------------------------------- I/O ---------------------------------- 
@@ -55,17 +55,16 @@
 !
 ! --------------------------------- GRID ----------------------------------
 !
-    imax = 300                                      ! number of points in x
-    jmax = 10                                       ! number of points in y
-    kmax = 1000                                     ! number of points in z
+    imax = 129                                      ! number of points in x
+    jmax = 160                                      ! number of points in y
+    kmax = 192                                      ! number of points in z
     
     len_x = 2.0                                     ! wall-normal length
-    len_y = 3.0                                     ! spanwise length
-    len_z = 10.0                                    ! streamwise length
+    len_y = 2.0*pi_const                            ! spanwise length
+    len_z = 4.0*pi_const                            ! streamwise length
 
     xmesh_type = "non_equid"                        ! options: "equid", "non_equid"
-    gridStretchX = 5.0                              ! wall clustering in x-direction
-    ReTau = 85.0                                    ! Re_tau at the domain inlet
+    gridStretchX = 4.0                              ! wall clustering in x-direction
 
     zmesh_type = "equid"                            ! option: "equid"    
 !

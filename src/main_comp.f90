@@ -283,12 +283,12 @@ program DNS
   call initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
 #endif
 ! save restart at time t=0
-      !$acc update host(rho,u,v,w,ien)
-      call saveRestart(istart,time,rho,u,v,w,ien,nHalo,part)
+    !$acc update host(rho,u,v,w,ien)
+    call saveRestart(istart,time,dpdz,rho,u,v,w,ien,nHalo,part)
   else
 ! read restart file    
     istart = readRestartFile
-    call loadRestart(istart,time,rho,u,v,w,ien,nHalo,part)
+    call loadRestart(istart,time,dpdz,rho,u,v,w,ien,nHalo,part)
     !$acc update device(rho,u,v,w,ien)
   endif
 
@@ -416,7 +416,7 @@ program DNS
     if ((mod(istep-istart,intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
       call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
       !$acc update host(rho,u,v,w,ien)
-      call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)
+      call saveRestart(istep,time,dpdz,rho,u,v,w,ien,nHalo,part)
     endif
 
     ! I/O statistics files if condition is met 
@@ -441,7 +441,7 @@ program DNS
     ! simulation can be stopped with *abortSimulation*
     if (abortSimulation .eqv. .true.) then 
       !$acc update host(rho,u,v,w,ien)
-      call saveRestart(istep,time,rho,u,v,w,ien,nHalo,part)    
+      call saveRestart(istep,time,dpdz,rho,u,v,w,ien,nHalo,part)    
       call decomp_2d_finalize
       call mpi_finalize(ierr)
       stop

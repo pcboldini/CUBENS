@@ -71,9 +71,9 @@ module mod_auxl
     use mpi
     use mod_grid
     implicit none 
-    integer ierr,i,j,k, nxnynz
+    integer ierr,i,j,k
     real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: w,r
-    real(mytype) wb, da
+    real(mytype) wb, da, nxnynz
     ! initialization
     wb  = 0.0_mytype
     !$acc parallel default(present) copy(wb)
@@ -101,9 +101,9 @@ module mod_auxl
     use mod_eos
     implicit none 
     character(len=100) :: filename
-    integer ierr,i,j,k,istep,ioutput,nxnynz
+    integer ierr,i,j,k,istep,ioutput
     real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz
-    real(mytype) ddx,ddy,ddz,time,dt,isNan,isNanGlobal,CFL_new
+    real(mytype) ddx,ddy,ddz,time,dt,isNan,isNanGlobal,CFL_new,nxnynz
     real(mytype) rb,wb,preb,dp,kib,eb,str,tmp,enst,sos,max_Mach
     real(8) :: wt1
     ! initialization
@@ -560,6 +560,7 @@ module mod_auxl
           Pr_local = cp_local*mu(i,j,k)/ka(i,j,k)
           Pr_1d    = Pr_1d  + Pr_local
           ent_1d   = ent_1d + ent_local
+          sos_1d   = sos_1d + sos_local
           rhou_1d  = rhou_1d + rho(i,j,k)*u(i,j,k)
           rhov_1d  = rhov_1d + rho(i,j,k)*v(i,j,k)
           rhow_1d  = rhow_1d + rho(i,j,k)*w(i,j,k)
@@ -806,7 +807,7 @@ module mod_auxl
 
 
 ! I/O load restart
-  subroutine loadRestart(istep,time,rho,u,v,w,ien,nHaloIn,part)
+  subroutine loadRestart(istep,time,dp,rho,u,v,w,ien,nHaloIn,part)
     use mpi
     use decomp_2d
     use decomp_2d_io
@@ -816,8 +817,8 @@ module mod_auxl
     character*7 cha
     real(mytype), dimension(1-nHaloIn:,1-nHaloIn:,1-nHaloIn:) :: rho,u,v,w,ien
     real(mytype), allocatable, dimension(:,:,:) :: tmp
-    real(mytype), dimension(5) :: infoRestart
-    real(mytype) :: time
+    real(mytype), dimension(6) :: infoRestart
+    real(mytype) :: time, dp
     LOGICAL :: file_exists
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize, disp
@@ -830,7 +831,7 @@ module mod_auxl
                        MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
     call MPI_FILE_GET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
-    call decomp_2d_read_scalar(fh,disp,5,infoRestart)
+    call decomp_2d_read_scalar(fh,disp,6,infoRestart)
     INQUIRE (FILE='output/restart/ruvwe.'//cha//'.bin', EXIST=file_exists)
     ! check if restart file exists
     if (file_exists) then
@@ -873,14 +874,15 @@ module mod_auxl
     call decomp_2d_read_var(fh,disp,1,tmp,part); ien(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3)) = tmp
     call MPI_FILE_CLOSE(fh,ierr)
     deallocate(tmp)
-    time = infoRestart(5)
+    dp = infoRestart(5)
+    time = infoRestart(6)
     if(nrank==0) write(stdout,'(A,E12.5,A,I0)') 'The simulation restarts at t: ',time, ' and at step: ', istep
     if(nrank==0) write(stdout,*) ''
   end subroutine
 
 
 ! I/O save restart
-  subroutine saveRestart(istep,time,rho,u,v,w,ien,nHaloIn,part,interpol)
+  subroutine saveRestart(istep,time,dp,rho,u,v,w,ien,nHaloIn,part,interpol)
     use mpi
     use decomp_2d
     use decomp_2d_io
@@ -890,8 +892,8 @@ module mod_auxl
     character*7 cha
     real(mytype), dimension(1-nHaloIn:,1-nHaloIn:,1-nHaloIn:) :: rho,u,v,w,ien
     real(mytype), allocatable, dimension(:,:,:) :: tmp
-    real(mytype), dimension(5) :: infoRestart
-    real(mytype) :: time
+    real(mytype), dimension(6) :: infoRestart
+    real(mytype) :: time, dp
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize, disp
     TYPE(DECOMP_INFO), intent(IN) :: part
@@ -908,7 +910,8 @@ module mod_auxl
       infoRestart(3) = 1.0*jmax
       infoRestart(4) = 1.0*kmax
     endif
-    infoRestart(5) = time 
+    infoRestart(5) = dp
+    infoRestart(6) = time 
     allocate(tmp(part%xsz(1),part%xsz(2),part%xsz(3)))
     write(cha,'(I0.7)') istep
     if (nrank == 0) then
@@ -936,7 +939,7 @@ module mod_auxl
     ! guarantee overwriting
     call MPI_FILE_SET_SIZE(fh,filesize,ierr)  
     disp = 0_MPI_OFFSET_KIND
-    call decomp_2d_write_scalar(fh,disp,5,infoRestart)
+    call decomp_2d_write_scalar(fh,disp,6,infoRestart)
     ! write the five primary non-conservative variables: density, velocities, and internal energy
     tmp = rho(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3));  call decomp_2d_write_var(fh,disp,1,tmp,part)
     tmp =   u(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3));  call decomp_2d_write_var(fh,disp,1,tmp,part)
@@ -959,218 +962,94 @@ module mod_auxl
     real(mytype) :: dt, factAvg, factAvg_inv, countAvg_inv
     TYPE (DECOMP_INFO) :: part
     logical :: exist
+    real(mytype), allocatable, dimension(:,:,:) :: tmpPlane
 #if defined(BL) || defined(TGV)
     ! for boundary layer
-    real(mytype), allocatable, dimension(:,:,:) :: tmpPlane
     real(mytype), dimension(:,:,:), intent(in) :: qave
     real(mytype), dimension(:,:,:), intent(in) :: qtime
-    allocate(tmpPlane(part%xsz(1),part%xsz(2),part%xsz(3)))
-    tmpPlane = 0.0_mytype
 #elif defined(CHA)
-    real(mytype), allocatable, dimension(:,:) :: tmpCut 
     real(mytype), dimension(:,:), intent(in) :: qave
     real(mytype), dimension(:,:), intent(in) :: qtime
 #endif
+    allocate(tmpPlane(part%xsz(1),part%xsz(2),part%xsz(3)))
+    tmpPlane = 0.0_mytype
     write(cha,'(I0.7)') istep
     factAvg_inv = 1.0_mytype/factAvg
     countAvg_inv = 1.0_mytype/countAvg
     ! write stats planes in /output/stats/ 
     ! for boundary layer
 #if defined(BL)
-    ! density (1)
-    tmpPlane(:,1,:) = qave(:,:,1)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/r_avg.'//cha//'.bin','dummy')
-    ! u-velocity (2)
-    tmpPlane(:,1,:) = qave(:,:,2)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/u_avg.'//cha//'.bin','dummy')
-    ! v-velocity (3)
-    tmpPlane(:,1,:) = qave(:,:,3)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/v_avg.'//cha//'.bin','dummy')
-    ! w-velocity (4) 
-    tmpPlane(:,1,:) = qave(:,:,4)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/w_avg.'//cha//'.bin','dummy')
-    ! pressure (5)
-    tmpPlane(:,1,:) = qave(:,:,5)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/p_avg.'//cha//'.bin','dummy')
-    ! temperature (6)   
-    tmpPlane(:,1,:) = qave(:,:,6)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/t_avg.'//cha//'.bin','dummy')
-    ! internal energy (7)   
-    tmpPlane(:,1,:) = qave(:,:,7)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ien_avg.'//cha//'.bin','dummy')
-    ! viscosity (8)
-    tmpPlane(:,1,:) = qave(:,:,8)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mu_avg.'//cha//'.bin','dummy') 
-    ! conductivity (9)
-    tmpPlane(:,1,:) = qave(:,:,9)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ka_avg.'//cha//'.bin','dummy') 
-    ! isobaric specific heat (10)
-    tmpPlane(:,1,:) = qave(:,:,10)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/cp_avg.'//cha//'.bin','dummy') 
-    ! enthalpy (11)
-    tmpPlane(:,1,:) = qave(:,:,11)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ent_avg.'//cha//'.bin','dummy') 
-    ! speed of sound (12)
-    tmpPlane(:,1,:) = qave(:,:,12)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/sos_avg.'//cha//'.bin','dummy') 
-    ! Prandtl number (13)
-    tmpPlane(:,1,:) = qave(:,:,13)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/Pr_avg.'//cha//'.bin','dummy') 
-
-    ! Favre: ru (14)
-    tmpPlane(:,1,:) = qave(:,:,14)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ru_avg.'//cha//'.bin','dummy') 
-    ! Favre: rv (15) 
-    tmpPlane(:,1,:) = qave(:,:,15)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rv_avg.'//cha//'.bin','dummy') 
-    ! Favre: rw (16)
-    tmpPlane(:,1,:) = qave(:,:,16)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rw_avg.'//cha//'.bin','dummy') 
-    ! Favre: rt (17)
-    tmpPlane(:,1,:) = qave(:,:,17)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rt_avg.'//cha//'.bin','dummy')  
-    ! Favre: rent (18)
-    tmpPlane(:,1,:) = qave(:,:,18)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rent_avg.'//cha//'.bin','dummy')  
-
-    ! Double product: uu (19)
-    tmpPlane(:,1,:) = qave(:,:,19)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uu_avg.'//cha//'.bin','dummy') 
-    ! Double product: uv (20) 
-    tmpPlane(:,1,:) = qave(:,:,20)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uv_avg.'//cha//'.bin','dummy') 
-    ! Double product: uw (21)
-    tmpPlane(:,1,:) = qave(:,:,21)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/uw_avg.'//cha//'.bin','dummy') 
-    ! Double product: vv (22)
-    tmpPlane(:,1,:) = qave(:,:,22)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/vv_avg.'//cha//'.bin','dummy')  
-    ! Double product: vw (23)
-    tmpPlane(:,1,:) = qave(:,:,23)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/vw_avg.'//cha//'.bin','dummy')  
-    ! Double product: ww (24)
-    tmpPlane(:,1,:) = qave(:,:,24)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ww_avg.'//cha//'.bin','dummy') 
-    ! Double product: rhorho (25)
-    tmpPlane(:,1,:) = qave(:,:,25)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rhorho_avg.'//cha//'.bin','dummy')
-    ! Double product: temtem (26)
-    tmpPlane(:,1,:) = qave(:,:,26)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/temtem_avg.'//cha//'.bin','dummy')
-    ! Double product: mumu (27)
-    tmpPlane(:,1,:) = qave(:,:,27)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mumu_avg.'//cha//'.bin','dummy')
-    ! Double product: kaka (28)
-    tmpPlane(:,1,:) = qave(:,:,28)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/kaka_avg.'//cha//'.bin','dummy')
-    ! Double product: PrPr (29)
-    tmpPlane(:,1,:) = qave(:,:,29)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/PrPr_avg.'//cha//'.bin','dummy')
-    ! Double product: cpcp (30)
-    tmpPlane(:,1,:) = qave(:,:,30)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/cpcp_avg.'//cha//'.bin','dummy')  
-
-    ! Favre: ruu (31)
-    tmpPlane(:,1,:) = qave(:,:,31)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruu_avg.'//cha//'.bin','dummy')   
-    ! Favre: ruv (32)
-    tmpPlane(:,1,:) = qave(:,:,32)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruv_avg.'//cha//'.bin','dummy')   
-    ! Favre: ruw (33)
-    tmpPlane(:,1,:) = qave(:,:,33)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/ruw_avg.'//cha//'.bin','dummy')   
-    ! Favre: rvv (34)
-    tmpPlane(:,1,:) = qave(:,:,34)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvv_avg.'//cha//'.bin','dummy')    
-    ! Favre: rvw (35)
-    tmpPlane(:,1,:) = qave(:,:,35)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rvw_avg.'//cha//'.bin','dummy')    
-    ! Favre: rww (36)
-    tmpPlane(:,1,:) = qave(:,:,36)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rww_avg.'//cha//'.bin','dummy')   
-    ! Favre: rutem (37)
-    tmpPlane(:,1,:) = qave(:,:,37)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/rutem_avg.'//cha//'.bin','dummy')  
-
-    ! tau_xx (38)
-    tmpPlane(:,1,:) = qave(:,:,38)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxx_avg.'//cha//'.bin','dummy')    
-    ! tau_xy (39)
-    tmpPlane(:,1,:) = qave(:,:,39)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxy_avg.'//cha//'.bin','dummy')    
-    ! tau_xz (40) 
-    tmpPlane(:,1,:) = qave(:,:,40)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauxz_avg.'//cha//'.bin','dummy')    
-    ! tau_yy (41)
-    tmpPlane(:,1,:) = qave(:,:,41)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyy_avg.'//cha//'.bin','dummy')    
-    ! tau_yz (42)
-    tmpPlane(:,1,:) = qave(:,:,42)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauyz_avg.'//cha//'.bin','dummy')    
-    ! tau_zz (43) 
-    tmpPlane(:,1,:) = qave(:,:,43)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/tauzz_avg.'//cha//'.bin','dummy')
-    ! q_x (44)
-    tmpPlane(:,1,:) = qave(:,:,44)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qx_avg.'//cha//'.bin','dummy')
-    ! q_y (45)
-    tmpPlane(:,1,:) = qave(:,:,45)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qy_avg.'//cha//'.bin','dummy')
-    ! q_z (46)
-    tmpPlane(:,1,:) = qave(:,:,46)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/qz_avg.'//cha//'.bin','dummy')
-
-    ! dwdx (47)
-    tmpPlane(:,1,:) = qave(:,:,47)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dwdx_avg.'//cha//'.bin','dummy')
-    ! dudz (48)
-    tmpPlane(:,1,:) = qave(:,:,48)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dudz_avg.'//cha//'.bin','dummy')
-    ! dtdx (49)
-    tmpPlane(:,1,:) = qave(:,:,49)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/dtdx_avg.'//cha//'.bin','dummy')
-    ! mudwdx (50)
-    tmpPlane(:,1,:) = qave(:,:,50)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mudwdx_avg.'//cha//'.bin','dummy')
-    ! mududz (51)
-    tmpPlane(:,1,:) = qave(:,:,51)*factAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,2,1, '.','output/stats/mududz_avg.'//cha//'.bin','dummy')
+    call write_all_qave_51()
     ! tau_xz_wall (1-time)
-    tmpPlane(1,:,:) = qtime(:,:,1)*countAvg_inv; &
-    call decomp_2d_write_plane(1,tmpPlane,1,1, '.','output/stats/tauxz_wall_time.'//cha//'.bin','dummy')
-    ! for channel
-#elif defined(CHA) 
-    ! call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-    !   if(myid == 0) then
-    !     open(newunit=iunit,file=fname)
-    !     do i=1,ng(1)
-    !       write(iunit,fmt_rp) (i-.5)*dl(1),p1d(i)
-    !     end do
-    !     close(iunit)
-    !   end if
-    ! tmpPlane(:,1,:) = qave(:,:,1)*factAvg_inv; &
-    ! call decomp_2d_write_plane(1,tmpPlane,2,1, '.','postproc/stats/r_avg.'//cha//'.bin','dummy')
-#endif        
-    ! save information for this average
+    tmpPlane(1,:,:) = qtime(:,:,1) * countAvg_inv
+    call decomp_2d_write_plane(1, tmpPlane, 1, 1, '.', &
+         'output/stats/tauxz_wall_time.'//cha//'.bin', 'dummy')
+#elif defined(CHA)
+    call write_all_qave_51()
+#endif
     if (nrank == 0) then
 #if defined(BL)
       write(stdout,'(A, I0)') 'Boundary layer: writing time- and span-averaged statistics at final step: ', istep
 #elif defined(CHA)
       write(stdout,'(A, I0)') 'Channel: writing time-, span- and stream-averaged statistics at final step: ', istep
-#endif          
+#endif
       inquire(file="output/stats/stats_info.txt", exist=exist)
       if (exist) then
-        open(11,file = 'output/stats/stats_info.txt',status="old",position="append",action="write")
+        open(11,file='output/stats/stats_info.txt',status="old",position="append",action="write")
       else
-        open(11,file = 'output/stats//stats_info.txt',status="new", action="write")
-      endif   
-      write(11,'(A, I0)') 'step: ', istep
-      write(11,'(A, I0)') 'number of averaged files: ', countAvg
-      write(11,'(A, I0)') 'average factor: ', int(factAvg)
+        open(11,file='output/stats/stats_info.txt',status="new",action="write")
+      endif
+      write(11,'(A, I0)')   'step: ', istep
+      write(11,'(A, I0)')   'number of averaged files: ', countAvg
+      write(11,'(A, I0)')   'average factor: ', int(factAvg)
       write(11,'(A, E17.6)') 'time from begin averaging: ', dt*(istep - saveStatsAfter)
       close(11)
     endif
-  end subroutine
+    deallocate(tmpPlane)
 
+  contains
+
+    subroutine write_stat_plane(idx, base)
+      integer, intent(in) :: idx
+      character(len=*), intent(in) :: base
+      character(len=256) :: fname
+      integer :: u
+      fname = 'output/stats/'//trim(base)//cha//'.bin'
+#if defined(BL)
+      tmpPlane(:,1,:) = qave(:,:,idx) * factAvg_inv
+      call decomp_2d_write_plane(1, tmpPlane, 2, 1, '.', trim(fname), 'dummy')
+#elif defined(CHA)
+      if (nrank == 0) then
+        u = 99
+        open(u, file=trim(fname), form='unformatted', access='stream', &
+             status='replace', action='write')
+        write(u) qave(:,idx) * factAvg_inv
+        close(u)
+      endif
+#endif 
+    end subroutine write_stat_plane
+
+    subroutine write_all_qave_51()
+      integer, parameter :: nvar = 51
+      integer :: n
+      character(len=32), parameter :: tag(nvar) = [ character(len=32) :: &
+        'r_avg.',      'u_avg.',      'v_avg.',      'w_avg.',      &
+        'p_avg.',      't_avg.',      'ien_avg.',    'mu_avg.',     &
+        'ka_avg.',     'cp_avg.',     'ent_avg.',    'sos_avg.',    &
+        'Pr_avg.',     'ru_avg.',     'rv_avg.',     'rw_avg.',     &
+        'rt_avg.',     'rent_avg.',   'uu_avg.',     'uv_avg.',     &
+        'uw_avg.',     'vv_avg.',     'vw_avg.',     'ww_avg.',     &
+        'rhorho_avg.', 'temtem_avg.', 'mumu_avg.',   'kaka_avg.',   &
+        'PrPr_avg.',   'cpcp_avg.',   'ruu_avg.',    'ruv_avg.',    &
+        'ruw_avg.',    'rvv_avg.',    'rvw_avg.',    'rww_avg.',    &
+        'rutem_avg.',  'tauxx_avg.',  'tauxy_avg.',  'tauxz_avg.',  &
+        'tauyy_avg.',  'tauyz_avg.',  'tauzz_avg.',  'qx_avg.',     &
+        'qy_avg.',     'qz_avg.',     'dwdx_avg.',   'dudz_avg.',   &
+        'dtdx_avg.',   'mudwdx_avg.', 'mududz_avg.' ]
+      do n = 1, nvar
+        call write_stat_plane(n, tag(n))
+      end do
+    end subroutine write_all_qave_51
+  end subroutine saveStats
 
 end module
