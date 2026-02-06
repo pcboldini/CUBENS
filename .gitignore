@@ -5,7 +5,7 @@
 
 
 # Precompiled Headers
-*.h
+#*.h
 
 # Fortran module files
 *.mod
@@ -21,9 +21,9 @@ out
 
 # Others 
 JOB
-*.txt
-*.bin
-*.xmf
-*.ipynb
-Makefile
+#*.txt
+#*.bin
+#*.xmf
+#*.ipynb
+#Makefile
 .DS_Store
