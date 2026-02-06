@@ -222,5 +222,46 @@ call calcState_rP(rho,pre,ien,tem,mu,ka,1,part%xsz(1),1,part%xsz(2),1,part%xsz(3
 !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
 
+! Differentially heated cavity
+subroutine initField_DHC(part,rho,u,v,w,ien,pre,tem,mu,ka)
+  use decomp_2d
+  use mod_param
+  use mod_eos
+  use mod_eos_var
+  use mod_grid
+  use mod_finitediff
+  implicit none
+  integer :: i,j,k,jj,kk
+  real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
+  real(mytype) :: fx,fy,fz
+  TYPE (DECOMP_INFO), intent(IN) :: part
+  ! initialization parameters, an ideal pressure is imposed
+  do i=1,xsize(1)
+    do j=1,xsize(2)
+      do k=1,xsize(3)
+        u(i,j,k) =  0.0_mytype
+        v(i,j,k) =  0.0_mytype
+        w(i,j,k) =  0.0_mytype
+      enddo
+    enddo
+  enddo
+  ! pressure
+#if defined(IG)
+  pre = Pref*t_ig%prefac_r  
+#elif defined(VdW)
+  pre = Pref*t_vdw%prefac_r 
+#elif defined(RK)
+  pre = Pref*t_rk%prefac_r 
+#elif defined(PR)
+  pre = Pref*t_pr%prefac_r 
+#endif
+  do k=1,xsize(3)
+    rho(:,:,k) = 1.0_mytype
+  enddo
+  !$acc update device(rho,pre,u,v,w)
+  ! calculation of the secondary variables
+  call calcState_rP(rho,pre,ien,tem,mu,ka, 1,xsize(1),1,xsize(2),1,xsize(3))
+  !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
+end subroutine
 
 end module mod_init

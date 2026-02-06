@@ -72,7 +72,6 @@ module mod_eos_visc
 ! Include Constant law 
 #ifdef Constant
 ! Initialize
-
   subroutine init_VISCModel()
     use mod_param
     implicit none

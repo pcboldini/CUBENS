@@ -73,7 +73,7 @@ implicit none
  character(len=20) :: USE_VISC
 #endif 
   ! Sutherland (ideal gas)
-  real(mytype) :: Smuref = 111.0_mytype
+  real(mytype) :: Smuref = 110.4_mytype
   ! JST & Chung
   real(mytype) :: Muref   = 0.0_mytype
   real(mytype) :: Kref  = 0.0_mytype
@@ -82,6 +82,8 @@ implicit none
   character(len=30) :: BC_bot 
   real(mytype)      :: Twall_bot = 0.0_mytype
   real(mytype)      :: Twall_top = 0.0_mytype
+  real(mytype)      :: Twall_inl = 0.0_mytype
+  real(mytype)      :: Twall_out = 0.0_mytype
   character(len=30) :: BC_top
   character(len=30) :: BC_inl 
   character(len=30) :: BC_out
@@ -257,6 +259,8 @@ contains
 #include "../config_CHA.h"
 #elif defined(TGV)
 #include "../config_TGV.h"
+#elif defined(DHC)
+#include "../config_DHC.h"
 #endif
   end subroutine     
 
@@ -323,6 +327,8 @@ end subroutine
       write(stdout,* ) 'CHANNEL'
 #elif defined(TGV)
       write(stdout,* ) 'TAYLOR-GREEN VORTEX'
+#elif defined(DHC)
+      write(stdout,* ) 'DIFFERENTIALLY-HEATED CAVITY'
 #elif defined(1D)
       write(stdout,* ) '1D TEST WAVE'
 #endif
@@ -334,13 +340,14 @@ end subroutine
       write(stdout, '(A, F10.4)') 'Eckert number:                        ', Ec
       write(stdout, '(A, F10.4)') 'Prandtl number:                       ', Pra
       write(stdout, '(A, F10.4)') 'Pref:                                 ', Pref
-      write(stdout, '(A, F10.4)') 'Wall Richardson number:               ', Ri_wall
       write(stdout, '(A, F10.4)') 'Richardson number (unit values):      ', Ri_unit
 #if defined(BL)
+      write(stdout, '(A, F10.4)') 'Wall Richardson number:               ', Ri_wall
       write(stdout, '(A, F10.4)') 'Inlet friction Reynolds number:       ', ReTau
 #endif
 #if defined(CHA)
-      write(stdout, '(A, F10.4)') 'Streamwise pressure gradient: 	 ', dpdz
+      write(stdout, '(A, F10.4)') 'Wall Richardson number:               ', Ri_wall
+      write(stdout, '(A, F10.4)') 'Initial streamwise pressure gradient: ', dpdz
 #endif
 #if defined(BL)
       write(stdout, '(A, F10.4)') 'Reynolds number end (delta):          ', Redelta_end

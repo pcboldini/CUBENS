@@ -235,7 +235,7 @@ module mod_auxl
     real(mytype) :: dux, duy, duz, dvx, dvy, dvz, dwx, dwy, dwz, xa, za
     real(mytype) :: dilla2, dtx, dty, dtz
     real(mytype) :: cp_local, ent_local, sos_local, Pr_local
-#if defined(BL) ||  defined(TGV) 
+#if defined(BL) ||  defined(TGV) ||  defined(DHC) 
     real(mytype), dimension(:,:,:), intent(inout) :: qave,qtime
     real(mytype) :: rho_2d,u_2d,v_2d,w_2d,pre_2d,tem_2d,ien_2d,mu_2d,ka_2d,cp_2d,ent_2d,sos_2d,Pr_2d
     real(mytype) :: rhou_2d,rhov_2d,rhow_2d,rhot_2d,rhoent_2d
@@ -963,7 +963,7 @@ module mod_auxl
     TYPE (DECOMP_INFO) :: part
     logical :: exist
     real(mytype), allocatable, dimension(:,:,:) :: tmpPlane
-#if defined(BL) || defined(TGV)
+#if defined(BL) || defined(TGV) || defined(DHC)
     ! for boundary layer
     real(mytype), dimension(:,:,:), intent(in) :: qave
     real(mytype), dimension(:,:,:), intent(in) :: qtime

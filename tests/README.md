@@ -41,4 +41,20 @@ input: `config_BL.h` file with `Makefile`, for inital condition: `main_PR.ipynb`
 
 output: `ypl.1.` planes of non-conservative variables at `t=100000` (periodic solution)
 
+### Turbulent Channel Flow (Extra)
+Run the 3-D channel flow at `Re_tau=180` (Kim et al., JFM, 1987) for:
+  - `Re=2800, M=0.2, Pr=0.75, dpdx=2.0`
+  - `N_x=129, N_y=160, N_z=192, L_x=2.0, L_y=2.0\pi, L_z=4.0\pi`
 
+input: `config_CHA.h` file with `Makefile`, for inital condition: `main_IG.ipynb` file generating files in `preproc/initCHA/inputDNS`
+
+output: time- and spanwise-average profiles at `t=1200000` in `stats`, postprocessing script in `postproc.ipynb`, reference files in `literature`
+
+### Differentially Heated Cavity (Extra)
+Run the DHC problem at `Ra=10^6` (Le Quéré et al., ESAIM, 2005) for:
+  - `Re=1532.13, M=0.2, Pr=0.71, 1/Fr^2=0.5`
+  - `T_h=1.6, T_c=0.4, L=1.0, N_x=N_z=301, VISC_LAW=Constant`
+
+input: `config_DHC.h` file with `Makefile`
+
+output: `ypl.1.` planes and restart file of non-conservative variables at `t=2000000`, postprocessing script in `postproc.ipynb`

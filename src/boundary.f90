@@ -87,6 +87,9 @@ contains
 #elif defined(CHA)
       write(stdout,'(A, F10.4)') 'Top T_wall (T/T_inf):                 ',Twall_top
       write(stdout,'(A, F10.4)') 'Bottom T_wall (T/T_inf):              ',Twall_bot
+#elif defined(DHC)
+      write(stdout,'(A, F10.4)') 'Inlet T_wall (T/T_ref):               ',Twall_inl
+      write(stdout,'(A, F10.4)') 'Outlet T_wall (T/T_ref):              ',Twall_out
 #endif
     write(stdout,'(A, A10)') 'Inlet boundary:                       ',BC_inl
     write(stdout,'(A, A11)') 'Outlet boundary:                      ',BC_out
@@ -1141,6 +1144,53 @@ subroutine setBC_Inl(rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pr
         enddo
       enddo
     enddo
+    ! isothermal standard boundary condition
+  else if ( BC_inl == "isoth_std" ) then 
+    !$acc parallel loop collapse(2) default(present) async(1) 
+    do j=1,jm
+      do i=1,im
+        u(i,j,kBC) = 0.0_mytype
+        v(i,j,kBC) = 0.0_mytype
+        w(i,j,kBC) = 0.0_mytype
+      enddo
+    enddo
+    !$acc wait(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
+    do j=1,jm
+      do i=1,im
+        pre(i,j,kBC) = 0.0_mytype
+        ! prescribing the inlet temperature
+        tem(i,j,kBC) = Twall_inl
+      enddo
+    enddo
+    !$acc wait(1)    
+    !$acc parallel loop collapse(2) default(present) async(1)
+    do j=1,jm
+      do i=1,im
+        !$acc loop seq
+        do c = 1,2
+          pre(i,j,kBC) = pre(i,j,kBC) - c1_FD2(c)*pre(i,j,kBC+c)/c1_FD2(0)
+        enddo
+      enddo
+    enddo
+    !$acc wait(1)    
+    call calcState_PT(pre,tem,rho,ien,mu,ka,1,im,1,jm,kBC,kBC)
+    !$acc parallel loop collapse(3) default(present) async(1)
+    do j=1,jm
+      do i=1,im 
+        do c=1,nHalo 
+          rho( i,j,kBC-c) = 2.0_mytype*rho(i,j,kBC) - rho(i,j,kBC+c)
+            u( i,j,kBC-c) = 2.0_mytype*  u(i,j,kBC) -   u(i,j,kBC+c)
+            v( i,j,kBC-c) = 2.0_mytype*  v(i,j,kBC) -   v(i,j,kBC+c)
+            w( i,j,kBC-c) = 2.0_mytype*  w(i,j,kBC) -   w(i,j,kBC+c)
+          ien( i,j,kBC-c) = 2.0_mytype*ien(i,j,kBC) - ien(i,j,kBC+c)
+          pre( i,j,kBC-c) =                           pre(i,j,kBC+c)
+          tem( i,j,kBC-c) = 2.0_mytype*tem(i,j,kBC) - tem(i,j,kBC+c)
+           mu( i,j,kBC-c) = 2.0_mytype* mu(i,j,kBC) -  mu(i,j,kBC+c)
+           ka( i,j,kBC-c) = 2.0_mytype* ka(i,j,kBC) -  ka(i,j,kBC+c)
+        enddo
+      enddo
+    enddo
   ! non-existing boundary condition
   else
     if (nrank.eq.0) write(stdout,*) "unknown BC_inlet", BC_inl
@@ -1397,10 +1447,10 @@ subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
       enddo
     enddo
   ! standard boundary condition
-  else if (BC_inl == "inlet_std") then  
-    !$acc parallel loop collapse(2) default(present) async(1)
+  else
+    !$acc parallel loop collapse(2) default(present) async(1) 
     do j=1,jm
-      do i=1,im
+      do i=2,im
         rhs_r(i,j,kBC) = 0.0_mytype
         rhs_u(i,j,kBC) = 0.0_mytype
         rhs_v(i,j,kBC) = 0.0_mytype
@@ -1411,6 +1461,8 @@ subroutine setBC_RHS_Inl(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e, rho,u,v,w,ien,pre)
   ! if BC_inl == 'inlet_lst', no RHS is needed 
   endif
 end subroutine
+
+
 ! halo cells: outlet boundary
 subroutine setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
@@ -1440,6 +1492,53 @@ subroutine setBC_Out(rho,u,v,w,ien,pre,tem,mu,ka)
           tem(i,j,kBC+c) = 2.0_mytype*tem(i,j,kBC) - tem(i,j,kBC-c)
            mu(i,j,kBC+c) = 2.0_mytype* mu(i,j,kBC) -  mu(i,j,kBC-c)
            ka(i,j,kBC+c) = 2.0_mytype* ka(i,j,kBC) -  ka(i,j,kBC-c)
+        enddo
+      enddo
+    enddo
+    ! isothermal standard boundary condition
+  else if ( BC_out == "isoth_std" ) then 
+    !$acc parallel loop collapse(2) default(present) async(1) 
+    do j=1,jm
+      do i=1,im
+        u(i,j,kBC) = 0.0_mytype
+        v(i,j,kBC) = 0.0_mytype
+        w(i,j,kBC) = 0.0_mytype
+      enddo
+    enddo
+    !$acc wait(1)
+    !$acc parallel loop collapse(2) default(present) async(1)
+    do j=1,jm
+      do i=1,im
+        pre(i,j,kBC) = 0.0_mytype
+        ! prescribing the outlet temperature
+        tem(i,j,kBC) = Twall_out
+      enddo
+    enddo
+    !$acc wait(1)    
+    !$acc parallel loop collapse(2) default(present) async(1)
+    do j=1,jm
+      do i=1,im
+        !$acc loop seq
+        do c = -2,-1
+          pre(i,j,kBC) = pre(i,j,kBC) - c1_BD2(c)*pre(i,j,kBC+c)/c1_BD2(0)
+        enddo
+      enddo
+    enddo
+    !$acc wait(1)    
+    call calcState_PT(pre,tem,rho,ien,mu,ka,1,im,1,jm,kBC,kBC)
+    !$acc parallel loop collapse(3) default(present) async(1)
+    do j=1,jm
+      do i=1,im 
+        do c=1,nHalo 
+          rho( i,j,kBC+c) = 2.0_mytype*rho(i,j,kBC) - rho(i,j,kBC-c)
+            u( i,j,kBC+c) = 2.0_mytype*  u(i,j,kBC) -   u(i,j,kBC-c)
+            v( i,j,kBC+c) = 2.0_mytype*  v(i,j,kBC) -   v(i,j,kBC-c)
+            w( i,j,kBC+c) = 2.0_mytype*  w(i,j,kBC) -   w(i,j,kBC-c)
+          ien( i,j,kBC+c) = 2.0_mytype*ien(i,j,kBC) - ien(i,j,kBC-c)
+          pre( i,j,kBC+c) =                           pre(i,j,kBC-c)
+          tem( i,j,kBC+c) = 2.0_mytype*tem(i,j,kBC) - tem(i,j,kBC-c)
+           mu( i,j,kBC+c) = 2.0_mytype* mu(i,j,kBC) -  mu(i,j,kBC-c)
+           ka( i,j,kBC+c) = 2.0_mytype* ka(i,j,kBC) -  ka(i,j,kBC-c)
         enddo
       enddo
     enddo
@@ -1524,6 +1623,17 @@ subroutine setBC_RHS_Out(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,rho,u,v,w,ien,pre,p_ref)
                                         - d(3)*rhoa*ua &
                                         - d(4)*rhoa*va &
                                         - d(5)
+      enddo
+    enddo
+  else
+    !$acc parallel loop collapse(2) default(present) async(1) 
+    do j=1,jm
+      do i=2,im
+        rhs_r(i,j,kBC) = 0.0_mytype
+        rhs_u(i,j,kBC) = 0.0_mytype
+        rhs_v(i,j,kBC) = 0.0_mytype
+        rhs_w(i,j,kBC) = 0.0_mytype
+        rhs_e(i,j,kBC) = 0.0_mytype
       enddo
     enddo
   endif

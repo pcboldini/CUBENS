@@ -14,7 +14,8 @@ It incorporates:
 The following geometries can be simulated:
  - transitional boundary layer,
  - turbulent boundary layer,
- - channel flow.
+ - channel flow,
+ - differentially heated square cavity problem.
 
 Current developments:
  - suitable shock-capturing techniques for the supersonic and hypersonic flow regime,
@@ -26,7 +27,7 @@ The application of non-ideal fluids has rapidly and widely increased the relevan
 
 ## Contributing
 
-Any contributions and feedback that can improve CUBENS are appreciated. If you wish to contribute to the tool, please get in touch with the maintainers or open an Issue in the repository / a thread in Discussions.
+Any contributions and feedback that can improve CUBENS are appreciated. If you wish to contribute to the tool, please get in touch with the maintainers (e.g. p.c.boldini@tudelft.nl) or open an Issue in the repository / a thread in Discussions.
 
 ### Reference 
 For more information on CUBENS:
@@ -36,6 +37,7 @@ P.C. Boldini, R. Hirai, P. Costa, J.W.R. Peeters, R. Pecnik, "CUBENS: a GPU-acce
 P.C. Boldini, "CUBENS: A GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Computer Physics Communications Seminar Series, [link_to_seminar](https://doi.org/10.52843/cassyni.gwmx6m)
 
 ## News
+## **[2026/02/05]** Differentially heated cavity testcase added.
 ## **[2026/02/04]** Turbulent channel flow testcase added.
 ## **[2025/08/29]** Redlich-Kwong EoS is implemented.
 # **[2025/01/17]** CUBENS v1.0 is finally online!
@@ -52,17 +54,17 @@ P.C. Boldini, "CUBENS: A GPU-accelerated high-order solver for wall-bounded flow
  In the Makefile, the flag `ARCH` needs to be set
 
 2. CUBENS requires the geometry input:
- - Boundary layer (BL), Channel (CHA), Taylor-Green-Vortex (TGV)
+ - Boundary layer (BL), Channel (CHA), Taylor-Green-Vortex (TGV), Differentially Heated Cavity (DHC), One Dimensional Density Wave (ONED)
 
   In the Makefile, the flag `CASE` needs to be set   
 
 3. CUBENS requires the Equation of State input:
- - Ideal gas (IG), Van der Waals (VdW), Peng-Robinson (PR)
+ - Ideal gas (IG), Van der Waals (VdW), Redlich-Kwong (RK), Peng-Robinson (PR)
 
  In the Makefile, the flag `EOS_LAW` needs to be set   
 
 4. CUBENS requires the Transport Properties input:
- - Power Law, Sutherland, JossiStielThodos, Chung
+ - Constant, Power Law, Sutherland, JossiStielThodos, Chung
 
  In the Makefile, the flag `VISC_LAW` needs to be set  
 

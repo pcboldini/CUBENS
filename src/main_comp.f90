@@ -40,8 +40,8 @@ program DNS
   real(mytype) :: dt, time, velwb, CFL_new, factAvg
   real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
-#if defined(BL) || defined(TGV)
-  ! for boundary layer and TGV
+#if defined(BL) || defined(TGV) || defined(DHC)
+  ! for boundary layer, TGV, and DHC
   real(mytype), allocatable, dimension(:,:,:) :: qave,qtime
 #elif defined(CHA)
   real(mytype), allocatable, dimension(:,:) :: qave,qtime
@@ -199,8 +199,8 @@ program DNS
   allocate(vortz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   allocate(strxz(1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
   ! save 51 statistics
-#if defined(BL) || defined(TGV)
-  ! for boundary layer and TGV
+#if defined(BL) || defined(TGV) || defined(DHC)
+  ! for boundary layer, TGV, and DHC
   allocate(qave(xsize(1), xsize(3), 51))
   allocate(qtime(xsize(2), xsize(3), 1))
 #elif defined(CHA)
@@ -278,7 +278,10 @@ program DNS
 #elif defined(TGV)
   ! TGV
   call initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
-#elif defined(1D) 
+#elif defined(DHC)
+  ! TGV
+  call initField_DHC(part,rho,u,v,w,ien,pre,tem,mu,ka)
+#elif defined (ONED) 
   ! 1D wave
   call initField_1D(part,rho,u,v,w,ien,pre,tem,mu,ka)
 #endif
@@ -474,6 +477,7 @@ program DNS
   deallocate(strxz)
   deallocate(qave)
   deallocate(qtime)
+#if defined(BL)
   if (perBC(3) .eqv. .false.) then
     deallocate(rho_bl)
     deallocate(u_bl)
@@ -485,6 +489,7 @@ program DNS
     deallocate(mu_bl)
     deallocate(ka_bl)
   endif
+#endif
   ! stop the mpi 
   call decomp_2d_finalize
   call mpi_finalize(ierr)
