@@ -53,7 +53,7 @@ program DNS_POST
   character(5) :: stat_name_2D(9)
 ! CUBENS Version number
   real(mytype), parameter                    :: version = 1.0
-  real(mytype) :: factAvg, time,theta, dTx, DeltaT
+  real(mytype) :: factAvg, time, time_zero, theta, dTx, DeltaT
   ! 3-D properties
   real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka,Cp
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
@@ -359,7 +359,7 @@ endif
     allocate(tem_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
     allocate(mu_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
     allocate(ka_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-    call initField_BL(part1,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
+    call initField_BL(part1,x,y,z,rho,u,v,w,ien,pre,tem,mu,ka)
     ! save boundary layer profiles for FFT
     rho_bl=rho;u_bl=u;v_bl=v;w_bl=w;ien_bl=ien;pre_bl=pre;tem_bl=tem;mu_bl=mu;ka_bl=ka
   endif
@@ -423,12 +423,13 @@ endif
       count=count+1
       write(cha,'(I0.7)') istep
       if (nrank==0) write(stdout,'(A, A10)') 'reading restart at step:              ', cha
-      call loadRestart(istep,time,rho,u,v,w,ien,nHalo,partinterp)
+      call loadRestart(istep,time,dpdz,rho,u,v,w,ien,nHalo,partinterp)
+      time_zero = time
       if (nrank==0) write(stdout,*) 'updating ien,pre,tem,mu,ka,cp'
       call calcState_re(rho,ien,pre,tem,mu,ka, 1,xsize(1),1,xsize(2),1,xsize(3))
       call calcCp(Cp,rho,ien)
       if (nrank==0) write(stdout,*) 'setting boundary conditions'
-      call setBC(part1,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call setBC(part1,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
       if (avg_flag==1)  then
         if (nrank==0) write(stdout,*) 'calculating Q-criterion'
         ! Q-criterion

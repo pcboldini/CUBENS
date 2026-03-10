@@ -16,6 +16,7 @@ time_start=5
 time_end=10
 time_step=1
 index_x=45
+fluc='on'
 interpol=0 # 1 for interpol planes
 
 var=["r","u","v","w","e"] #,"vortx","vorty","vortz"
@@ -131,17 +132,18 @@ else:
                 [x[index_x]]*x_scale, (y+(i-1)*ly)*y_scale, z*z_scale,\
                 timestamp = timestamps, dt = 1.0,\
                 dataNames = datanames_var)
-
-if interpol==1:
-    writexmf("xplanes/xplanes_aI.fluc.xmf", precision,  \
-            [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
-            timestamp = timestamps, dt = 1.0,\
-            dataNames = datanames_fluc)
-else:
-    writexmf("xplanes/xplanes.fluc.xmf", precision,  \
-            [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
-            timestamp = timestamps, dt = 1.0,\
-            dataNames = datanames_fluc)
+        
+if fluc=='on':
+    if interpol==1:
+        writexmf("xplanes/xplanes_aI.fluc.xmf", precision,  \
+                [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
+                timestamp = timestamps, dt = 1.0,\
+                dataNames = datanames_fluc)
+    else:
+        writexmf("xplanes/xplanes.fluc.xmf", precision,  \
+                [x[index_x]]*x_scale, y*y_scale, z*z_scale,\
+                timestamp = timestamps, dt = 1.0,\
+                dataNames = datanames_fluc)
 
 
 for j in range(0,len(var)):
@@ -149,12 +151,14 @@ for j in range(0,len(var)):
         if slice_flag=='on':
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i]) + ".bin")
             shutil.move(src_path, dst_path)
-            src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.move(src_path, dst_path)  
+            if fluc=='on':
+                src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
+                shutil.move(src_path, dst_path)  
         else:
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i]) + ".bin")
             shutil.move(src_path, dst_path)
-            src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + ".fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.move(src_path, dst_path)     
+            if fluc=='on':
+                src_path=os.path.join(current_path,"../../output/planes/" + str(char_x) + "." + str(index_x) + "." + str(var[j]) + ".fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
+                shutil.move(src_path, dst_path)     
 
 print('Planes copied')

@@ -25,6 +25,10 @@
     z_recycle = 100.0_mytype                        ! recycle position
     delta_inl = 1.5_mytype                          ! inlet boundary thickness
 
+    INIT_forcing = .false.                           ! options: .true. or .false.
+    z_forcing = 0.2_mytype                          ! z-location of the forcing vortex pair
+    ampl_forcing = 0.1_mytype                       ! amplitude of the forcing vortex pair
+
 !   outlet BCs:
     BC_out = "outlet_nrbc"                          ! options: outlet_nrbc (subsonic)
 
@@ -34,17 +38,17 @@
 !  
     CFL              = 0.8                          ! CFL number, keep < 1
     dtMax            = -3.385e-4                    ! maximum timestep, if <0 ignored (only applies to pert_bc=0)
-    nsteps           = 10                           ! simulations steps
+    nsteps           = 2                           ! simulations steps
     intvCalcCFL      = 1                            ! interval CFL calculation
 !
 ! ---------------------------------- I/O ----------------------------------
 !     
     intvPrint        = 1                            ! on the screen
-    readRestartFile  = -11                          ! if <0, not read
+    readRestartFile  = 2                          ! if <0, not read
     intvSaveRestart  = 1                            ! interval save restart files
-    saveRestartAfter = 5                            ! save restart files after which timestep
+    saveRestartAfter = 1                            ! save restart files after which timestep
     intvSavePlanes   = 1                            ! interval save planes
-    savePlanesAfter  = 5                            ! save planes after which timestep
+    savePlanesAfter  = 1                            ! save planes after which timestep
     intvSaveStats    = 1                            ! interval save statistics
     saveStatsAfter   = -5                            ! save statistics after which timestep
     intvReadParam    = -2                           ! read variation file

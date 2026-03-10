@@ -37,6 +37,7 @@ P.C. Boldini, R. Hirai, P. Costa, J.W.R. Peeters, R. Pecnik, "CUBENS: a GPU-acce
 P.C. Boldini, "CUBENS: A GPU-accelerated high-order solver for wall-bounded flows with non-ideal fluids", Computer Physics Communications Seminar Series, [link_to_seminar](https://doi.org/10.52843/cassyni.gwmx6m)
 
 ## News
+## **[2026/03/10]** Supercritical turbulent channel flow testcase added.
 ## **[2026/02/05]** Differentially heated cavity testcase added.
 ## **[2026/02/04]** Turbulent channel flow testcase added.
 ## **[2025/08/29]** Redlich-Kwong EoS is implemented.

@@ -67,9 +67,9 @@ module mod_interpolate
 
 
 ! initializing solution
-  subroutine initSolution(part,x,z,r1,u1,v1,w1,e1)
+  subroutine initSolution(part,x,y,z,r1,u1,v1,w1,e1)
     use mod_init
-    real(mytype), dimension(:) :: x,z
+    real(mytype), dimension(:) :: x,y,z
     real(mytype), dimension(:,:,:) :: r1,u1,v1,w1,e1
     real(mytype), allocatable, dimension(:,:,:) :: r,u,v,w,e,pre,tem,mu,ka
     TYPE (DECOMP_INFO), intent(IN) :: part
@@ -84,16 +84,16 @@ module mod_interpolate
     allocate(ka(1-nHalo:part%xsz(1)+nHalo, 1-nHalo:part%xsz(2)+nHalo, 1-nHalo:part%xsz(3)+nHalo))
 #if defined(BL)
   ! Blasius
-  call initField_BL(part,x,z,r,u,v,w,e,pre,tem,mu,ka) 
+  call initField_BL(part,x,y,z,r,u,v,w,e,pre,tem,mu,ka) 
 #elif defined(CHA) 
   ! channel
-  call initField_CHA(part,rho,u,v,w,e,pre,tem,mu,ka)
+  call initField_CHA(part,x,y,z,r,u,v,w,e,pre,tem,mu,ka)
 #elif defined(TGV)
   ! TGV
-  call initField_TGV(part,rho,u,v,w,e,pre,tem,mu,ka)
+  call initField_TGV(part,r,u,v,w,e,pre,tem,mu,ka)
 #elif defined(1D) 
   ! 1D wave
-  call initField_1D(part,rho,u,v,w,e,pre,tem,mu,ka)
+  call initField_1D(part,r,u,v,w,e,pre,tem,mu,ka)
 #endif
     r1 = r(1:part%xsz(1), 1:part%xsz(2), 1:part%xsz(3))
     u1 = u(1:part%xsz(1), 1:part%xsz(2), 1:part%xsz(3))

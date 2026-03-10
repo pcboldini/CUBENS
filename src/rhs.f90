@@ -368,21 +368,36 @@ contains
 ! call of the boundary conditions and sponge
   subroutine calcViscFlux(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p,tem,mu,ka)
     use decomp_2d
+    use mod_auxl
     use mod_param
     use mod_halo
     use mod_boundary
     implicit none
+    integer :: i,j,k
     real(mytype), dimension(:,:,:) :: rhs_r,rhs_u,rhs_v,rhs_w,rhs_e
     real(mytype), dimension(1-nHalo:, 1-nHalo:, 1-nHalo:)  :: r,u,v,w,e,p,tem,mu,ka
     ! calculation of the viscous (diffusive) fluxes
     call calcRHSVisc(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,tem,mu,ka)
     ! add streamwise pressure term
-    !$acc kernels default(present)
-    if (dpdz /= 0.0) then 
-      rhs_w = rhs_w + dpdz
-      rhs_e = rhs_e + dpdz*w(1:xsize(1),1:xsize(2),1:xsize(3))
+    if (dpdz /= 0.0) then
+      if (BC_pre == "const") then
+        !$acc parallel loop collapse(3) default(present)
+        do k=1,xsize(3)
+          do j=1,xsize(2)
+            do i=1,xsize(1)
+              rhs_w(i,j,k) = rhs_w(i,j,k) + dpdz * rho_bar_avg(i)
+              rhs_e(i,j,k) = rhs_e(i,j,k) + dpdz * rho_bar_avg(i)*w(i,j,k)
+            enddo
+          enddo
+        enddo
+        !$acc end parallel
+      else
+        !$acc kernels default(present)
+        rhs_w = rhs_w + dpdz
+        rhs_e = rhs_e + dpdz*w(1:xsize(1),1:xsize(2),1:xsize(3))
+        !$acc end kernels
+      endif
     endif
-    !$acc end kernels
     ! bottom boundary conditions
     if (perBC(1) .eqv. .false.) then
       call setBC_RHS_Bot(rhs_r,rhs_u,rhs_v,rhs_w,rhs_e,r,u,v,w,e,p)

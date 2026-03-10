@@ -14,7 +14,7 @@ contains
 
 
 ! boundary layer: Blasius solution loaded from external files
-subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
+subroutine initField_BL(part,xcoord,ycoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
   use mod_param
   use mod_eos
@@ -27,8 +27,9 @@ subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
   real(8),      allocatable, dimension(:) :: xRead, wRead, uRead, rRead
   real(mytype), allocatable, dimension(:) ::        wIntp, uIntp, rIntp
-  real(mytype), dimension(:) :: xcoord, zcoord
+  real(mytype), dimension(:) :: xcoord, ycoord, zcoord
   real(mytype) :: scaling_delta,rho_integ
+  real(mytype) :: xa, ya, za, psi_y, psi_x
   TYPE (DECOMP_INFO), intent(IN) :: part
   ! wall-normal mesh
   inquire(FILE='preproc/initBL/inputDNS/prof_x.bin', SIZE=fs); npts = fs/8
@@ -58,6 +59,24 @@ subroutine initField_BL(part,xcoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   enddo
   ! spanwise velocity
   v = 0.0_mytype
+  if (INIT_forcing .eqv. .true.)then
+    ! add vortex
+    do k=1,part%xsz(3)
+      do j=1,part%xsz(2)
+        do i=1,part%xsz(1)
+          xa = 2*xcoord(i) - 1
+          ya = (ycoord(j) - 0.5_mytype*len_y)/delta99
+          za = (zcoord(k) - z_forcing*len_z)/delta99
+          if (abs(xa) .lt. 1.0_mytype) then
+            psi_y = (1-xa**2)**2 * exp(-16*za**2 - 4*ya**2) * (1 - 8*ya**2)
+            psi_x = -4*xa*(1-xa**2) * ya * exp(-16*za**2 - 4*ya**2)         
+            u(i,j,k) = u(i,j,k) + ampl_forcing*psi_y
+            v(i,j,k) = v(i,j,k) - ampl_forcing*psi_x
+          endif
+        enddo
+      enddo
+    enddo
+  endif
   ! pressure
 #if defined(IG)
   pre = Pref*t_ig%prefac_r  
@@ -135,7 +154,7 @@ end subroutine
 
 
 ! turbulent channel: Poiseuille laminar profile plus vortex pair according to Henningson & Kim, JFM 228, 1991
-subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
+subroutine initField_CHA(part,xcoord,ycoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   use decomp_2d
   use mod_param
   use mod_eos
@@ -145,6 +164,7 @@ subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
   implicit none
   integer :: i,j,k,jj,kk
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
+  real(mytype), dimension(:) :: xcoord, ycoord, zcoord
   real(mytype) :: c_0, c_1, c_2, xa, ya, za, psi, psi_y, psi_x
   TYPE (DECOMP_INFO), intent(IN) :: part
   ! integration constants for laminar velocity profile
@@ -160,11 +180,11 @@ subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
   do k=1,part%xsz(3)
     do j=1,part%xsz(2)
       do i=1,part%xsz(1)
-        xa = x(i)
+        xa = xcoord(i)
         w(i,j,k) = - c_0*xa**2 + c_1*xa + c_2
-        xa = 2*x(i)/len_x - 1
-        ya = (y(j)-0.5*len_y)*2/len_x
-        za = (z(k)-0.5*len_z)*2/len_x
+        xa = 2*xcoord(i)/len_x - 1
+        ya = (ycoord(j)-0.5*len_y)*2/len_x
+        za = (zcoord(k)-0.5*len_z)*2/len_x
         psi      = (1-xa**2)**2 * ya*exp(-16*za**2-4*ya**2)
         psi_y    = (1-xa**2)**2 *exp(-16*za**2-4*ya**2)*(1 - 8*ya**2)
         psi_x    = -4*xa*(1-xa**2)*ya*exp(-16*za**2-4*ya**2) 
@@ -174,8 +194,8 @@ subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
     enddo
   enddo
   ! linear temperature profile for the initialization of the temperature in case Twall_top not equal to Twall_bot
-  do i=1,xsize(1)
-    tem(i,:,:) = Twall_bot + 0.5_mytype*x(i)*(Twall_top - Twall_bot)
+  do i=1,part%xsz(1)
+    tem(i,:,:) = Twall_bot + 0.5_mytype*xcoord(i)*(Twall_top - Twall_bot)
   enddo
   !$acc update device(rho,tem,u,v,w)
   ! calculation of the secondary variables
@@ -183,6 +203,36 @@ subroutine initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
 
+subroutine init_BC_pre(pre,tem,rho,ien,mu,ka,w,rhobulk)                                                                                                                                                         
+  use decomp_2d
+  use mod_param
+  use mod_eos
+  use mod_eos_var
+  use mod_auxl
+  implicit none                                                                                                                                                                                                 
+  real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: pre,tem,rho,ien,mu,ka,w
+  real(mytype), intent(out) :: rhobulk
+  real(mytype) :: velwb, rhorb, tau_w_bot, tau_w_top, prefac_r
+#if defined(IG)
+  prefac_r = t_ig%prefac_r
+#elif defined(VdW)
+  prefac_r = t_vdw%prefac_r
+#elif defined(RK)
+  prefac_r = t_rk%prefac_r
+#elif defined(PR)
+  prefac_r = t_pr%prefac_r
+#endif
+  rhobulk = 0.0_mytype
+  if (BC_pre == "const") then
+    pre = Pref*prefac_r
+    !$acc update device(pre)
+    call calcState_PT(pre,tem,rho,ien,mu,ka,1,xsize(1),1,xsize(2),1,xsize(3))
+    call cmpbulkvel(rho,w,mu,velwb,rhorb,tau_w_bot,tau_w_top)
+    rhobulk = rhorb
+    call initRhoBar()
+    if (nrank==0) write(stdout,'(A,E15.6)') 'BC_pre=const: rhobulk auto-computed = ', rhobulk
+  endif
+end subroutine init_BC_pre
 
 ! Taylor-Green Vortex: laminar-turbulent transition of a decaying vortex
 subroutine initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)

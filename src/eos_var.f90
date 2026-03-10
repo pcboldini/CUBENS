@@ -35,12 +35,12 @@ module mod_eos_var
   !$acc                t_rk%Cpfac_r,t_rk%Zc,t_rk%Zc1,t_rk%Zc2,t_rk%a,t_rk%b)
 ! Variables container for Peng-Robinson EoS  
   type t_EOS_PR
-    real(mytype) :: Rref, Efac_r, cvOverR, prefac_r, Cpfac_r, K, Zc, Zc1, Zc2, a, b
+    real(mytype) :: Rref, Efac_r, cvOverR, prefac_r, Cpfac_r, K, Zc, Zc1, Zc2, Zc3, a, b
   end type 
   type(t_EOS_PR) :: t_pr
   !$acc declare create(t_pr)
   !$acc declare create(t_pr%Rref,t_pr%Efac_r,t_pr%cvOverR,t_pr%prefac_r, &
-  !$acc                 t_pr%Cpfac_r,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%a,t_pr%b)
+  !$acc                 t_pr%Cpfac_r,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%Zc3,t_pr%a,t_pr%b)
   contains 
 
 
@@ -377,7 +377,7 @@ module mod_eos_var
 #endif
         ! Calculate variables
     rk_cvR=eos_dof/2
-    prefac_r = vdw_Zc/Rhoref/Tref/Ec/Cpref
+    prefac_r = rk_Zc/Rhoref/Tref/Ec/Cpref
     Cpfac_r = Tref/Ma**2/SOSref**2/rk_Zc
     ! Declare variables
     t_rk%Rref= Rref
@@ -649,6 +649,7 @@ module mod_eos_var
     t_pr%Zc  = pr_Zc
     t_pr%Zc1 = pr_Zc**(-1)
     t_pr%Zc2 = pr_Zc**(-2)
+    t_pr%Zc3 = pr_Zc**(-3)
     t_pr%a = pr_a
     t_pr%b = pr_b
     t_pr%prefac_r = pr_Zc/Rhoref/Tref/Ec/Cpref
@@ -657,7 +658,7 @@ module mod_eos_var
     t_pr%Cpfac_r  = Cpfac_r
     t_pr%Rref= Rref
     !$acc update device(t_pr) 
-    !$acc update device(t_pr%Rref,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%a,t_pr%b, &
+    !$acc update device(t_pr%Rref,t_pr%K,t_pr%Zc,t_pr%Zc1,t_pr%Zc2,t_pr%Zc3,t_pr%a,t_pr%b, &
     !$acc               t_pr%prefac_r,t_pr%Efac_r,t_pr%cvOverR,t_pr%Cpfac_r)
   end subroutine
 
@@ -761,15 +762,39 @@ module mod_eos_var
 
 ! Calculate EoS from pressure and temperature
   subroutine calcEOS_PT(pre,tem_r,rho_r,ien)
-    !$acc routine seq
+    !$acc routine seq  
     use decomp_2d, only: mytype
+    use mod_math
     implicit none
-    integer :: ierr
-    real(mytype), intent(IN) :: pre,tem_r
+    real(mytype), intent(IN)  :: pre,tem_r
     real(mytype), intent(OUT) :: rho_r,ien
-    write(stdout,*)
-    write(stdout,*) "Not included yet! Select different boundary conditions"
-    stop
+    real(mytype) :: alpha
+    real(mytype) :: pre_r,v_r,ien_r,A,B,C,D
+    real(mytype) :: Efac_r, prefac_r, cvOverR, t_pr_a, t_pr_b, t_pr_Zc1, t_pr_Zc2, t_pr_Zc3, t_pr_K, sqrt2
+    ! Reduced quantities
+    Efac_r = t_pr%Efac_r
+    prefac_r = t_pr%prefac_r
+    cvOverR = t_pr%cvOverR
+    t_pr_a = t_pr%a
+    t_pr_b = t_pr%b
+    t_pr_Zc1 = t_pr%Zc1
+    t_pr_Zc2 = t_pr%Zc2
+    t_pr_Zc3 = t_pr%Zc3
+    t_pr_K = t_pr%K
+    sqrt2=2**(0.5_mytype)
+    alpha = ( 1.0_mytype + t_pr_K*(1-sqrt(tem_r)) )**2
+    pre_r = pre/prefac_r
+    A = pre_r
+    B = (pre_r*t_pr_b - tem_r)*t_pr_Zc1
+    C = -(2.0_mytype*tem_r*t_pr_b + 3.0_mytype*pre_r*t_pr_b**2 - alpha*t_pr_a)*t_pr_Zc2
+    D = t_pr_b*(tem_r*t_pr_b - alpha*t_pr_a + t_pr_b**2*pre_r)*t_pr_Zc3
+    call cubic_root(A,B,C,D,v_r)
+    rho_r = 1/v_r
+    ien_r = ( cvOverR*tem_r*t_pr_Zc1 + t_pr_a*t_pr_Zc1/(2.0_mytype*sqrt2*t_pr%b) &
+            *( (t_pr%K+1.0_mytype)**2-t_pr_K*(t_pr_K+1.0_mytype)*sqrt(tem_r) ) &
+            *log( (1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0_mytype-sqrt2))/(1.0_mytype+t_pr_b*t_pr_Zc1*rho_r*(1.0_mytype+sqrt2)) ) )
+    ! Non-dimensional quantities
+    ien = Efac_r*ien_r
   end subroutine
 
 ! Calculate speed of sound from density and internal energy

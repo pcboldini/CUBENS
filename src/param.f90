@@ -22,6 +22,7 @@ implicit none
   real(mytype) :: Ri_wall = 0.0_mytype 
   real(mytype) :: Ri_unit = 0.0_mytype 
   real(mytype) :: dpdz    = 0.0_mytype
+  character(len=30) :: BC_pre
   real(mytype) :: Tinf    = 0.0_mytype
   real(mytype) :: Pinf    = 0.0_mytype
   real(mytype) :: Rhoinf  = 0.0_mytype
@@ -38,7 +39,7 @@ implicit none
 
 
 ! equation of state
-#if defined(BL) || defined(CHA)
+#if defined(BL) || defined(CHA) || defined(DHC)
   character(len=20) :: USE_EOS 
 #endif
   real(mytype) :: eos_dof = 9.0_mytype
@@ -61,15 +62,15 @@ implicit none
   real(mytype) :: rk_b   = 0.08664_mytype  
   real(mytype) :: rk_Zc  = 1.0_mytype/3.0_mytype   
   ! Peng-Robinson
-  real(mytype) :: pr_a   = 0.45724_mytype  
-  real(mytype) :: pr_b   = 0.07780_mytype  
-  real(mytype) :: pr_Zc  = 0.3112_mytype 
+  real(mytype) :: pr_a   = 0.457236_mytype  
+  real(mytype) :: pr_b   = 0.077796_mytype  
+  real(mytype) :: pr_Zc  = 0.301810_mytype 
   ! tables (REFPROP)
   real(mytype) :: rp_Zc  = 0.274586376_mytype
 
 
 ! Transport properties
-#if defined(BL) || defined(CHA)
+#if defined(BL) || defined(CHA) || defined(DHC)
  character(len=20) :: USE_VISC
 #endif 
   ! Sutherland (ideal gas)
@@ -81,13 +82,17 @@ implicit none
   character(len=20) :: wall_bc
   character(len=30) :: BC_bot 
   real(mytype)      :: Twall_bot = 0.0_mytype
+  real(mytype)      :: Twall_bot_old = 0.0_mytype
   real(mytype)      :: Twall_top = 0.0_mytype
+  real(mytype)      :: Twall_top_old = 0.0_mytype
   real(mytype)      :: Twall_inl = 0.0_mytype
   real(mytype)      :: Twall_out = 0.0_mytype
   character(len=30) :: BC_top
   character(len=30) :: BC_inl 
   character(len=30) :: BC_out
   character(len=30) :: BC_span
+  character(len=30) :: temp_ramping_bot
+  character(len=30) :: temp_ramping_top
   logical, dimension(3) :: perBC = (/.false.,.true.,.false./)
   complex(mytype) :: alphaLST=(0.061251_mytype,0.013715_mytype)
   real(mytype) :: epsilonLST=1.0_mytype
@@ -96,6 +101,10 @@ implicit none
   logical      :: BC_inl_rescale = .false.
   real(mytype) :: z_recycle = 15.0_mytype
   real(mytype) :: delta_inl = 1.0_mytype
+  real(mytype) :: beta_exponent = 0.1_mytype
+  logical      :: INIT_forcing = .false.
+  real(mytype) :: z_forcing = 0.2_mytype
+  real(mytype) :: ampl_forcing = 0.1_mytype
   ! perturbation-related parameters
   integer      :: pert_calc = 0
   real(mytype) :: omega1 = 0.0_mytype
@@ -133,9 +142,22 @@ implicit none
   namelist /paramTimestepping/ dtMax, CFL, nsteps, readRestartFile, intvSaveRestart, &
                          intvSavePlanes, intvSaveStats, savePlanesAfter, saveRestartAfter, saveStatsAfter, &
                          intvCalcCFL, intvPrint, intvReadParam, abortSimulation
+  enum, bind(c)
+    enumerator :: i_rho=1, i_u, i_v, i_w, i_pre, i_tem, i_ien, i_mu, i_ka,  &
+                  i_cp, i_ent, i_sos, i_Pr,                                    &
+                  i_rhou, i_rhov, i_rhow, i_rhoien, i_rhot, i_rhoent,          &
+                  i_uu, i_uv, i_uw, i_vv, i_vw, i_ww,                         &
+                  i_rhorho, i_temtem, i_mumu, i_kaka, i_PrPr, i_cpcp,          &
+                  i_rhouu, i_rhouv, i_rhouw, i_rhovv, i_rhovw, i_rhoww,        &
+                  i_rhouT,                                                      &
+                  i_tauxx, i_tauxy, i_tauxz, i_tauyy, i_tauyz, i_tauzz,        &
+                  i_qx, i_qy, i_qz,                                            &
+                  i_dwdx, i_dudz, i_dtdx, i_mudwdx, i_mududz,                  &
+                  nqave
+  end enum
 
 
-! FFT values: when pert_calc=1    
+  ! FFT values: when pert_calc=1    
   integer :: fft_samples = 50 
   integer :: fft_step    = 400 
   namelist /paramFFT/ fft_samples, fft_step

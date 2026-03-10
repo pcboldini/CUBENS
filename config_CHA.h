@@ -8,8 +8,10 @@
 !
 ! ------------------------------ FLOW INPUT  ------------------------------
 !
-    Re   = 2800                                     ! Bulk Reynolds number
-    dpdz = 2.0                                      ! Initial pressure gradient (adjusted during calculation to ensure u_bulk=1)
+    Re   = 3000                                     ! Bulk Reynolds number
+    dpdz = 3.0                                      ! Initial pressure gradient (adjusted during calculation to ensure u_bulk=1)
+    BC_pre = "const"                             ! "standard": constant dpdz (adjusts to maintain bulk momentum=1) 
+                                                    ! "const":    density-weighted dpdz (maintains bulk pressure)
 !
 ! --------------------------- BOUNDARY CONDITIONS  ------------------------
 !
@@ -18,9 +20,13 @@
 !   adiab_nrbc, isoth_nrbc : non-reflecting implementation of wall BC
 
     BC_bot = "isoth_std"                           ! see above
+    temp_ramping_bot = "off"                        ! ramping up of the bottom wall temperature
+    Twall_bot_old = 1.0                             ! old bottom wall temperature
 
 !   freestream BCs:
     BC_top = "isoth_std"                           ! see above
+    temp_ramping_top = "off"                        ! ramping up of the top wall temperature
+    Twall_top_old = 1.0                             ! old top wall temperature
 
     perBC  = (/.false.,.true.,.true./)              ! if .true., periodic BC
 !
@@ -60,8 +66,8 @@
     kmax = 192                                      ! number of points in z
     
     len_x = 2.0                                     ! wall-normal length
-    len_y = 2.0*pi_const                            ! spanwise length
-    len_z = 4.0*pi_const                            ! streamwise length
+    len_y = 4.0*pi_const/3.0                        ! spanwise length
+    len_z = 2.0*pi_const                            ! streamwise length
 
     xmesh_type = "non_equid"                        ! options: "equid", "non_equid"
     gridStretchX = 4.0                              ! wall clustering in x-direction
@@ -100,6 +106,7 @@
 
     len_x_new = len_x                               ! new wall-normal length
     len_y_new = len_y                               ! new spanwise length
+    len_z_new = len_z                               ! new streamwise length
 
     ReTau_new = ReTau                               ! new Re_tau at the domain inlet
 

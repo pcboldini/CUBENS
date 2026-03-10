@@ -16,7 +16,8 @@ current_path=os.getcwd()
 time_start=5
 time_end=10
 time_step=1
-index_y=1
+index_y=20
+fluc='off'
 interpol=0 # 1 for interpol planes
 
 var=["r","w"]
@@ -140,16 +141,17 @@ else:
             timestamp = timestamps, dt = 1.0,\
             dataNames = datanames_var)
 
-if interpol==1:
-    writexmf("yplanes/yplanes_aI.fluc.xmf", precision,  \
-            x*x_scale, [y[0]]*y_scale, z*z_scale,\
-            timestamp = timestamps, dt = 1.0,\
-            dataNames = datanames_fluc)
-else:
-    writexmf("yplanes/yplanes.fluc.xmf", precision,  \
-            x*x_scale, [y[0]]*y_scale, z*z_scale,\
-            timestamp = timestamps, dt = 1.0,\
-            dataNames = datanames_fluc)
+if fluc=='on':
+    if interpol==1:
+        writexmf("yplanes/yplanes_aI.fluc.xmf", precision,  \
+                x*x_scale, [y[0]]*y_scale, z*z_scale,\
+                timestamp = timestamps, dt = 1.0,\
+                dataNames = datanames_fluc)
+    else:
+        writexmf("yplanes/yplanes.fluc.xmf", precision,  \
+                x*x_scale, [y[0]]*y_scale, z*z_scale,\
+                timestamp = timestamps, dt = 1.0,\
+                dataNames = datanames_fluc)
 
 if interpol==1:
     writexmf_one("yplanes/yplanes_aI.rms.xmf", precision,  \
@@ -168,13 +170,15 @@ for j in range(0,len(var)):
         if slice_flag=='on':
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) + ".slice." + '{0:07d}'.format(timestamps[i])+ ".bin")
             shutil.move(src_path, dst_path)
-            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
-            shutil.move(src_path, dst_path)    
+            if fluc=='on':
+                src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.fluc." + '{0:07d}'.format(timestamps[i]) + ".bin")
+                shutil.move(src_path, dst_path)    
         else:
             src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  "." + '{0:07d}'.format(timestamps[i])+ ".bin")
             shutil.copy(src_path, dst_path)
-            src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
-            shutil.move(src_path, dst_path) 
+            if fluc=='on':
+                src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
+                shutil.move(src_path, dst_path) 
     if slice_flag=='on':
         src_path=os.path.join(current_path,"../../output/planes/" + str(char_y) + "." + str(index_y) + "." + str(var[j]) +  ".slice.rms.bin")
         shutil.move(src_path, dst_path)

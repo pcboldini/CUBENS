@@ -187,14 +187,14 @@ program interpolate
   endif
 
 ! initialize solution on the new partition (mesh)
-  call initSolution(part2,xnew,znew,rbn,ubn,vbn,wbn,ebn)
+  call initSolution(part2,xnew,ynew,znew,rbn,ubn,vbn,wbn,ebn)
   if (nrank.eq.0) then
     write(stdout,'(A)',ADVANCE='NO') 'Reading old restart files:'
     write(stdout,* ) 
   endif
 ! read and save the original solution, this is named with _bI
-  call loadRestart(timeStepRead,time,rbo,ubo,vbo,wbo,ebo,nHaloInterpol,part1)
-  call saveRestart(timeStepRead,time,rbo,ubo,vbo,wbo,ebo,nHaloInterpol,part1,'bI')
+  call loadRestart(timeStepRead,time,dpdz,rbo,ubo,vbo,wbo,ebo,nHaloInterpol,part1)
+  call saveRestart(timeStepRead,time,dpdz,rbo,ubo,vbo,wbo,ebo,nHaloInterpol,part1,'bI')
 ! write the old planes
   if (yi_plane(1).gt.0)  then
     do i=1,size(yi_plane)
@@ -255,7 +255,7 @@ program interpolate
   if(nrank==0) write(stdout,*) 
 ! write the new interpolated restart file and planes
   if(nrank.eq.0) write(stdout,*) "writing the new restart files" 
-  call saveRestart(timeStepSave,time,rbn,ubn,vbn,wbn,ebn,nHaloInterpol,part2,'aI')
+  call saveRestart(timeStepSave,time,dpdz,rbn,ubn,vbn,wbn,ebn,nHaloInterpol,part2,'aI')
 ! write the new interpolated planes
   if (yi_plane_new(1).gt.0)  then
     do i=1,size(yi_plane_new)

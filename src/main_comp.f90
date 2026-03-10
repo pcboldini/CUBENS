@@ -37,7 +37,7 @@ program DNS
   integer :: ierr,k,j,i
   integer :: istep,istart,countAvg
   real(8) :: wt_start, wt_tmp 
-  real(mytype) :: dt, time, velwb, CFL_new, factAvg
+  real(mytype) :: dt, da, time, time_zero, velwb, rhorb, tau_w_bot, tau_w_top, rhobulk, CFL_new, factAvg
   real(mytype), allocatable, dimension(:,:,:) :: rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz
   real(mytype), allocatable, dimension(:,:,:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
 #if defined(BL) || defined(TGV) || defined(DHC)
@@ -180,7 +180,6 @@ program DNS
     endif
   endif
 
-
 !===============================================================================================!
 !                                       ALLOCATION
 !===============================================================================================!
@@ -201,10 +200,10 @@ program DNS
   ! save 51 statistics
 #if defined(BL) || defined(TGV) || defined(DHC)
   ! for boundary layer, TGV, and DHC
-  allocate(qave(xsize(1), xsize(3), 51))
+  allocate(qave(xsize(1), xsize(3), 52))
   allocate(qtime(xsize(2), xsize(3), 1))
 #elif defined(CHA)
-  allocate(qave(xsize(1), 51))
+  allocate(qave(xsize(1), 52))
   allocate(qtime(1, 1))
 #endif
   rho      = 1.0e30_mytype
@@ -239,7 +238,7 @@ program DNS
     allocate(tem_bl  (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
     allocate(mu_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
     allocate(ka_bl   (1-nHalo:xsize(1)+nHalo, 1-nHalo:xsize(2)+nHalo, 1-nHalo:xsize(3)+nHalo))
-      call initField_BL(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
+      call initField_BL(part,x,y,z,rho,u,v,w,ien,pre,tem,mu,ka)
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)  
       r_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))
      ru_ref(1:xsize(1),1:xsize(3)) = rho(1:xsize(1),1,1:xsize(3))*u(1:xsize(1),1,1:xsize(3))
@@ -269,12 +268,12 @@ program DNS
   if (readRestartFile.lt.0)  then
 #if defined(BL)
   ! Blasius
-  call initField_BL(part,x,z,rho,u,v,w,ien,pre,tem,mu,ka)
+  call initField_BL(part,x,y,z,rho,u,v,w,ien,pre,tem,mu,ka)
   rho_bl=rho;u_bl=u;v_bl=v;w_bl=w;ien_bl=ien;pre_bl=pre;tem_bl=tem;mu_bl=mu;ka_bl=ka
   !$acc update device(rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl)
 #elif defined(CHA) 
   ! channel
-  call initField_CHA(part,rho,u,v,w,ien,pre,tem,mu,ka)
+  call initField_CHA(part,x,y,z,rho,u,v,w,ien,pre,tem,mu,ka)
 #elif defined(TGV)
   ! TGV
   call initField_TGV(part,rho,u,v,w,ien,pre,tem,mu,ka)
@@ -288,17 +287,22 @@ program DNS
 ! save restart at time t=0
     !$acc update host(rho,u,v,w,ien)
     call saveRestart(istart,time,dpdz,rho,u,v,w,ien,nHalo,part)
+    time_zero = time
   else
 ! read restart file    
     istart = readRestartFile
     call loadRestart(istart,time,dpdz,rho,u,v,w,ien,nHalo,part)
+    time_zero = time
     !$acc update device(rho,u,v,w,ien)
   endif
 
 ! update the other secondary variables
   if (nrank==0) write(stdout,*) 'updating initial pre,tem,mu,ka'
   call calcState_RE(rho,ien,pre,tem,mu,ka,1,xsize(1),1,xsize(2),1,xsize(3)) 
-  call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+#if defined(CHA)
+  call init_BC_pre(pre,tem,rho,ien,mu,ka,w,rhobulk)
+#endif
+  call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
   if (nrank==0) write(stdout,*)
   if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .true.)) then
     ! rescaling inlet boundary
@@ -350,13 +354,40 @@ program DNS
   ! calculate timestep
   if (CFL.gt.0) call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
 
+#if defined(CHA)                                                                                                                                                                      
+  ! flow-through time info                                                                                                                                                            
+  if (nrank==0) then                                                                                                                                                                  
+    write(stdout,'(A)') 'o--------------------------------------------------o'                                                                                                        
+    write(stdout,'(A, E15.6)') 'Timestep dt:                          ', dt                                                                                                           
+    write(stdout,'(A, E15.6)') 'Flow-through time (len_z/Ub):         ', len_z
+    write(stdout,'(A, I10  )') 'Steps per flow-through time:          ', nint(len_z/dt)
+    write(stdout,'(A, E15.6)') 'Total flow-through times in run:      ', real(nsteps,mytype)*dt/len_z
+    write(stdout,'(A)') 'o--------------------------------------------------o'
+    write(stdout,*)
+  endif
+#endif
+
   ! loop over timesteps
   do istep=istart+1, istart+nsteps
     wt_tmp = MPI_WTIME()
-    ! for channel flow: pressure gradient correction for unity bulk velocity
+    ! for channel flow: pressure gradient correction
+    ! local body force
     if (dpdz /= 0.0) then 
-      call cmpbulkvel(rho,w,velwb)
-      dpdz = 0.999*dpdz - 0.5*(velwb - 1.0)
+      call cmpbulkvel(rho,w,mu,velwb,rhorb,tau_w_bot,tau_w_top)
+      ! for unity bulk momentum
+      if (BC_pre == "const") then
+        call cmpRhoBar(rho)
+        rhobulk = 0.0_mytype                                                                                                                                                            
+        do i = 2, xsize(1)                                                                                                                                                          
+         da = x(i) - x(i-1)                                                                                                                                                        
+         rhobulk = rhobulk + 0.5_mytype*(rho_bar_avg(i) + rho_bar_avg(i-1))*da                                                                                                     
+        enddo                                                                                                                                                                       
+        rhobulk = rhobulk / len_x 
+        dpdz = (tau_w_bot + tau_w_top) / len_x / rhobulk
+      ! for unity bulk momentum
+      else
+        dpdz = 0.999*dpdz - 0.5*(velwb - 1.0)
+      endif
     endif
     if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .true.)) then
     ! rescaling inlet boundary
@@ -367,13 +398,13 @@ program DNS
     if ((CFL.gt.0).and.(mod(istep, intvCalcCFL).eq.0))  call calcTimeStep(dt,CFL_new,rho,u,v,w,ien,mu,ka)
     ! time integration
 
-    call rk3(part,dt,istep,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time) !
+    call rk3(part,dt,istep,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero) !
     ! advance time
     time = time + dt
 
     ! calculate bulk properties for real time monitoring
     if (mod(istep,intvPrint).eq.0) then 
-      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
       call cmpbulk(istep,wt_tmp,time,dt,CFL_new,rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,velwb,dpdz)
     endif
@@ -381,7 +412,7 @@ program DNS
     ! I/O planes if condition is met 
     if ((mod(istep-istart,intvSavePlanes).eq.0).and.(istep.ge.savePlanesAfter).and.(savePlanesAfter .ge. 0)) then 
       ! set boundary conditions
-      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
       call calcVort(vortx,vorty,vortz,strxz,u,v,w) 
       !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,vortx,vorty,vortz,strxz)
       ! write y-planes
@@ -417,7 +448,7 @@ program DNS
 
     ! I/O restart files if condition is met 
     if ((mod(istep-istart,intvSaveRestart) .eq. 0).and.(istep .ge. saveRestartAfter).and.(saveRestartAfter .ge. 0)) then
-      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
       !$acc update host(rho,u,v,w,ien)
       call saveRestart(istep,time,dpdz,rho,u,v,w,ien,nHalo,part)
     endif
@@ -431,7 +462,7 @@ program DNS
       else if ((istep .ge. saveStatsAfter) .and. (istep .eq. (istart+nsteps))) then
         if (nrank==0) write(stdout,'(A, I10)') 'final averaging at step:              ', istep
       endif
-      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time)
+      call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
       call calcStats(qave,qtime,factAvg,countAvg,rho,u,v,w,ien,pre,tem,mu,ka)
       if (istep .eq. (istart+nsteps)) then
         !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka,qave,qtime)

@@ -15,8 +15,8 @@ current_path=os.getcwd()
 time_start=0
 time_end=0
 time_step=1
-index_z=500
-
+index_z=100
+fluc-'on'
 var=["r","p","t","u","v","w"]
 #var = ["w"]
 
@@ -78,16 +78,18 @@ writexmf("zplanes/zplanes.xmf", precision,  \
         timestamp = timestamps, dt = 1.0,\
         dataNames = datanames_var)
 
-writexmf("zplanes/zplanes.fluc.xmf", precision,  \
-        x*x_scale, y*y_scale, [z[0]]*z_scale,\
-        timestamp = timestamps, dt = 1.0,\
-        dataNames = datanames_fluc)
+if fluc=='on':
+    writexmf("zplanes/zplanes.fluc.xmf", precision,  \
+            x*x_scale, y*y_scale, [z[0]]*z_scale,\
+            timestamp = timestamps, dt = 1.0,\
+            dataNames = datanames_fluc)
 
 for j in range(0,len(var)):
     for i in range(0, len (timestamps)):
         src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) + "." + '{0:07d}'.format(timestamps[i])+ ".bin")
         shutil.copy(src_path, dst_path)
-        src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
-        shutil.copy(src_path, dst_path)
+        if fluc=='on':
+            src_path=os.path.join(current_path,"../../output/planes/zpl." + str(index_z) + "." + str(var[j]) +  ".fluc." + '{0:07d}'.format(timestamps[i])+ ".bin")
+            shutil.copy(src_path, dst_path)
 
 print('Planes copied')
