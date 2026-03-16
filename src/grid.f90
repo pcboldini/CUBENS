@@ -13,7 +13,7 @@ module mod_grid
 ! definition of the grid sizes, coordinate stencils, and their derivatives
   integer :: Kmult
   real(mytype) :: dx,dy,dz,dt_FFT
-  real(mytype), allocatable, dimension(:) :: x,y,z,z_global
+  real(mytype), allocatable, dimension(:) :: x,y,y_global,z,z_global
   real(mytype), allocatable, dimension(:) :: xp,xpp,zp,zpp,zp_global,zpp_global
   contains
 
@@ -27,7 +27,7 @@ module mod_grid
     ! definition of the variables
     integer      :: i,j,k,kk,c,lenr,ierr
     character*4 cha
-    real(mytype), allocatable, dimension(:) :: tmp, tmp1, tmp2
+    real(mytype), allocatable, dimension(:) :: tmp_y, tmp, tmp1, tmp2
     ! Computational mesh for non_equid: dx, dz; physical mesh elsewhere
     ! x-direction (wall-normal)
     if (xmesh_type == "equid") then
@@ -54,6 +54,8 @@ module mod_grid
     allocate( xp(xsize(1)))
     allocate(xpp(xsize(1)))
     allocate(  y(ny_global))
+    allocate(y_global(ny_global))
+    allocate(tmp_y(ny_global))
     allocate(  z(xsize(3)))
     allocate( zp(xsize(3)))
     allocate(zpp(xsize(3)))
@@ -70,7 +72,10 @@ module mod_grid
       ! for channel
       call xDistribution_CHA(gridStretchX, len_x, xsize(1), x, xp, xpp)
 #endif   
-    call yDistribution(ny_global, y, dy)
+    call yDistribution(xstart(2), xsize(2), ny_global, y, y_global, dy)
+    call mpi_allreduce(y_global, tmp_y, ny_global, real_type, MPI_MAX, MPI_COMM_WORLD, ierr)
+    y_global = tmp_y
+
     call zDistribution(zmesh_type, xstart(3), xsize(3) ,nz_global, len_z &
                        ,z_1, z_2, bumpz1, bumpz2, zplus_min, zplus_max &
                        ,zpert_1, zpert_2, bumpzpert1, bumpzpert2, zpluspert_min &
@@ -94,7 +99,7 @@ module mod_grid
       write(11,rec=1) x(1:nx_global)
       close(11)
       open(11,file='output/planes/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
-      write(11,rec=1) y(1:ny_global)
+      write(11,rec=1) y_global(1:ny_global)
       close(11)
       open(11,file='output/planes/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
       write(11,rec=1) z_global(1:nz_global) 
@@ -106,7 +111,7 @@ module mod_grid
       write(11,rec=1) x(1:nx_global)
       close(11)
       open(11,file='output/restart/y.bin', status='REPLACE', access='direct', recl=ny_global*lenr)
-      write(11,rec=1) y(1:ny_global)
+      write(11,rec=1) y_global(1:ny_global)
       close(11)
       open(11,file='output/restart/z.bin', status='REPLACE', access='direct', recl=nz_global*lenr)
       write(11,rec=1) z_global(1:nz_global) 
@@ -123,7 +128,7 @@ module mod_grid
       close(11)
       open(11,file = 'postproc/ygrid.txt')
         do j=1,ny_global
-          write(11,'(i5,1F12.6)') j,y(j)
+          write(11,'(i5,1F12.6)') j,y_global(j)
         enddo
       close(11)
       open(11,file = 'postproc/zgrid.txt')
@@ -201,15 +206,17 @@ module mod_grid
 
 
 ! calculation of the y-stencil (spanwise)
-  subroutine yDistribution(npts, y, dy)
+  subroutine yDistribution(xst, npts, kmax, y, y_global, dy)
     implicit none
-    integer :: npts, j
+    integer :: npts, kmax, xst, j, jj
     real(mytype) :: dy, facty
-    real(mytype), dimension(:) :: y
+    real(mytype), dimension(:) :: y, y_global
+    y_global = 0.0_mytype
     ! Equidistant
     do j=1,npts
-      facty= 1.0_mytype*j
-      y(j)= facty*dy
+      jj = j + xst - 1
+      y(j) = real(jj,mytype)*dy
+      y_global(jj) = y(j)
     enddo
   end subroutine
 

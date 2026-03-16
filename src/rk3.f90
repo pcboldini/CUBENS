@@ -130,7 +130,7 @@ contains
     km = xsize(3)
     ! first substep k1 (internal and BC are asynchronous)
     call calcEuler_internal(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,istep)
-    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
+    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,dt,time,time_zero)
     ! calculation of the solution at time t
     !$acc parallel loop collapse(3) default(present) async(1)
     do k=1,km
@@ -167,7 +167,7 @@ contains
 
     ! second substep k2 (internal and BC are asynchronous)
     call calcEuler_internal(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,istep)
-    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time+0.5*dt,time_zero)
+    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,dt,time+0.5*dt,time_zero)
     !$acc wait
     call calcEuler_atBoundary(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,istep)
     call calcViscFlux(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,tem,mu,ka)
@@ -195,7 +195,7 @@ contains
 
     ! final step (internal and BC are asynchronous)
     call calcEuler_internal(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,istep)
-    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time+dt,time_zero)
+    call setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,dt,time+dt,time_zero)
     !$acc wait
     call calcEuler_atBoundary(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,istep)
     call calcViscFlux(drho,drhu,drhv,drhw,dret,rho,u,v,w,ien,pre,tem,mu,ka)

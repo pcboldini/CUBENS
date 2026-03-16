@@ -16,7 +16,7 @@ time_start=0
 time_end=0
 time_step=1
 index_z=100
-fluc-'on'
+fluc='on'
 var=["r","p","t","u","v","w"]
 #var = ["w"]
 

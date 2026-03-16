@@ -10,7 +10,7 @@
 !
     Re   = 3000                                     ! Bulk Reynolds number
     dpdz = 3.0                                      ! Initial pressure gradient (adjusted during calculation to ensure u_bulk=1)
-    BC_pre = "const"                             ! "standard": constant dpdz (adjusts to maintain bulk momentum=1) 
+    BC_pre = "standard"                             ! "standard": constant dpdz (adjusts to maintain bulk momentum=1) 
                                                     ! "const":    density-weighted dpdz (maintains bulk pressure)
 !
 ! --------------------------- BOUNDARY CONDITIONS  ------------------------
@@ -21,11 +21,13 @@
 
     BC_bot = "isoth_std"                           ! see above
     temp_ramping_bot = "off"                        ! ramping up of the bottom wall temperature
+    temp_ramp_fac_bot = 1.0                         ! ramp duration in units of len_z
     Twall_bot_old = 1.0                             ! old bottom wall temperature
 
 !   freestream BCs:
     BC_top = "isoth_std"                           ! see above
     temp_ramping_top = "off"                        ! ramping up of the top wall temperature
+    temp_ramp_fac_top = 1.0                         ! ramp duration in units of len_z
     Twall_top_old = 1.0                             ! old top wall temperature
 
     perBC  = (/.false.,.true.,.true./)              ! if .true., periodic BC
@@ -107,8 +109,6 @@
     len_x_new = len_x                               ! new wall-normal length
     len_y_new = len_y                               ! new spanwise length
     len_z_new = len_z                               ! new streamwise length
-
-    ReTau_new = ReTau                               ! new Re_tau at the domain inlet
 
     xmesh_type_new = "non_equid"                    ! options: "equid", "non_equid"
     gridStretchX_new = gridStretchX                 ! new wall clustering in x-direction

@@ -93,6 +93,8 @@ implicit none
   character(len=30) :: BC_span
   character(len=30) :: temp_ramping_bot
   character(len=30) :: temp_ramping_top
+  real(mytype)      :: temp_ramp_fac_bot = 1.0_mytype
+  real(mytype)      :: temp_ramp_fac_top = 1.0_mytype
   logical, dimension(3) :: perBC = (/.false.,.true.,.false./)
   complex(mytype) :: alphaLST=(0.061251_mytype,0.013715_mytype)
   real(mytype) :: epsilonLST=1.0_mytype
@@ -139,6 +141,7 @@ implicit none
   integer      :: intvPrint        = 10
   integer      :: intvReadParam    = 100
   logical      :: abortSimulation  = .false.
+  logical      :: last_step = .false.
   namelist /paramTimestepping/ dtMax, CFL, nsteps, readRestartFile, intvSaveRestart, &
                          intvSavePlanes, intvSaveStats, savePlanesAfter, saveRestartAfter, saveStatsAfter, &
                          intvCalcCFL, intvPrint, intvReadParam, abortSimulation
@@ -351,7 +354,7 @@ end subroutine
       write(stdout,* ) 'TAYLOR-GREEN VORTEX'
 #elif defined(DHC)
       write(stdout,* ) 'DIFFERENTIALLY-HEATED CAVITY'
-#elif defined(1D)
+#elif defined(ONED)
       write(stdout,* ) '1D TEST WAVE'
 #endif
       write(stdout,* ) 

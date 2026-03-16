@@ -252,7 +252,7 @@ end subroutine
 
 
 ! set all boundary conditions: bottom, top, inlet, outlet
-subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,time,time_zero)
+subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl,dt,time,time_zero)
   use decomp_2d
   use mod_param
   use mod_eos
@@ -261,7 +261,7 @@ subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,p
   implicit none
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho_bl,u_bl,v_bl,w_bl,ien_bl,pre_bl,tem_bl,mu_bl,ka_bl
-  real(mytype) :: time,time_zero
+  real(mytype) :: dt,time,time_zero
   TYPE (DECOMP_INFO), intent(IN) :: part
 
   ! communication: halo cells data transfer
@@ -277,9 +277,9 @@ subroutine setBC(part,rho,u,v,w,ien,pre,tem,mu,ka,rho_bl,u_bl,v_bl,w_bl,ien_bl,p
   ! in case perBC is set to .true., periodic boundary conditions are applied
   if (perBC(1) .eqv. .false.) then 
     ! bottom boundary
-    call setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
+    call setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,dt,time,time_zero)
     ! top boundary
-    call setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
+    call setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,dt,time,time_zero)
   endif
   if ((perBC(3) .eqv. .false.) .and. (BC_inl_rescale .eqv. .false.) .and. (neigh%inlet)) then 
     ! standard inlet boundary 
@@ -293,7 +293,7 @@ end subroutine
 
 
 ! halo cells: bottom boundary
-subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
+subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,dt,time,time_zero)
   use decomp_2d
   use mod_param
   use mod_grid
@@ -303,14 +303,22 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
   use mod_perturbation
   implicit none
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
-  real(mytype) :: time, time_zero, t_ramp_bot
+  real(mytype) :: dt,time, time_zero, t_ramp_bot,Twall_bot_eff
   integer :: j,k,c, ierr, jm,km, iBC
   ! at the first mesh cell in x-direction
   iBC = 1
   jm = xsize(2)
   km = xsize(3)
-  if (temp_ramping_bot == "on") then 
-    t_ramp_bot = 10.0_mytype*len_z  
+  if (temp_ramping_bot == "on") then
+    t_ramp_bot = temp_ramp_fac_bot*len_z
+    Twall_bot_eff = Twall_bot_old + (Twall_bot - Twall_bot_old) * min((time-time_zero)/t_ramp_bot, 1.0_mytype)
+    if (nrank == 0 .and. (mod(time-time_zero, len_z) < dt .or. last_step)) then
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+      write(stdout,'(A,ES12.4,A,ES12.4)') ' Twall_bot_eff = ', Twall_bot_eff, '  at time = ', time
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+    endif
+  else
+    Twall_bot_eff = Twall_bot
   endif
   !$acc parallel loop collapse(2) default(present) async(1) 
   do k=1,km
@@ -386,11 +394,7 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
       do j=1,jm
         pre(iBC,j,k) = 0.0_mytype
         ! prescribing the wall temperature
-        if (temp_ramping_bot == "on") then 
-          tem(iBC,j,k) = Twall_bot_old + (Twall_bot - Twall_bot_old) * min((time-time_zero)/t_ramp_bot, 1.0_mytype)
-        else
-          tem(iBC,j,k) = Twall_bot
-        endif
+        tem(iBC,j,k) = Twall_bot_eff
       enddo
     enddo
     !$acc wait(1)    
@@ -427,11 +431,7 @@ subroutine setBC_Bot(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
     do k=1,km
       do j=1,jm 
         ! prescribing the wall temperature
-        if (temp_ramping_bot == "on") then 
-          tem(iBC,j,k) = Twall_bot_old + (Twall_bot - Twall_bot_old) * min((time-time_zero)/t_ramp_bot, 1.0_mytype)
-        else
-          tem(iBC,j,k) = Twall_bot
-        endif
+        tem(iBC,j,k) = Twall_bot_eff
       enddo
     enddo
     !$acc wait(1)
@@ -659,7 +659,7 @@ end subroutine
 
 
 ! halo cells: top boundary
-subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
+subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,dt,time,time_zero)
   use decomp_2d
   use mod_param
   use mod_grid
@@ -670,14 +670,22 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
   real(mytype), dimension(5) :: d,L
   real(mytype) :: Kfact, sigm, sos, fac, dp, drho, du, dv, dw
-  real(mytype) :: time,time_zero,t_ramp_top
+  real(mytype) :: dt,time,time_zero,t_ramp_top,Twall_top_eff
   integer :: iBC, ierr,c, jm, km, j, k 
   ! at the last mesh cell in x-direction
   iBC = xsize(1)
   jm = xsize(2)
   km = xsize(3)
   if (temp_ramping_top == "on") then
-    t_ramp_top = 10.0_mytype*len_z  
+    t_ramp_top = temp_ramp_fac_top*len_z
+    Twall_top_eff = Twall_top_old + (Twall_top - Twall_top_old) * min((time-time_zero)/t_ramp_top, 1.0_mytype)
+    if (nrank == 0 .and. (mod(time-time_zero, len_z) < dt .or. last_step)) then
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+      write(stdout,'(A,ES12.4,A,ES12.4)') ' Twall_top_eff = ', Twall_top_eff, '  at time = ', time
+      write(stdout,'(A)') 'o--------------------------------------------------o'
+    endif
+  else
+    Twall_top_eff = Twall_top
   endif
   ! freestream boundary condition
   if (BC_top == "free_nrbc") then 
@@ -788,11 +796,7 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
       do j=1,jm
         pre(iBC,j,k) = 0.0_mytype
         ! prescribing the wall temperature
-        if (temp_ramping_top == "on") then 
-          tem(iBC,j,k) = Twall_top_old + (Twall_top - Twall_top_old) * min((time-time_zero)/t_ramp_top, 1.0_mytype)
-        else
-          tem(iBC,j,k) = Twall_top
-        endif
+        tem(iBC,j,k) = Twall_top_eff
       enddo
     enddo
     !$acc wait(1)    
@@ -838,11 +842,7 @@ subroutine setBC_Top(rho,u,v,w,ien,pre,tem,mu,ka,time,time_zero)
     do k=1,km
       do j=1,jm 
         ! prescribing the wall temperature
-        if (temp_ramping_top == "on") then 
-          tem(iBC,j,k) = Twall_top_old + (Twall_top - Twall_top_old) * min((time-time_zero)/t_ramp_top, 1.0_mytype)
-        else
-          tem(iBC,j,k) = Twall_top
-        endif
+        tem(iBC,j,k) = Twall_top_eff
       enddo
     enddo
     !$acc wait(1)
