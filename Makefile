@@ -7,11 +7,11 @@
 # Compiler: gnu, intel_cpu, cray_cpu, cray_gpu, nvhpc
 ARCH = gnu
 # Cases: Boundary Layer, Channel, Taylor-Green vortex, Differentially Heated Cavity, 1D test wave
-CASE = -DBL # DBL # DCHA # DTGV # DDHC # ONED
+CASE = -DCHA # DBL # DCHA # DTGV # DDHC # ONED
 # Equation of state: Ideal Gas (IG), Van der Waals (VdW), Redlich-Kwong (RK), Peng-Robinson (PR)
-EOS_LAW = -DIG     # DIG # DVdW # DRK # DPR
+EOS_LAW = -DPR     # DIG # DVdW # DRK # DPR
 # Transport properties: Constant (IG, VdW, PR), Power Law (IG), Sutherland (IG), JossiStielThodos (VdW), Chung (PR)
-VISC_LAW = -DSutherland  # DConstant # DPowerLaw # DSutherland # DJST # DChung
+VISC_LAW = -DChung  # DConstant # DPowerLaw # DSutherland # DJST # DChung
 # Benchmark mode: if defined, printing only timesteps without parameters
 BENCH =  
 # Floating-point numbers

@@ -398,6 +398,7 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Parameter a in VdW:                   ',vdw_a
       write(stdout,'(A, F10.4)') 'Parameter b in VdW:                   ',vdw_b
       write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',vdw_Zc 
+      write(stdout,'(A, F10.4)') 'Pressure factor [-]:                  ',vdw_Zc/Rhoref/Tref/Ec/Cpref
 #elif defined(RK)
       write(stdout,* ) 'EoS: Redlich-Kwong'
       write(stdout,* ) 
@@ -407,6 +408,7 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Parameter a in RK:                    ',rk_a
       write(stdout,'(A, F10.4)') 'Parameter b in RK:                    ',rk_b
       write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',rk_Zc 
+      write(stdout,'(A, F10.4)') 'Pressure factor [-]:                  ',rk_Zc/Rhoref/Tref/Ec/Cpref
 #elif defined(PR)
       write(stdout,* ) 'EoS: Peng-Robinson'
       write(stdout,* ) 
@@ -416,6 +418,7 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Parameter a in PR:                    ',pr_a
       write(stdout,'(A, F10.4)') 'Parameter b in PR:                    ',pr_b
       write(stdout,'(A, F10.4)') 'Compressibility factor at crit. point:',pr_Zc 
+      write(stdout,'(A, F10.4)') 'Pressure factor [-]:                  ',pr_Zc/Rhoref/Tref/Ec/Cpref
 #endif
 #if defined(VdW) || defined(RK) || defined(PR) 
       write(stdout,'(A, F10.4)') 'Acentric factor:                      ',eos_ac   
@@ -428,7 +431,7 @@ end subroutine
       write(stdout,'(A, F10.4)') 'Reduced Density [-]:                  ',Rhoref
       write(stdout,'(A, F10.4)') 'Specific gas constant [-]:            ',Rref
       write(stdout,'(A, F10.4)') 'Heat capacity cp [-]:                 ',Cpref
-      write(stdout,'(A, F10.4)') 'Speed of sound [-]:                   ',SOSref 
+      write(stdout,'(A, F10.4)') 'Speed of sound [-]:                   ',SOSref  
 #endif
       write(stdout,'(A)') 'o--------------------------------------------------o'
       write(stdout,* )  

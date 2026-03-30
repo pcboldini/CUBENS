@@ -25,6 +25,6 @@ JOB
 *.bin
 *.xmf
 #*.py
-*.ipynb
+#*.ipynb
 #Makefile
 .DS_Store
