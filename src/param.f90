@@ -74,7 +74,7 @@ implicit none
  character(len=20) :: USE_VISC
 #endif 
   ! Sutherland (ideal gas)
-  real(mytype) :: Smuref = 110.4_mytype
+  real(mytype) :: Smuref = 110.5_mytype
   ! JST & Chung
   real(mytype) :: Muref   = 0.0_mytype
   real(mytype) :: Kref  = 0.0_mytype

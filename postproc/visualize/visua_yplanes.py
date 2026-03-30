@@ -13,14 +13,14 @@ for filename in os.listdir(dst_path):
 
 current_path=os.getcwd()
 
-time_start=5
-time_end=10
+time_start=0
+time_end=0
 time_step=1
-index_y=20
+index_y=1
 fluc='off'
 interpol=0 # 1 for interpol planes
 
-var=["r","w"]
+var=["p"]
 
 x_scale=1
 y_scale=1

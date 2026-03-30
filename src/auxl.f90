@@ -177,7 +177,7 @@ module mod_auxl
     nxnynz = len_x*len_z*len_y
     ! grid spacing in y- and z-direction
     if (xsize(2) == 1) then
-      ddy = 1.0_mytype
+      ddy = len_y
     else
       ddy = y(2)-y(1)
     endif

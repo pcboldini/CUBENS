@@ -197,7 +197,7 @@ module mod_grid
     real(mytype), dimension(:) :: x, xp, xpp
     ! stretched towards both walls
     do i=1,npts
-      factx    =  (i-0.5_mytype)/(npts) - 0.5_mytype
+      factx    =  real(i-1,mytype)/real(npts-1,mytype) - 0.5_mytype
       x(i)    =  0.5_mytype*(1.0+tanh(stretchx*factx)/tanh(stretchx*0.5_mytype))*len_x
       xp(i)   =  0.5_mytype*stretchx/tanh(stretchx*0.5_mytype)/cosh(stretchx*factx)**2*len_x
       xpp(i)  =  -stretchx**2*tanh(stretchx*factx)/tanh(stretchx*0.5_mytype)/cosh(stretchx*factx)**2*len_x

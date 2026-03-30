@@ -165,14 +165,12 @@ subroutine initField_CHA(part,xcoord,ycoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   integer :: i,j,k,jj,kk
   real(mytype), dimension(1-nHalo:,1-nHalo:,1-nHalo:) :: rho,u,v,w,ien,pre,tem,mu,ka
   real(mytype), dimension(:) :: xcoord, ycoord, zcoord
-  real(mytype) :: c_0, c_1, c_2, xa, ya, za, psi, psi_y, psi_x
+  real(mytype) :: c_0, c_1, c_2, xa, ya, za, psi, psi_y, psi_x, prefac_r
   TYPE (DECOMP_INFO), intent(IN) :: part
   ! integration constants for laminar velocity profile
   c_0 = 0.5_mytype*dpdz
   c_1 = dpdz 
   c_2 = 0.0_mytype
-  ! density is initialized with one
-  rho = 1.0_mytype
   u   = 0.0_mytype
   v   = 0.0_mytype
   w   = 0.0_mytype
@@ -197,9 +195,18 @@ subroutine initField_CHA(part,xcoord,ycoord,zcoord,rho,u,v,w,ien,pre,tem,mu,ka)
   do i=1,part%xsz(1)
     tem(i,:,:) = Twall_bot + 0.5_mytype*xcoord(i)*(Twall_top - Twall_bot)
   enddo
-  !$acc update device(rho,tem,u,v,w)
+#if defined(IG)
+  pre = Pref*t_ig%prefac_r  
+#elif defined(VdW)
+  pre = Pref*t_vdw%prefac_r 
+#elif defined(RK)
+  pre = Pref*t_rk%prefac_r 
+#elif defined(PR)
+  pre = Pref*t_pr%prefac_r 
+#endif
+  !$acc update device(pre,tem,u,v,w)
   ! calculation of the secondary variables
-  call calcState_rT(rho,tem,ien,pre,mu,ka,1,part%xsz(1),1,part%xsz(2),1,part%xsz(3))
+  call calcState_pT(pre,tem,rho,ien,mu,ka,1,part%xsz(1),1,part%xsz(2),1,part%xsz(3))
   !$acc update host(rho,u,v,w,ien,pre,tem,mu,ka)
 end subroutine
 
