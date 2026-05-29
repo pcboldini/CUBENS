@@ -111,11 +111,11 @@ contains
       else if ((p_row==1) .and. (xs(2)>2*nHalo)) then
         char_buff_j='local_copy_3d'
 #define ACC_LOCAL_COPY_3D_J
-      else if ((p_row==1) .and. (xs(2)<2*nHalo)) then
-        if (myid == 0) write(*,*) "ERROR: too few points jmax<2 x Halo, increase jmax!"
+      else
+        if (myid == 0) write(*,*) "ERROR: too few points per rank in y: need jmax/p_row > 2 x nHalo. Reduce p_row or increase jmax!"
           call decomp_2d_finalize
-          call mpi_finalize(ierr) 
-          stop 
+          call mpi_finalize(ierr)
+          stop
       endif
     else if (xs(2)==1) then
       char_buff_j='local_copy_2d'
@@ -129,11 +129,11 @@ contains
       else if ((p_col==1) .and. (xs(3)>2*nHalo)) then
         char_buff_k='local_copy_3d'
 #define ACC_LOCAL_COPY_3D_K
-      else if ((p_col==1) .and. (xs(3)<2*nHalo)) then
-        if (myid == 0) write(*,*) "ERROR: too few points kmax<2 x Halo, increase kmax!"
+      else
+        if (myid == 0) write(*,*) "ERROR: too few points per rank in z: need kmax/p_col > 2 x nHalo. Reduce p_col or increase kmax!"
           call decomp_2d_finalize
-          call mpi_finalize(ierr) 
-          stop 
+          call mpi_finalize(ierr)
+          stop
       endif
     else if (xs(3)==1) then
       char_buff_k='local_copy_2d'
@@ -144,8 +144,8 @@ contains
       if ((myid == 0) .and. (jmax<p_row)) write(*,*) "ERROR: n_row>jmax, increase the number of points in y!"
       if ((myid == 0) .and. (kmax<p_col)) write(*,*) "ERROR: n_col>kmax, increase the number of points in z!"
       call decomp_2d_finalize
-      call mpi_finalize(ierr) 
-      stop 
+      call mpi_finalize(ierr)
+      stop
     endif
 ! define GPU task IDs and initialize OpenACC runtime
 #if defined(_OPENACC)
