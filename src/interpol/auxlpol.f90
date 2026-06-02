@@ -33,13 +33,13 @@ module mod_interpolate
     real(mytype) :: Lx, Ly, Lz, ReTau, stretchx, dy, z_1, z_2, bumpz1, bumpz2, zplus_min, zplus_max
     real(mytype) :: zpert_1, zpert_2, bumpzpert1, bumpzpert2, zpluspert_min
     real(mytype), allocatable, dimension(:)     :: x,y,z,z_global
-    real(mytype), allocatable, dimension(:)     :: dummy1,dummy2,tmp
+    real(mytype), allocatable, dimension(:)     :: dummy1,dummy2,tmp,y_global
     real(mytype), allocatable, dimension(:,:,:) :: r,u,v,w,e
     character(len=30) :: xmesh_type, zmesh_type
     TYPE (DECOMP_INFO), intent(IN) :: part
     allocate( dummy1(im), dummy2(km), tmp(km))
     allocate( x(part%xsz(1)) )
-    allocate( y(part%xsz(2)) )
+    allocate( y(part%xsz(2)), y_global(jm) )
     allocate( z(part%xsz(3)), z_global(km))
     ! x-mesh
 #if !defined(CHA)
@@ -51,7 +51,7 @@ module mod_interpolate
 #endif 
     ! y-mesh
     dy = Ly/(jm)
-    call yDistribution(jm, y, dy)
+    call yDistribution(part%xst(2), part%xsz(2), jm, y, y_global, dy)
     ! z-mesh
     call zDistribution(zmesh_type,part%xst(3),part%xsz(3), km, Lz, &
                         z_1, z_2, bumpz1, bumpz2, zplus_min, zplus_max, &
