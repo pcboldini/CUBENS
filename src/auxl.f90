@@ -879,7 +879,7 @@ module mod_auxl
     use decomp_2d_io
     use mod_param
     implicit none
-    integer :: istep,ierr,nHaloIn
+    integer :: istep,ierr,nHaloIn,nhdr
     character*7 cha
     real(mytype), dimension(1-nHaloIn:,1-nHaloIn:,1-nHaloIn:) :: rho,u,v,w,ien
     real(mytype), allocatable, dimension(:,:,:) :: tmp
@@ -896,8 +896,15 @@ module mod_auxl
     call MPI_FILE_OPEN(MPI_COMM_WORLD, 'output/restart/ruvwe.'//cha//'.bin', &
                        MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
     call MPI_FILE_GET_SIZE(fh,filesize,ierr)
+    ! auto-detect header size (#scalars) from file size to stay compatible with
+    ! both old (5-scalar: time@5) and new (6-scalar: dp@5,time@6) restart formats
+    nhdr = int( filesize/int(mytype_bytes,MPI_OFFSET_KIND) &
+              - 5_MPI_OFFSET_KIND*int(nx_global,MPI_OFFSET_KIND) &
+                                 *int(ny_global,MPI_OFFSET_KIND) &
+                                 *int(nz_global,MPI_OFFSET_KIND) )
+    if (nrank==0) write(stdout,'(A,I0,A)') 'restart header has ', nhdr, ' scalars'
     disp = 0_MPI_OFFSET_KIND
-    call decomp_2d_read_scalar(fh,disp,6,infoRestart)
+    call decomp_2d_read_scalar(fh,disp,nhdr,infoRestart)
     INQUIRE (FILE='output/restart/ruvwe.'//cha//'.bin', EXIST=file_exists)
     ! check if restart file exists
     if (file_exists) then
@@ -940,8 +947,13 @@ module mod_auxl
     call decomp_2d_read_var(fh,disp,1,tmp,part); ien(1:part%xsz(1),1:part%xsz(2),1:part%xsz(3)) = tmp
     call MPI_FILE_CLOSE(fh,ierr)
     deallocate(tmp)
-    dp = infoRestart(5)
-    time = infoRestart(6)
+    if (nhdr .ge. 6) then
+      dp   = infoRestart(5)
+      time = infoRestart(6)
+    else
+      dp   = 0.0_mytype
+      time = infoRestart(5)
+    endif
     if(nrank==0) write(stdout,'(A,E12.5,A,I0)') 'The simulation restarts at t: ',time, ' and at step: ', istep
     if(nrank==0) write(stdout,*) ''
   end subroutine
