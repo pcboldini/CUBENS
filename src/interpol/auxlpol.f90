@@ -109,68 +109,34 @@ module mod_interpolate
     use decomp_2d
     use mod_math
     implicit none
-    integer :: imax,jmax,kmax,inew,jnew,knew,i,j,k, nHalo
-    real(mytype) :: zinterp
+    integer :: imax,jmax,kmax,inew,jnew,knew,i,j,k
     real(mytype), dimension(:,:,:) :: input, output
     real(mytype), allocatable, dimension(:,:,:) :: tmpArray1,tmpArray2, out_y,out_z
-    real(mytype), allocatable, dimension(:) :: tmpInt1,tmpInt2
     TYPE (DECOMP_INFO) :: tmpPart
-    
+
     allocate(out_y(part2%ysz(1),part2%ysz(2),part2%ysz(3)))
     allocate(out_z(part2%zsz(1),part2%zsz(2),part2%zsz(3)))
-    call transpose_x_to_y(output, out_y, part2)
-    call transpose_y_to_z(out_y,  out_z, part2)
-    ! i-direction
+    ! i-direction (wall-normal)
     call decomp_info_init(inew,jmax,kmax,tmpPart)
-    allocate(   tmpArray1(inew,tmpPart%xsz(2),tmpPart%xsz(3)))
-    allocate(     tmpInt1(imax))
-    allocate(     tmpInt2(imax))
+    allocate(tmpArray1(inew,tmpPart%xsz(2),tmpPart%xsz(3)))
     do k=1,tmpPart%xsz(3)
       do j=1,tmpPart%xsz(2)
-        do i=1,imax
-          tmpInt1(i) = input(i,j,k)
-        enddo
-        call spline(xold,tmpInt1,imax,tmpInt2)
-        do i=1,inew
-          if (xnew(i) < xold(imax)) then
-            call splint(xold,tmpInt1,tmpInt2,imax,xnew(i),tmpArray1(i,j,k))
-          else
-            tmpArray1(i,j,k) = input(imax,j,k)
-          endif
-        enddo
+        call interp_line(xold, input(:,j,k), imax, xnew, tmpArray1(:,j,k), inew, len_x, perBC(1))
       enddo
     enddo
     allocate(tmpArray2(tmpPart%ysz(1),tmpPart%ysz(2),tmpPart%ysz(3)))
     call transpose_x_to_y(tmpArray1, tmpArray2, tmpPart)
     deallocate(tmpArray1)
-    deallocate(  tmpInt1)
-    deallocate(  tmpInt2)
     call decomp_info_finalize(tmpPart)
-    ! j-direction
+    ! j-direction (spanwise)
     call decomp_info_init(inew,jnew,kmax,tmpPart)
     allocate(tmpArray1(tmpPart%ysz(1),jnew,tmpPart%ysz(3)))
-    allocate(tmpInt1(jmax))
-    allocate(tmpInt2(jmax))
-    if (jnew == 1) then 
+    if (jnew == 1) then
       tmpArray1(:,1,:) = tmpArray2(:,1,:)
-    else if (jmax /= 1) then
+    else
       do k=1,tmpPart%ysz(3)
         do i=1,tmpPart%ysz(1)
-          do j=1,jmax
-            tmpInt1(j) = tmpArray2(i,j,k)
-          enddo
-          call spline(yold,tmpInt1,jmax,tmpInt2)
-          do j=1,jnew
-           call splint(yold,tmpInt1,tmpInt2,jmax,ynew(j),tmpArray1(i,j,k))
-          enddo
-        enddo
-      enddo
-    else if (jmax == 1) then
-      do k=1,tmpPart%ysz(3)
-        do i=1,tmpPart%ysz(1)
-          do j=1,jnew
-            tmpArray1(i,j,k) = tmpArray2(i,jmax,k)
-          enddo
+          call interp_line(yold, tmpArray2(i,:,k), jmax, ynew, tmpArray1(i,:,k), jnew, len_y, perBC(2))
         enddo
       enddo
     endif
@@ -178,29 +144,61 @@ module mod_interpolate
     allocate(tmpArray2(tmpPart%zsz(1),tmpPart%zsz(2),tmpPart%zsz(3)))
     call transpose_y_to_z(tmpArray1, tmpArray2, tmpPart)
     deallocate(tmpArray1)
-    deallocate(  tmpInt1)
-    deallocate(  tmpInt2)
     call decomp_info_finalize(tmpPart)
-    ! k-direction
-    allocate(tmpInt1(kmax))
-    allocate(tmpInt2(kmax))
+    ! k-direction (streamwise)
     do j=1,part2%zsz(2)
       do i=1,part2%zsz(1)
-        do k=1,kmax
-          tmpInt1(k) = tmpArray2(i,j,k)
-        enddo
-        call spline(zold_global,tmpInt1,kmax,tmpInt2)
-        do k=1,knew
-          if (znew_global(k) < zold_global(kmax)) call splint(zold_global,tmpInt1,tmpInt2,kmax,znew_global(k),out_z(i,j,k))
-        enddo
+        call interp_line(zold_global, tmpArray2(i,j,:), kmax, znew_global, out_z(i,j,:), knew, len_z, perBC(3))
       enddo
     enddo
     deallocate(tmpArray2)
-    deallocate(tmpInt1)
-    deallocate(tmpInt2)
     call transpose_z_to_y(out_z, out_y, part2)
     call transpose_y_to_x(out_y, output,part2)
     deallocate(out_y)
     deallocate(out_z)
+  end subroutine
+
+
+! interpolate one line from an old mesh to a new mesh along one direction.
+! periodic = .true.  -> periodically-extended spline (wrap, no seam)
+! periodic = .false. -> clamp to the last old node (wall-normal / outflow)
+  subroutine interp_line(co, vo, nold, cn, vn, nnew, length, periodic)
+    use mod_math
+    implicit none
+    integer,      intent(in)  :: nold, nnew
+    real(mytype), intent(in)  :: co(nold), vo(nold), cn(nnew), length
+    logical,      intent(in)  :: periodic
+    real(mytype), intent(out) :: vn(nnew)
+    real(mytype) :: ce(nold+2), ve(nold+2), d2(nold+2), cq
+    integer :: i, ne
+    ! degenerate direction (e.g. 2D / spanwise-invariant)
+    if (nold == 1) then
+      vn = vo(1)
+      return
+    endif
+    if (periodic) then
+      ! pad one wrap node on each side so every query lands inside the data
+      ne = nold + 2
+      ce(1)      = co(nold) - length
+      ce(2:ne-1) = co(1:nold)
+      ce(ne)     = co(1) + length
+      ve(1)      = vo(nold)
+      ve(2:ne-1) = vo(1:nold)
+      ve(ne)     = vo(1)
+      call spline(ce, ve, ne, d2)
+      do i = 1, nnew
+        cq = co(1) + modulo(cn(i) - co(1), length)   ! fold query into one period
+        call splint(ce, ve, d2, ne, cq, vn(i))
+      enddo
+    else
+      call spline(co, vo, nold, d2)
+      do i = 1, nnew
+        if (cn(i) < co(nold)) then
+          call splint(co, vo, d2, nold, cn(i), vn(i))
+        else
+          vn(i) = vo(nold)   ! clamp at the boundary
+        endif
+      enddo
+    endif
   end subroutine
 end module
